@@ -454,6 +454,11 @@ func promptText(label string, required bool) (string, error) {
 			Valid:   "{{ . }}: ",
 			Invalid: "{{ . }}: ",
 			Success: "{{ . }}",
+			FuncMap: texttmpl.FuncMap{
+				"faint": func(v string) string { return v },
+				"bold":  func(v string) string { return v },
+				"red":   func(v string) string { return v },
+			},
 		},
 	}
 	value, err := prompt.Run()
