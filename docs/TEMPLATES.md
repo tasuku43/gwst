@@ -15,6 +15,9 @@ templates:
       - github.com/org/backend
 ```
 
+互換性:
+- 過去の形式（`repos: - repo: ...`）も読み込み可能
+
 ルール:
 - `gws new` でテンプレート名を指定（未指定なら対話）
 - repo は `gws repo get` 済みであることが前提（未取得ならエラー）

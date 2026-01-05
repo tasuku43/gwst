@@ -20,6 +20,34 @@ type Template struct {
 	Repos []string `yaml:"repos"`
 }
 
+func (t *Template) UnmarshalYAML(value *yaml.Node) error {
+	type rawTemplate struct {
+		Repos []string `yaml:"repos"`
+	}
+	var direct rawTemplate
+	if err := value.Decode(&direct); err == nil && len(direct.Repos) > 0 {
+		t.Repos = direct.Repos
+		return nil
+	}
+
+	var legacy struct {
+		Repos []struct {
+			Repo string `yaml:"repo"`
+		} `yaml:"repos"`
+	}
+	if err := value.Decode(&legacy); err == nil && len(legacy.Repos) > 0 {
+		for _, item := range legacy.Repos {
+			if strings.TrimSpace(item.Repo) == "" {
+				continue
+			}
+			t.Repos = append(t.Repos, item.Repo)
+		}
+		return nil
+	}
+
+	return value.Decode(&direct)
+}
+
 func Load(rootDir string) (File, error) {
 	if rootDir == "" {
 		return File{}, fmt.Errorf("root directory is required")
