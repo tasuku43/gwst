@@ -28,6 +28,7 @@
 | MVP-050 | Unit tests for normalization & config | To Do |
 | MVP-051 | Integration tests for repo get + ws add/rm | To Do |
 | MVP-060 | Basic Makefile or justfile | To Do |
+| MVP-070 | src get/ls (human working tree) | To Do |
 
 ## MVP Definition of Done (全体)
 - コマンド:
@@ -230,3 +231,15 @@ Acceptance:
 ### MVP-061: CI (GitHub Actions) basic
 Acceptance:
 - go test が走る
+
+---
+
+## EP7: Human working tree (src)
+
+### MVP-070: src get / ls
+Goal:
+- human 向けの作業ツリーを `$GWS_ROOT/src` に用意する
+
+Acceptance:
+- `gws src get <repo>` で `$GWS_ROOT/src/<host>/<owner>/<repo>` が作成される
+- `gws src ls` で `src` 配下の一覧が出せる

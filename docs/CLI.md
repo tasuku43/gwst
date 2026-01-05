@@ -28,6 +28,8 @@
 - `gws doctor [--fix]`
 - `gws repo get <repo>`
 - `gws repo ls`
+- `gws src get <repo>`
+- `gws src ls`
 
 ## repo
 
@@ -48,6 +50,20 @@
 
 MVP出力:
 - repo_key, store_path, remote_url, last_fetch_at（あれば）
+
+## src (human working tree)
+
+### gws src get <repo>
+目的:
+- human 向けの作業ツリーを `$GWS_ROOT/src` に作成する
+
+挙動:
+- repo store を最新化（未取得ならエラー）
+- `$GWS_ROOT/src/<host>/<owner>/<repo>` に clone（既存なら fetch）
+
+### gws src ls
+目的:
+- src 配下の一覧を出す
 
 ## workspace
 
