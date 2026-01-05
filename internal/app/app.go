@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/tasuku43/gws/internal/config"
+	"github.com/tasuku43/gws/internal/doctor"
 	"github.com/tasuku43/gws/internal/gc"
 	"github.com/tasuku43/gws/internal/paths"
 	"github.com/tasuku43/gws/internal/repo"
@@ -40,6 +41,8 @@ func Run() error {
 
 	ctx := context.Background()
 	switch args[0] {
+	case "doctor":
+		return runDoctor(ctx, rootDir, jsonFlag, args[1:])
 	case "gc":
 		return runGC(ctx, rootDir, jsonFlag, args[1:])
 	case "repo":
@@ -57,6 +60,40 @@ func Run() error {
 	default:
 		return fmt.Errorf("unknown command: %s", args[0])
 	}
+}
+
+func runDoctor(ctx context.Context, rootDir string, jsonFlag bool, args []string) error {
+	doctorFlags := flag.NewFlagSet("doctor", flag.ContinueOnError)
+	var fix bool
+	doctorFlags.BoolVar(&fix, "fix", false, "remove stale locks only")
+	if err := doctorFlags.Parse(args); err != nil {
+		return err
+	}
+	if doctorFlags.NArg() != 0 {
+		return fmt.Errorf("usage: gws doctor [--fix]")
+	}
+	now := time.Now().UTC()
+	if fix {
+		result, err := doctor.Fix(ctx, rootDir, now)
+		if err != nil {
+			return err
+		}
+		if jsonFlag {
+			return writeDoctorJSON(result.Result, result.Fixed)
+		}
+		writeDoctorText(result.Result, result.Fixed)
+		return nil
+	}
+
+	result, err := doctor.Check(ctx, rootDir, now)
+	if err != nil {
+		return err
+	}
+	if jsonFlag {
+		return writeDoctorJSON(result, nil)
+	}
+	writeDoctorText(result, nil)
+	return nil
 }
 
 func runGC(ctx context.Context, rootDir string, jsonFlag bool, args []string) error {
@@ -453,4 +490,58 @@ func parseOlder(value string) (time.Duration, error) {
 		return 0, fmt.Errorf("invalid --older value: %s", value)
 	}
 	return parsed, nil
+}
+
+type doctorJSON struct {
+	SchemaVersion int               `json:"schema_version"`
+	Command       string            `json:"command"`
+	Issues        []doctorIssueJSON `json:"issues"`
+	Fixed         []string          `json:"fixed,omitempty"`
+}
+
+type doctorIssueJSON struct {
+	Kind    string `json:"kind"`
+	Path    string `json:"path"`
+	Message string `json:"message"`
+}
+
+func writeDoctorJSON(result doctor.Result, fixed []string) error {
+	out := doctorJSON{
+		SchemaVersion: 1,
+		Command:       "doctor",
+	}
+	for _, issue := range result.Issues {
+		out.Issues = append(out.Issues, doctorIssueJSON{
+			Kind:    issue.Kind,
+			Path:    issue.Path,
+			Message: issue.Message,
+		})
+	}
+	if len(fixed) > 0 {
+		out.Fixed = fixed
+	}
+	enc := json.NewEncoder(os.Stdout)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(out); err != nil {
+		return err
+	}
+	for _, warning := range result.Warnings {
+		fmt.Fprintf(os.Stderr, "warning: %v\n", warning)
+	}
+	return nil
+}
+
+func writeDoctorText(result doctor.Result, fixed []string) {
+	fmt.Fprintln(os.Stdout, "kind\tpath\tmessage")
+	for _, issue := range result.Issues {
+		fmt.Fprintf(os.Stdout, "%s\t%s\t%s\n", issue.Kind, issue.Path, issue.Message)
+	}
+	for _, warning := range result.Warnings {
+		fmt.Fprintf(os.Stderr, "warning: %v\n", warning)
+	}
+	if len(fixed) > 0 {
+		for _, path := range fixed {
+			fmt.Fprintf(os.Stdout, "fixed\t%s\n", path)
+		}
+	}
 }
