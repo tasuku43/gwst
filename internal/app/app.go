@@ -9,6 +9,7 @@ import (
 
 	"github.com/tasuku43/gws/internal/config"
 	"github.com/tasuku43/gws/internal/paths"
+	"github.com/tasuku43/gws/internal/repo"
 	"github.com/tasuku43/gws/internal/workspace"
 )
 
@@ -35,6 +36,8 @@ func Run() error {
 
 	ctx := context.Background()
 	switch args[0] {
+	case "repo":
+		return runRepo(ctx, rootDir, jsonFlag, args[1:])
 	case "new":
 		return runWorkspaceNew(ctx, rootDir, args[1:])
 	case "add":
@@ -48,6 +51,47 @@ func Run() error {
 	default:
 		return fmt.Errorf("unknown command: %s", args[0])
 	}
+}
+
+func runRepo(ctx context.Context, rootDir string, jsonFlag bool, args []string) error {
+	if len(args) == 0 {
+		return fmt.Errorf("repo subcommand is required")
+	}
+	switch args[0] {
+	case "get":
+		return runRepoGet(ctx, rootDir, args[1:])
+	case "ls":
+		return runRepoList(ctx, rootDir, jsonFlag, args[1:])
+	default:
+		return fmt.Errorf("unknown repo subcommand: %s", args[0])
+	}
+}
+
+func runRepoGet(ctx context.Context, rootDir string, args []string) error {
+	if len(args) != 1 {
+		return fmt.Errorf("usage: gws repo get <repo>")
+	}
+	store, err := repo.Get(ctx, rootDir, args[0])
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(os.Stdout, "%s\t%s\n", store.RepoKey, store.StorePath)
+	return nil
+}
+
+func runRepoList(ctx context.Context, rootDir string, jsonFlag bool, args []string) error {
+	if len(args) != 0 {
+		return fmt.Errorf("usage: gws repo ls")
+	}
+	entries, warnings, err := repo.List(rootDir)
+	if err != nil {
+		return err
+	}
+	if jsonFlag {
+		return writeRepoListJSON(entries, warnings)
+	}
+	writeRepoListText(entries, warnings)
+	return nil
 }
 
 func runWorkspaceNew(ctx context.Context, rootDir string, args []string) error {
@@ -239,6 +283,51 @@ func writeWorkspaceListText(entries []workspace.Entry, warnings []error) {
 		if entry.Warning != nil {
 			fmt.Fprintf(os.Stderr, "warning: %s: %v\n", entry.WorkspaceID, entry.Warning)
 		}
+	}
+	for _, warning := range warnings {
+		fmt.Fprintf(os.Stderr, "warning: %v\n", warning)
+	}
+}
+
+type repoListJSON struct {
+	SchemaVersion int                 `json:"schema_version"`
+	Command       string              `json:"command"`
+	Repos         []repoListEntryJSON `json:"repos"`
+}
+
+type repoListEntryJSON struct {
+	RepoKey   string `json:"repo_key"`
+	StorePath string `json:"store_path"`
+	Warning   string `json:"warning,omitempty"`
+}
+
+func writeRepoListJSON(entries []repo.Entry, warnings []error) error {
+	out := repoListJSON{
+		SchemaVersion: 1,
+		Command:       "repo.ls",
+	}
+	for _, entry := range entries {
+		item := repoListEntryJSON{
+			RepoKey:   entry.RepoKey,
+			StorePath: entry.StorePath,
+		}
+		out.Repos = append(out.Repos, item)
+	}
+	enc := json.NewEncoder(os.Stdout)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(out); err != nil {
+		return err
+	}
+	for _, warning := range warnings {
+		fmt.Fprintf(os.Stderr, "warning: %v\n", warning)
+	}
+	return nil
+}
+
+func writeRepoListText(entries []repo.Entry, warnings []error) {
+	fmt.Fprintln(os.Stdout, "repo_key\tstore_path")
+	for _, entry := range entries {
+		fmt.Fprintf(os.Stdout, "%s\t%s\n", entry.RepoKey, entry.StorePath)
 	}
 	for _, warning := range warnings {
 		fmt.Fprintf(os.Stderr, "warning: %v\n", warning)
