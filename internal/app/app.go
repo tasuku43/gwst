@@ -34,28 +34,16 @@ func Run() error {
 
 	ctx := context.Background()
 	switch args[0] {
-	case "ws":
-		return runWorkspace(ctx, rootDir, jsonFlag, args[1:])
+	case "status":
+		return runWorkspaceStatus(ctx, rootDir, jsonFlag, args[1:])
 	default:
 		return fmt.Errorf("unknown command: %s", args[0])
 	}
 }
 
-func runWorkspace(ctx context.Context, rootDir string, jsonFlag bool, args []string) error {
-	if len(args) == 0 {
-		return fmt.Errorf("workspace subcommand is required")
-	}
-	switch args[0] {
-	case "status":
-		return runWorkspaceStatus(ctx, rootDir, jsonFlag, args[1:])
-	default:
-		return fmt.Errorf("unknown workspace subcommand: %s", args[0])
-	}
-}
-
 func runWorkspaceStatus(ctx context.Context, rootDir string, jsonFlag bool, args []string) error {
 	if len(args) != 1 {
-		return fmt.Errorf("usage: gws ws status <WORKSPACE_ID>")
+		return fmt.Errorf("usage: gws status <WORKSPACE_ID>")
 	}
 	workspaceID := args[0]
 	result, err := workspace.Status(ctx, rootDir, workspaceID)
@@ -89,7 +77,7 @@ type workspaceStatusRepoJSON struct {
 func writeWorkspaceStatusJSON(result workspace.StatusResult) error {
 	out := workspaceStatusJSON{
 		SchemaVersion: 1,
-		Command:       "ws.status",
+		Command:       "status",
 		WorkspaceID:   result.WorkspaceID,
 	}
 	for _, repo := range result.Repos {

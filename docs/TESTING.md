@@ -10,4 +10,4 @@
 
 ## DoD（MVP）
 - `go test ./...` が通る
-- 主要コマンド（repo get、ws new/add/status/rm）が統合テストで一通り動く
+- 主要コマンド（repo get、new/add/status/rm）が統合テストで一通り動く

@@ -96,11 +96,11 @@ repo store の物理パスは下記を基本とする（正規化後）:
 - `gws repo ls`: repo store の一覧
 
 ### 7.2 workspace 操作
-- `gws ws new <WORKSPACE_ID>`: workspace 作成（manifest 雛形生成）
-- `gws ws add <WORKSPACE_ID> <repo> --alias <name>`: repo を workspace に追加（worktree 作成）
-- `gws ws ls`: workspace 一覧
-- `gws ws status <WORKSPACE_ID>`: workspace 内の各 repo の状態（dirty等）集計
-- `gws ws rm <WORKSPACE_ID>`: workspace 削除（安全に worktree remove → ディレクトリ削除）
+- `gws new <WORKSPACE_ID>`: workspace 作成（manifest 雛形生成）
+- `gws add <WORKSPACE_ID> <repo> --alias <name>`: repo を workspace に追加（worktree 作成）
+- `gws ls`: workspace 一覧
+- `gws status <WORKSPACE_ID>`: workspace 内の各 repo の状態（dirty等）集計
+- `gws rm <WORKSPACE_ID>`: workspace 削除（安全に worktree remove → ディレクトリ削除）
 
 ### 7.3 回収 / 診断
 - `gws gc [--dry-run] [--older <duration>]`: stale workspace の候補提示と回収（安全ガード付き）
