@@ -480,9 +480,11 @@ func promptSelect(label string, items []string) (string, error) {
 		return displayItem(item)
 	}
 	sel := promptui.Select{
-		Label: label,
-		Items: items,
-		Size:  min(10, len(items)),
+		Label:             label,
+		Items:             items,
+		Size:              min(10, len(items)),
+		HideHelp:          false,
+		StartInSearchMode: true,
 		Searcher: func(input string, index int) bool {
 			item := displayItem(items[index])
 			input = strings.ToLower(strings.TrimSpace(input))
