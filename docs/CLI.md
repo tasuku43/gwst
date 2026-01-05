@@ -67,7 +67,7 @@ MVP出力:
 - base_ref = 設定の defaults.base_ref（既定 origin/main）
 
 挙動:
-1. repo get を内部的に実行（store を最新化）
+1. repo get 済みであることを前提に store を最新化（未取得ならエラー）
 2. `<ws>/<id>/<alias>` を作業ディレクトリとして決定
 3. ブランチが存在しない場合は base_ref から作成して worktree add
 4. manifest に追記

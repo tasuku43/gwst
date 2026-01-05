@@ -45,7 +45,7 @@ func Add(ctx context.Context, rootDir, workspaceID, repoSpec, alias string, cfg 
 		return Repo{}, err
 	}
 
-	store, err := repo.Get(ctx, rootDir, repoSpec)
+	store, err := repo.Open(ctx, rootDir, repoSpec)
 	if err != nil {
 		return Repo{}, err
 	}

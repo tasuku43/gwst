@@ -49,6 +49,33 @@ func Get(ctx context.Context, rootDir string, repo string) (Store, error) {
 	}, nil
 }
 
+func Open(ctx context.Context, rootDir string, repo string) (Store, error) {
+	spec, err := repospec.Normalize(repo)
+	if err != nil {
+		return Store{}, err
+	}
+
+	storePath := filepath.Join(rootDir, "repos", spec.Host, spec.Owner, spec.Repo+".git")
+
+	exists, err := pathExists(storePath)
+	if err != nil {
+		return Store{}, err
+	}
+	if !exists {
+		return Store{}, fmt.Errorf("repo store not found, run: gws repo get %s", repo)
+	}
+
+	if _, err := gitcmd.Run(ctx, []string{"fetch", "--prune"}, gitcmd.Options{Dir: storePath}); err != nil {
+		return Store{}, err
+	}
+
+	return Store{
+		RepoKey:   spec.RepoKey,
+		StorePath: storePath,
+		RemoteURL: repo,
+	}, nil
+}
+
 func pathExists(path string) (bool, error) {
 	info, err := os.Stat(path)
 	if err != nil {
