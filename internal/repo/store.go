@@ -42,6 +42,10 @@ func Get(ctx context.Context, rootDir string, repo string) (Store, error) {
 		}
 	}
 
+	if err := ensureSrc(ctx, rootDir, spec, storePath, repo); err != nil {
+		return Store{}, err
+	}
+
 	return Store{
 		RepoKey:   spec.RepoKey,
 		StorePath: storePath,
@@ -74,6 +78,27 @@ func Open(ctx context.Context, rootDir string, repo string) (Store, error) {
 		StorePath: storePath,
 		RemoteURL: repo,
 	}, nil
+}
+
+func ensureSrc(ctx context.Context, rootDir string, spec repospec.Spec, storePath, repoSpec string) error {
+	srcPath := filepath.Join(rootDir, "src", spec.Host, spec.Owner, spec.Repo)
+	if exists, err := pathExists(srcPath); err != nil {
+		return err
+	} else if exists {
+		if _, err := gitcmd.Run(ctx, []string{"fetch", "--prune"}, gitcmd.Options{Dir: srcPath}); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	if err := os.MkdirAll(filepath.Dir(srcPath), 0o755); err != nil {
+		return fmt.Errorf("create src dir: %w", err)
+	}
+	if _, err := gitcmd.Run(ctx, []string{"clone", storePath, srcPath}, gitcmd.Options{}); err != nil {
+		return err
+	}
+	_, _ = gitcmd.Run(ctx, []string{"remote", "set-url", "origin", repoSpec}, gitcmd.Options{Dir: srcPath})
+	return nil
 }
 
 func pathExists(path string) (bool, error) {

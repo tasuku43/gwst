@@ -19,7 +19,6 @@ import (
 	"github.com/tasuku43/gws/internal/initcmd"
 	"github.com/tasuku43/gws/internal/paths"
 	"github.com/tasuku43/gws/internal/repo"
-	"github.com/tasuku43/gws/internal/src"
 	"github.com/tasuku43/gws/internal/template"
 	"github.com/tasuku43/gws/internal/workspace"
 )
@@ -59,8 +58,6 @@ func Run() error {
 		return runRepo(ctx, rootDir, jsonFlag, args[1:])
 	case "template":
 		return runTemplate(ctx, rootDir, jsonFlag, args[1:])
-	case "src":
-		return runSrc(ctx, rootDir, jsonFlag, args[1:])
 	case "new":
 		return runWorkspaceNew(ctx, rootDir, args[1:], noPrompt)
 	case "add":
@@ -208,47 +205,6 @@ func runTemplateRemove(ctx context.Context, rootDir string, jsonFlag bool, args 
 		return writeTemplateRemoveJSON(args[0])
 	}
 	fmt.Fprintf(os.Stdout, "removed template: %s\n", args[0])
-	return nil
-}
-
-func runSrc(ctx context.Context, rootDir string, jsonFlag bool, args []string) error {
-	if len(args) == 0 {
-		return fmt.Errorf("src subcommand is required")
-	}
-	switch args[0] {
-	case "get":
-		return runSrcGet(ctx, rootDir, args[1:])
-	case "ls":
-		return runSrcList(ctx, rootDir, jsonFlag, args[1:])
-	default:
-		return fmt.Errorf("unknown src subcommand: %s", args[0])
-	}
-}
-
-func runSrcGet(ctx context.Context, rootDir string, args []string) error {
-	if len(args) != 1 {
-		return fmt.Errorf("usage: gws src get <repo>")
-	}
-	result, err := src.Get(ctx, rootDir, args[0])
-	if err != nil {
-		return err
-	}
-	fmt.Fprintf(os.Stdout, "%s\t%s\n", result.RepoKey, result.Path)
-	return nil
-}
-
-func runSrcList(ctx context.Context, rootDir string, jsonFlag bool, args []string) error {
-	if len(args) != 0 {
-		return fmt.Errorf("usage: gws src ls")
-	}
-	entries, warnings, err := src.List(rootDir)
-	if err != nil {
-		return err
-	}
-	if jsonFlag {
-		return writeSrcListJSON(entries, warnings)
-	}
-	writeSrcListText(entries, warnings)
 	return nil
 }
 
@@ -839,49 +795,6 @@ func writeInitText(result initcmd.Result) {
 	}
 	for _, file := range result.SkippedFiles {
 		fmt.Fprintf(os.Stdout, "exists\t%s\n", file)
-	}
-}
-
-type srcListJSON struct {
-	SchemaVersion int                `json:"schema_version"`
-	Command       string             `json:"command"`
-	Src           []srcListEntryJSON `json:"src"`
-}
-
-type srcListEntryJSON struct {
-	RepoKey string `json:"repo_key"`
-	Path    string `json:"path"`
-}
-
-func writeSrcListJSON(entries []src.Entry, warnings []error) error {
-	out := srcListJSON{
-		SchemaVersion: 1,
-		Command:       "src.ls",
-	}
-	for _, entry := range entries {
-		out.Src = append(out.Src, srcListEntryJSON{
-			RepoKey: entry.RepoKey,
-			Path:    entry.Path,
-		})
-	}
-	enc := json.NewEncoder(os.Stdout)
-	enc.SetIndent("", "  ")
-	if err := enc.Encode(out); err != nil {
-		return err
-	}
-	for _, warning := range warnings {
-		fmt.Fprintf(os.Stderr, "warning: %v\n", warning)
-	}
-	return nil
-}
-
-func writeSrcListText(entries []src.Entry, warnings []error) {
-	fmt.Fprintln(os.Stdout, "repo_key\tpath")
-	for _, entry := range entries {
-		fmt.Fprintf(os.Stdout, "%s\t%s\n", entry.RepoKey, entry.Path)
-	}
-	for _, warning := range warnings {
-		fmt.Fprintf(os.Stderr, "warning: %v\n", warning)
 	}
 }
 

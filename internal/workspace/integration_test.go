@@ -50,6 +50,10 @@ func TestRepoGetWorkspaceAddRemove(t *testing.T) {
 	if _, err := os.Stat(store.StorePath); err != nil {
 		t.Fatalf("store path missing: %v", err)
 	}
+	srcPath := filepath.Join(rootDir, "src", "example.com", "owner", "repo")
+	if _, err := os.Stat(srcPath); err != nil {
+		t.Fatalf("src path missing: %v", err)
+	}
 
 	cfg := config.DefaultConfig()
 	if _, err := workspace.New(ctx, rootDir, "TEST-1", cfg); err != nil {

@@ -7,7 +7,6 @@ MVPでは “人間向け表示” を中心にしつつ、将来の agent 統�
 - `gws status <ID> --json`
 - `gws gc --dry-run --json`
 - `gws doctor --json`
-- `gws src ls --json`
 - `gws template ls --json`
 - `gws init --json`
 - `gws template show <name> --json`
