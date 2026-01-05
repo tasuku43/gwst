@@ -33,6 +33,8 @@
 - `gws src ls`
 - `gws template ls`
 - `gws template add`
+- `gws template show <name>`
+- `gws template rm <name>`
 
 ## repo
 
@@ -77,6 +79,14 @@ MVP出力:
 ### gws template add
 目的:
 - 対話形式でテンプレートを追加する
+
+### gws template show <name>
+目的:
+- テンプレートの内容（repos）を表示する
+
+### gws template rm <name>
+目的:
+- テンプレートを削除する
 
 ## init
 

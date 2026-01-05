@@ -100,6 +100,10 @@ func runTemplate(ctx context.Context, rootDir string, jsonFlag bool, args []stri
 		return runTemplateAdd(ctx, rootDir, args[1:])
 	case "ls":
 		return runTemplateList(ctx, rootDir, jsonFlag, args[1:])
+	case "show":
+		return runTemplateShow(ctx, rootDir, jsonFlag, args[1:])
+	case "rm":
+		return runTemplateRemove(ctx, rootDir, jsonFlag, args[1:])
 	default:
 		return fmt.Errorf("unknown template subcommand: %s", args[0])
 	}
@@ -163,6 +167,47 @@ func runTemplateList(ctx context.Context, rootDir string, jsonFlag bool, args []
 		return writeTemplateListJSON(names)
 	}
 	writeTemplateListText(names)
+	return nil
+}
+
+func runTemplateShow(ctx context.Context, rootDir string, jsonFlag bool, args []string) error {
+	if len(args) != 1 {
+		return fmt.Errorf("usage: gws template show <name>")
+	}
+	file, err := template.Load(rootDir)
+	if err != nil {
+		return err
+	}
+	tmpl, ok := file.Templates[args[0]]
+	if !ok {
+		return fmt.Errorf("template not found: %s", args[0])
+	}
+	if jsonFlag {
+		return writeTemplateShowJSON(args[0], tmpl)
+	}
+	writeTemplateShowText(args[0], tmpl)
+	return nil
+}
+
+func runTemplateRemove(ctx context.Context, rootDir string, jsonFlag bool, args []string) error {
+	if len(args) != 1 {
+		return fmt.Errorf("usage: gws template rm <name>")
+	}
+	file, err := template.Load(rootDir)
+	if err != nil {
+		return err
+	}
+	if _, ok := file.Templates[args[0]]; !ok {
+		return fmt.Errorf("template not found: %s", args[0])
+	}
+	delete(file.Templates, args[0])
+	if err := template.Save(rootDir, file); err != nil {
+		return err
+	}
+	if jsonFlag {
+		return writeTemplateRemoveJSON(args[0])
+	}
+	fmt.Fprintf(os.Stdout, "removed template: %s\n", args[0])
 	return nil
 }
 
@@ -694,6 +739,20 @@ type templateListJSON struct {
 	Templates     []string `json:"templates"`
 }
 
+type templateShowJSON struct {
+	SchemaVersion int      `json:"schema_version"`
+	Command       string   `json:"command"`
+	Name          string   `json:"name"`
+	Repos         []string `json:"repos"`
+}
+
+type templateRemoveJSON struct {
+	SchemaVersion int    `json:"schema_version"`
+	Command       string `json:"command"`
+	Name          string `json:"name"`
+	Removed       bool   `json:"removed"`
+}
+
 func writeTemplateListJSON(names []string) error {
 	out := templateListJSON{
 		SchemaVersion: 1,
@@ -709,6 +768,37 @@ func writeTemplateListText(names []string) {
 	for _, name := range names {
 		fmt.Fprintln(os.Stdout, name)
 	}
+}
+
+func writeTemplateShowJSON(name string, tmpl template.Template) error {
+	out := templateShowJSON{
+		SchemaVersion: 1,
+		Command:       "template.show",
+		Name:          name,
+		Repos:         tmpl.Repos,
+	}
+	enc := json.NewEncoder(os.Stdout)
+	enc.SetIndent("", "  ")
+	return enc.Encode(out)
+}
+
+func writeTemplateShowText(name string, tmpl template.Template) {
+	fmt.Fprintf(os.Stdout, "%s\n", name)
+	for _, repo := range tmpl.Repos {
+		fmt.Fprintf(os.Stdout, " - %s\n", repo)
+	}
+}
+
+func writeTemplateRemoveJSON(name string) error {
+	out := templateRemoveJSON{
+		SchemaVersion: 1,
+		Command:       "template.rm",
+		Name:          name,
+		Removed:       true,
+	}
+	enc := json.NewEncoder(os.Stdout)
+	enc.SetIndent("", "  ")
+	return enc.Encode(out)
 }
 
 type initJSON struct {
