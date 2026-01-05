@@ -1,11 +1,14 @@
 package app
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -16,6 +19,7 @@ import (
 	"github.com/tasuku43/gws/internal/paths"
 	"github.com/tasuku43/gws/internal/repo"
 	"github.com/tasuku43/gws/internal/src"
+	"github.com/tasuku43/gws/internal/template"
 	"github.com/tasuku43/gws/internal/workspace"
 )
 
@@ -24,8 +28,10 @@ func Run() error {
 	fs := flag.NewFlagSet("gws", flag.ContinueOnError)
 	var rootFlag string
 	var jsonFlag bool
+	var noPrompt bool
 	fs.StringVar(&rootFlag, "root", "", "override gws root")
 	fs.BoolVar(&jsonFlag, "json", false, "machine readable output")
+	fs.BoolVar(&noPrompt, "no-prompt", false, "disable interactive prompt")
 	if err := fs.Parse(os.Args[1:]); err != nil {
 		return err
 	}
@@ -48,10 +54,12 @@ func Run() error {
 		return runGC(ctx, rootDir, jsonFlag, args[1:])
 	case "repo":
 		return runRepo(ctx, rootDir, jsonFlag, args[1:])
+	case "template":
+		return runTemplate(ctx, rootDir, jsonFlag, args[1:])
 	case "src":
 		return runSrc(ctx, rootDir, jsonFlag, args[1:])
 	case "new":
-		return runWorkspaceNew(ctx, rootDir, args[1:])
+		return runWorkspaceNew(ctx, rootDir, args[1:], noPrompt)
 	case "add":
 		return runWorkspaceAdd(ctx, rootDir, args[1:])
 	case "ls":
@@ -63,6 +71,34 @@ func Run() error {
 	default:
 		return fmt.Errorf("unknown command: %s", args[0])
 	}
+}
+
+func runTemplate(ctx context.Context, rootDir string, jsonFlag bool, args []string) error {
+	if len(args) == 0 {
+		return fmt.Errorf("template subcommand is required")
+	}
+	switch args[0] {
+	case "ls":
+		return runTemplateList(ctx, rootDir, jsonFlag, args[1:])
+	default:
+		return fmt.Errorf("unknown template subcommand: %s", args[0])
+	}
+}
+
+func runTemplateList(ctx context.Context, rootDir string, jsonFlag bool, args []string) error {
+	if len(args) != 0 {
+		return fmt.Errorf("usage: gws template ls")
+	}
+	file, err := template.Load(rootDir)
+	if err != nil {
+		return err
+	}
+	names := template.Names(file)
+	if jsonFlag {
+		return writeTemplateListJSON(names)
+	}
+	writeTemplateListText(names)
+	return nil
 }
 
 func runSrc(ctx context.Context, rootDir string, jsonFlag bool, args []string) error {
@@ -224,18 +260,62 @@ func runRepoList(ctx context.Context, rootDir string, jsonFlag bool, args []stri
 	return nil
 }
 
-func runWorkspaceNew(ctx context.Context, rootDir string, args []string) error {
-	if len(args) != 1 {
-		return fmt.Errorf("usage: gws new <WORKSPACE_ID>")
+func runWorkspaceNew(ctx context.Context, rootDir string, args []string, noPrompt bool) error {
+	newFlags := flag.NewFlagSet("new", flag.ContinueOnError)
+	var templateName string
+	newFlags.StringVar(&templateName, "template", "", "template name")
+	if err := newFlags.Parse(args); err != nil {
+		return err
 	}
+	if newFlags.NArg() > 1 {
+		return fmt.Errorf("usage: gws new [--template <name>] [<WORKSPACE_ID>]")
+	}
+
+	workspaceID := ""
+	if newFlags.NArg() == 1 {
+		workspaceID = newFlags.Arg(0)
+	}
+
+	if templateName == "" || workspaceID == "" {
+		if noPrompt {
+			return fmt.Errorf("template name and workspace id are required without prompt")
+		}
+		var err error
+		templateName, workspaceID, err = promptTemplateAndID(rootDir, templateName, workspaceID)
+		if err != nil {
+			return err
+		}
+	}
+
 	cfg, err := config.Load("")
 	if err != nil {
 		return err
 	}
-	wsDir, err := workspace.New(ctx, rootDir, args[0], cfg)
+
+	file, err := template.Load(rootDir)
 	if err != nil {
 		return err
 	}
+	tmpl, ok := file.Templates[templateName]
+	if !ok {
+		return fmt.Errorf("template not found: %s", templateName)
+	}
+	if err := preflightTemplateRepos(ctx, rootDir, tmpl); err != nil {
+		return err
+	}
+
+	wsDir, err := workspace.New(ctx, rootDir, workspaceID, cfg)
+	if err != nil {
+		return err
+	}
+
+	if err := applyTemplate(ctx, rootDir, workspaceID, tmpl, cfg); err != nil {
+		if rollbackErr := workspace.Remove(ctx, rootDir, workspaceID); rollbackErr != nil {
+			return fmt.Errorf("apply template failed: %w (rollback failed: %v)", err, rollbackErr)
+		}
+		return err
+	}
+
 	fmt.Fprintln(os.Stdout, wsDir)
 	return nil
 }
@@ -255,6 +335,94 @@ func runWorkspaceAdd(ctx context.Context, rootDir string, args []string) error {
 		return err
 	}
 	fmt.Fprintf(os.Stdout, "%s\t%s\n", repoEntry.Alias, repoEntry.WorktreePath)
+	return nil
+}
+
+func promptTemplateAndID(rootDir, templateName, workspaceID string) (string, string, error) {
+	file, err := template.Load(rootDir)
+	if err != nil {
+		return "", "", err
+	}
+	names := template.Names(file)
+	if len(names) == 0 {
+		return "", "", fmt.Errorf("no templates found in %s", filepath.Join(rootDir, template.FileName))
+	}
+
+	reader := bufio.NewReader(os.Stdin)
+	if templateName == "" {
+		fmt.Fprintln(os.Stdout, "available templates:")
+		for _, name := range names {
+			fmt.Fprintf(os.Stdout, " - %s\n", name)
+		}
+		for {
+			input, err := promptInput(reader, "template> ")
+			if err != nil {
+				return "", "", err
+			}
+			if contains(names, input) {
+				templateName = input
+				break
+			}
+			fmt.Fprintln(os.Stdout, "invalid template name")
+		}
+	}
+
+	if workspaceID == "" {
+		for {
+			input, err := promptInput(reader, "workspace id> ")
+			if err != nil {
+				return "", "", err
+			}
+			if strings.TrimSpace(input) != "" {
+				workspaceID = input
+				break
+			}
+		}
+	}
+
+	return templateName, workspaceID, nil
+}
+
+func promptInput(reader *bufio.Reader, label string) (string, error) {
+	fmt.Fprint(os.Stdout, label)
+	line, err := reader.ReadString('\n')
+	if err != nil && err != io.EOF {
+		return "", err
+	}
+	return strings.TrimSpace(line), nil
+}
+
+func contains(values []string, target string) bool {
+	for _, value := range values {
+		if value == target {
+			return true
+		}
+	}
+	return false
+}
+
+func preflightTemplateRepos(ctx context.Context, rootDir string, tmpl template.Template) error {
+	var missing []string
+	for _, repoEntry := range tmpl.Repos {
+		if strings.TrimSpace(repoEntry.Repo) == "" {
+			return fmt.Errorf("template repo is empty")
+		}
+		if _, err := repo.Open(ctx, rootDir, repoEntry.Repo); err != nil {
+			missing = append(missing, repoEntry.Repo)
+		}
+	}
+	if len(missing) > 0 {
+		return fmt.Errorf("repo get required for: %s", strings.Join(missing, ", "))
+	}
+	return nil
+}
+
+func applyTemplate(ctx context.Context, rootDir, workspaceID string, tmpl template.Template, cfg config.Config) error {
+	for _, repoEntry := range tmpl.Repos {
+		if _, err := workspace.Add(ctx, rootDir, workspaceID, repoEntry.Repo, "", cfg); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -452,6 +620,29 @@ func writeRepoListText(entries []repo.Entry, warnings []error) {
 	}
 	for _, warning := range warnings {
 		fmt.Fprintf(os.Stderr, "warning: %v\n", warning)
+	}
+}
+
+type templateListJSON struct {
+	SchemaVersion int      `json:"schema_version"`
+	Command       string   `json:"command"`
+	Templates     []string `json:"templates"`
+}
+
+func writeTemplateListJSON(names []string) error {
+	out := templateListJSON{
+		SchemaVersion: 1,
+		Command:       "template.ls",
+		Templates:     names,
+	}
+	enc := json.NewEncoder(os.Stdout)
+	enc.SetIndent("", "  ")
+	return enc.Encode(out)
+}
+
+func writeTemplateListText(names []string) {
+	for _, name := range names {
+		fmt.Fprintln(os.Stdout, name)
 	}
 }
 

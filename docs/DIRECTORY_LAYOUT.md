@@ -3,6 +3,7 @@
 ## ルート
 - `GWS_ROOT` があればそれを使う
 - 無ければ `~/gws`
+- `templates.yaml` は `GWS_ROOT` 直下に配置
 
 ## 配下構造（固定）
 - `$GWS_ROOT/bare/`   : repo store（bare repo）

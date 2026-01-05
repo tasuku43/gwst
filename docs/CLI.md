@@ -19,7 +19,7 @@
 
 ## コマンド一覧（MVP）
 
-- `gws new <ID>`
+- `gws new [--template <name>] [<ID>]`
 - `gws add <ID> <repo>`
 - `gws ls`
 - `gws status <ID>`
@@ -30,6 +30,7 @@
 - `gws repo ls`
 - `gws src get <repo>`
 - `gws src ls`
+- `gws template ls`
 
 ## repo
 
@@ -65,14 +66,21 @@ MVP出力:
 目的:
 - src 配下の一覧を出す
 
+## template
+
+### gws template ls
+目的:
+- `$GWS_ROOT/templates.yaml` に定義されたテンプレート名を一覧する
+
 ## workspace
 
-### gws new <WORKSPACE_ID>
+### gws new [--template <name>] [<WORKSPACE_ID>]
 目的:
 - `$GWS_ROOT/ws/<id>/` と `.gws/manifest.yaml` を作成
 
 制約:
 - WORKSPACE_ID は Git ブランチ名として妥当な文字列であること（refname check）
+- template 未指定時は対話で template と WORKSPACE_ID を入力する
 
 ### gws add <WORKSPACE_ID> <repo>
 目的:

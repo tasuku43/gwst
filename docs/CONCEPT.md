@@ -44,6 +44,7 @@ gws は、作業場を workspace（タスク単位ディレクトリ）へ昇格
 - `$GWS_ROOT/bare/` : repo store（bare repo）
 - `$GWS_ROOT/src/`  : human working tree
 - `$GWS_ROOT/ws/`    : workspace 群（タスク単位）
+- `$GWS_ROOT/templates.yaml` : workspace templates
 
 ## 4. 設定（Config）
 

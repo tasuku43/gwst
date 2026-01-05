@@ -29,6 +29,7 @@
 | MVP-051 | Integration tests for repo get + ws add/rm | To Do |
 | MVP-060 | Basic Makefile or justfile | To Do |
 | MVP-070 | src get/ls (human working tree) | To Do |
+| MVP-080 | template (workspace templates) | To Do |
 
 ## MVP Definition of Done (全体)
 - コマンド:
@@ -243,3 +244,18 @@ Goal:
 Acceptance:
 - `gws src get <repo>` で `$GWS_ROOT/src/<host>/<owner>/<repo>` が作成される
 - `gws src ls` で `src` 配下の一覧が出せる
+
+---
+
+## EP8: Templates
+
+### MVP-080: template + new
+Goal:
+- `$GWS_ROOT/templates.yaml` で workspace テンプレートを管理する
+- `gws new` でテンプレート適用を行えるようにする
+
+Acceptance:
+- `gws template ls` でテンプレート名を一覧できる
+- `gws new --template <name> <id>` で template の repos が `ws` に追加される
+- template 未指定時は対話で template と workspace id を入力できる
+- repo get 未実行の repo があればエラーで中断する
