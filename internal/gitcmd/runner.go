@@ -64,11 +64,12 @@ func isAllowedSubcommand(subcommand string) bool {
 }
 
 var allowedSubcommands = map[string]struct{}{
-	"clone":    {},
-	"fetch":    {},
-	"init":     {},
-	"status":   {},
-	"worktree": {},
+	"check-ref-format": {},
+	"clone":            {},
+	"fetch":            {},
+	"init":             {},
+	"status":           {},
+	"worktree":         {},
 }
 
 func exitCode(err error) int {
