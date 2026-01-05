@@ -6,7 +6,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/tasuku43/gws/internal/config"
 	"github.com/tasuku43/gws/internal/paths"
@@ -112,60 +111,21 @@ func runWorkspaceNew(ctx context.Context, rootDir string, args []string) error {
 }
 
 func runWorkspaceAdd(ctx context.Context, rootDir string, args []string) error {
-	alias, positional, err := parseAlias(args)
-	if err != nil {
-		return err
+	if len(args) != 2 {
+		return fmt.Errorf("usage: gws add <WORKSPACE_ID> <repo>")
 	}
-	if len(positional) != 2 {
-		return fmt.Errorf("usage: gws add <WORKSPACE_ID> <repo> --alias <name>")
-	}
-	workspaceID := positional[0]
-	repoSpec := positional[1]
-	if alias == "" {
-		return fmt.Errorf("alias is required")
-	}
+	workspaceID := args[0]
+	repoSpec := args[1]
 	cfg, err := config.Load("")
 	if err != nil {
 		return err
 	}
-	repoEntry, err := workspace.Add(ctx, rootDir, workspaceID, repoSpec, alias, cfg)
+	repoEntry, err := workspace.Add(ctx, rootDir, workspaceID, repoSpec, "", cfg)
 	if err != nil {
 		return err
 	}
 	fmt.Fprintf(os.Stdout, "%s\t%s\n", repoEntry.Alias, repoEntry.WorktreePath)
 	return nil
-}
-
-func parseAlias(args []string) (string, []string, error) {
-	var alias string
-	var positional []string
-	for i := 0; i < len(args); i++ {
-		arg := args[i]
-		switch {
-		case arg == "--alias":
-			if i+1 >= len(args) {
-				return "", nil, fmt.Errorf("alias is required")
-			}
-			if alias != "" {
-				return "", nil, fmt.Errorf("alias is already set")
-			}
-			alias = args[i+1]
-			i++
-		case strings.HasPrefix(arg, "--alias="):
-			if alias != "" {
-				return "", nil, fmt.Errorf("alias is already set")
-			}
-			alias = strings.TrimPrefix(arg, "--alias=")
-		case strings.HasPrefix(arg, "-"):
-			return "", nil, fmt.Errorf("unknown flag: %s", arg)
-		default:
-			positional = append(positional, arg)
-		}
-	}
-	if alias == "" {
-		return "", nil, fmt.Errorf("alias is required")
-	}
-	return alias, positional, nil
 }
 
 func runWorkspaceList(ctx context.Context, rootDir string, jsonFlag bool, args []string) error {

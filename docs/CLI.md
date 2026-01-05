@@ -20,7 +20,7 @@
 ## コマンド一覧（MVP）
 
 - `gws new <ID>`
-- `gws add <ID> <repo> --alias <name>`
+- `gws add <ID> <repo>`
 - `gws ls`
 - `gws status <ID>`
 - `gws rm <ID>`
@@ -58,7 +58,7 @@ MVP出力:
 制約:
 - WORKSPACE_ID は Git ブランチ名として妥当な文字列であること（refname check）
 
-### gws add <WORKSPACE_ID> <repo> --alias <name>
+### gws add <WORKSPACE_ID> <repo>
 目的:
 - workspace 配下に worktree を作成する
 
@@ -68,7 +68,7 @@ MVP出力:
 
 挙動:
 1. repo get 済みであることを前提に store を最新化（未取得ならエラー）
-2. `<ws>/<id>/<alias>` を作業ディレクトリとして決定
+2. `<ws>/<id>/<repo_name>` を作業ディレクトリとして決定
 3. ブランチが存在しない場合は base_ref から作成して worktree add
 4. manifest に追記
 5. last_used_at を更新

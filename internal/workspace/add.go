@@ -14,9 +14,6 @@ import (
 )
 
 func Add(ctx context.Context, rootDir, workspaceID, repoSpec, alias string, cfg config.Config) (Repo, error) {
-	if alias == "" {
-		return Repo{}, fmt.Errorf("alias is required")
-	}
 	if err := validateWorkspaceID(ctx, workspaceID); err != nil {
 		return Repo{}, err
 	}
@@ -40,6 +37,12 @@ func Add(ctx context.Context, rootDir, workspaceID, repoSpec, alias string, cfg 
 	spec, err := repospec.Normalize(repoSpec)
 	if err != nil {
 		return Repo{}, err
+	}
+	if alias == "" {
+		alias = spec.Repo
+	}
+	if alias == "" {
+		return Repo{}, fmt.Errorf("alias is required")
 	}
 	if err := ensureRepoNotRegistered(manifest, alias, spec.RepoKey); err != nil {
 		return Repo{}, err
