@@ -24,7 +24,7 @@ func Get(ctx context.Context, rootDir string, repo string) (Store, error) {
 	}
 	remoteURL := strings.TrimSpace(repo)
 
-	storePath := filepath.Join(rootDir, "bare", spec.Host, spec.Owner, spec.Repo+".git")
+	storePath := storePathForSpec(rootDir, spec)
 
 	exists, err := pathExists(storePath)
 	if err != nil {
@@ -62,7 +62,7 @@ func Open(ctx context.Context, rootDir string, repo string) (Store, error) {
 	}
 	remoteURL := strings.TrimSpace(repo)
 
-	storePath := filepath.Join(rootDir, "bare", spec.Host, spec.Owner, spec.Repo+".git")
+	storePath := storePathForSpec(rootDir, spec)
 
 	exists, err := pathExists(storePath)
 	if err != nil {
@@ -72,7 +72,7 @@ func Open(ctx context.Context, rootDir string, repo string) (Store, error) {
 		return Store{}, fmt.Errorf("repo store not found, run: gws repo get %s", repo)
 	}
 
-	if _, err := gitcmd.Run(ctx, []string{"fetch", "--prune"}, gitcmd.Options{Dir: storePath}); err != nil {
+	if err := normalizeStore(ctx, storePath); err != nil {
 		return Store{}, err
 	}
 
@@ -102,6 +102,23 @@ func ensureSrc(ctx context.Context, rootDir string, spec repospec.Spec, storePat
 	}
 	_, _ = gitcmd.Run(ctx, []string{"remote", "set-url", "origin", remoteURL}, gitcmd.Options{Dir: srcPath})
 	return nil
+}
+
+func Exists(rootDir, repo string) (string, bool, error) {
+	spec, err := repospec.Normalize(repo)
+	if err != nil {
+		return "", false, err
+	}
+	storePath := storePathForSpec(rootDir, spec)
+	exists, err := pathExists(storePath)
+	if err != nil {
+		return "", false, err
+	}
+	return storePath, exists, nil
+}
+
+func storePathForSpec(rootDir string, spec repospec.Spec) string {
+	return filepath.Join(rootDir, "bare", spec.Host, spec.Owner, spec.Repo+".git")
 }
 
 func normalizeStore(ctx context.Context, storePath string) error {

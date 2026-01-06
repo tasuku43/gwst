@@ -498,7 +498,11 @@ func preflightTemplateRepos(ctx context.Context, rootDir string, tmpl template.T
 		if strings.TrimSpace(repoSpec) == "" {
 			return nil, fmt.Errorf("template repo is empty")
 		}
-		if _, err := repo.Open(ctx, rootDir, repoSpec); err != nil {
+		_, exists, err := repo.Exists(rootDir, repoSpec)
+		if err != nil {
+			return nil, err
+		}
+		if !exists {
 			missing = append(missing, repoSpec)
 		}
 	}
