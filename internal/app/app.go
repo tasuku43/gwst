@@ -304,11 +304,30 @@ func runRepoGet(ctx context.Context, rootDir string, args []string) error {
 	if len(args) != 1 {
 		return fmt.Errorf("usage: gws repo get <repo>")
 	}
-	store, err := repo.Get(ctx, rootDir, args[0])
+	repoSpec := strings.TrimSpace(args[0])
+	if repoSpec == "" {
+		return fmt.Errorf("repo is required")
+	}
+
+	theme := ui.DefaultTheme()
+	useColor := isatty.IsTerminal(os.Stdout.Fd())
+	renderer := ui.NewRenderer(os.Stdout, theme, useColor)
+	output.SetStepLogger(renderer)
+	defer output.SetStepLogger(nil)
+
+	header := fmt.Sprintf("gws repo get (%s)", repoSpec)
+	renderer.Header(header)
+	renderer.Blank()
+	renderer.Section("Steps")
+	output.Step(fmt.Sprintf("repo get %s", repoSpec))
+
+	store, err := repo.Get(ctx, rootDir, repoSpec)
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(os.Stdout, "%s%s\t%s\n", output.Indent, store.RepoKey, store.StorePath)
+	renderer.Blank()
+	renderer.Section("Result")
+	renderer.Result(fmt.Sprintf("%s\t%s", store.RepoKey, store.StorePath))
 	return nil
 }
 

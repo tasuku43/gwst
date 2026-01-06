@@ -31,7 +31,7 @@
 | MVP-080 | template (workspace templates) | To Do |
 | MVP-090 | init (bootstrap) | To Do |
 | MVP-100 | UI: gws new (Bubble Tea inputs + sectioned output) | Done |
-| MVP-101 | UI: gws repo get | To Do |
+| MVP-101 | UI: gws repo get | Done |
 | MVP-102 | UI: gws repo ls | To Do |
 | MVP-103 | UI: gws add | To Do |
 | MVP-104 | UI: gws ls | To Do |
