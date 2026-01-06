@@ -274,8 +274,26 @@ func runWorkspaceNew(ctx context.Context, rootDir string, args []string, noPromp
 	if !ok {
 		return fmt.Errorf("template not found: %s", templateName)
 	}
-	if err := preflightTemplateRepos(ctx, rootDir, tmpl); err != nil {
+	missing, err := preflightTemplateRepos(ctx, rootDir, tmpl)
+	if err != nil {
 		return err
+	}
+	if len(missing) > 0 {
+		if noPrompt {
+			return fmt.Errorf("repo get required for: %s", strings.Join(missing, ", "))
+		}
+		confirm, err := promptConfirm(fmt.Sprintf("repo get required for %d repos. run now?", len(missing)))
+		if err != nil {
+			return err
+		}
+		if !confirm {
+			return fmt.Errorf("repo get required for: %s", strings.Join(missing, ", "))
+		}
+		for _, repoSpec := range missing {
+			if _, err := repo.Get(ctx, rootDir, repoSpec); err != nil {
+				return err
+			}
+		}
 	}
 
 	wsDir, err := workspace.New(ctx, rootDir, workspaceID, cfg)
@@ -408,6 +426,20 @@ func promptSelect(label string, items []string) (string, error) {
 	return result, nil
 }
 
+func promptConfirm(label string) (bool, error) {
+	items := []string{"yes", "no"}
+	sel := promptui.Select{
+		Label: label,
+		Items: items,
+		Size:  len(items),
+	}
+	_, result, err := sel.Run()
+	if err != nil {
+		return false, err
+	}
+	return result == "yes", nil
+}
+
 func cloneFuncMap(src texttmpl.FuncMap) texttmpl.FuncMap {
 	dest := texttmpl.FuncMap{}
 	for key, value := range src {
@@ -423,20 +455,17 @@ func min(a, b int) int {
 	return b
 }
 
-func preflightTemplateRepos(ctx context.Context, rootDir string, tmpl template.Template) error {
+func preflightTemplateRepos(ctx context.Context, rootDir string, tmpl template.Template) ([]string, error) {
 	var missing []string
 	for _, repoSpec := range tmpl.Repos {
 		if strings.TrimSpace(repoSpec) == "" {
-			return fmt.Errorf("template repo is empty")
+			return nil, fmt.Errorf("template repo is empty")
 		}
 		if _, err := repo.Open(ctx, rootDir, repoSpec); err != nil {
 			missing = append(missing, repoSpec)
 		}
 	}
-	if len(missing) > 0 {
-		return fmt.Errorf("repo get required for: %s", strings.Join(missing, ", "))
-	}
-	return nil
+	return missing, nil
 }
 
 func applyTemplate(ctx context.Context, rootDir, workspaceID string, tmpl template.Template, cfg config.Config) error {

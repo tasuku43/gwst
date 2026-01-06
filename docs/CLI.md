@@ -95,6 +95,9 @@ MVP出力:
 4. manifest に追記
 5. last_used_at を更新
 
+テンプレート適用時の repo get:
+- 未取得 repo がある場合、対話で `repo get` を実行して続行するか確認する
+
 失敗条件（MVP）
 - alias が衝突している
 - WORKSPACE_ID ブランチが既に別の worktree で checkout されている（Gitが拒否するはず）
