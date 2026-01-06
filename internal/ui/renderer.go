@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/tasuku43/gws/internal/output"
 )
 
 type Renderer struct {
@@ -35,19 +36,23 @@ func (r *Renderer) Section(title string) {
 }
 
 func (r *Renderer) Step(text string) {
-	r.writeLine(Indent + StepPrefix + " " + text)
+	r.writeLine(output.Indent + output.StepPrefix + " " + text)
 }
 
 func (r *Renderer) StepLog(text string) {
-	r.writeLine(Indent + Indent + LogConnector + " " + r.style(text, r.theme.Muted))
+	r.writeLine(output.Indent + output.Indent + output.LogConnector + " " + r.style(text, r.theme.Muted))
+}
+
+func (r *Renderer) StepLogOutput(text string) {
+	r.writeLine(output.LogOutputPrefix() + r.style(text, r.theme.Muted))
 }
 
 func (r *Renderer) Result(text string) {
-	r.writeLine(Indent + text)
+	r.writeLine(output.Indent + text)
 }
 
 func (r *Renderer) TreeLine(prefix, name string) {
-	r.writeLine(Indent + prefix + name)
+	r.writeLine(output.Indent + prefix + name)
 }
 
 func (r *Renderer) style(text string, style lipgloss.Style) string {
@@ -59,4 +64,12 @@ func (r *Renderer) style(text string, style lipgloss.Style) string {
 
 func (r *Renderer) writeLine(text string) {
 	fmt.Fprintln(r.out, strings.TrimRight(text, "\n"))
+}
+
+func (r *Renderer) Log(text string) {
+	r.StepLog(text)
+}
+
+func (r *Renderer) LogOutput(text string) {
+	r.StepLogOutput(text)
 }

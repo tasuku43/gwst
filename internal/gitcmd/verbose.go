@@ -21,5 +21,9 @@ func Logf(format string, args ...any) {
 	if verbose {
 		return
 	}
-	fmt.Fprintf(os.Stderr, "\x1b[36m%s$ "+format+"\x1b[0m\n", append([]any{output.Indent}, args...)...)
+	if output.HasStepLogger() {
+		output.Logf("$ "+format, args...)
+		return
+	}
+	fmt.Fprintf(os.Stderr, "%s$ "+format+"\n", append([]any{output.Indent}, args...)...)
 }

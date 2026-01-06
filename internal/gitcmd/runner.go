@@ -44,7 +44,11 @@ func Run(ctx context.Context, args []string, opts Options) (Result, error) {
 	cmd.Stderr = &stderr
 
 	if verbose {
-		fmt.Fprintf(os.Stderr, "\x1b[36m%s$ git %s\x1b[0m\n", output.Indent, strings.Join(args, " "))
+		if output.HasStepLogger() {
+			output.Logf("$ git %s", strings.Join(args, " "))
+		} else {
+			fmt.Fprintf(os.Stderr, "%s$ git %s\n", output.Indent, strings.Join(args, " "))
+		}
 	}
 	err := cmd.Run()
 	result := Result{
@@ -54,13 +58,25 @@ func Run(ctx context.Context, args []string, opts Options) (Result, error) {
 	}
 	if verbose || opts.ShowOutput {
 		if result.Stdout != "" {
-			writeIndented(os.Stderr, result.Stdout, output.Indent)
+			if output.HasStepLogger() {
+				output.LogLines(result.Stdout)
+			} else {
+				writeIndented(os.Stderr, result.Stdout, output.Indent)
+			}
 		}
 		if result.Stderr != "" {
-			writeIndented(os.Stderr, result.Stderr, output.Indent)
+			if output.HasStepLogger() {
+				output.LogLines(result.Stderr)
+			} else {
+				writeIndented(os.Stderr, result.Stderr, output.Indent)
+			}
 		}
 		if verbose {
-			fmt.Fprintf(os.Stderr, "%sexit: %d\n", output.Indent, result.ExitCode)
+			if output.HasStepLogger() {
+				output.LogOutputf("exit: %d", result.ExitCode)
+			} else {
+				fmt.Fprintf(os.Stderr, "%sexit: %d\n", output.Indent, result.ExitCode)
+			}
 		}
 	}
 	if err != nil {

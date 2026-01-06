@@ -13,10 +13,14 @@ Status: draft (MVP+)
 - JSON/format switching: MVP では扱わない
 
 ## Layout (common)
-Sectioned layout with 3 sections:
+Sectioned layout with 3 sections (interactive may insert Inputs):
 
 ```
 Header
+
+Inputs
+  <input line>
+  <input line>
 
 Steps
   <step line>
@@ -71,6 +75,23 @@ Steps
 
 ## Examples
 
+### gws new (interactive)
+```
+gws new
+
+Inputs
+  › template: hel
+    └─ helmfiles
+  › workspace id: SREP-123
+
+Steps
+  › worktree add helmfiles
+
+Result
+  /Users/me/gws/ws/SREP-123
+    └─ helmfiles
+```
+
 ### gws new (non-interactive)
 ```
 gws new (template: app)
@@ -92,7 +113,7 @@ gws review <PR URL>
 Steps
   › repo get required for 1 repo
     └─ gws repo get git@github.com:org/repo.git
-  › run now? (yes/no)
+  › run now? (y/n)
 ```
 
 ## Notes

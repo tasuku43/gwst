@@ -2,12 +2,6 @@ package ui
 
 import "github.com/charmbracelet/lipgloss"
 
-const (
-	Indent       = "  "
-	StepPrefix   = "›"
-	LogConnector = "└─"
-)
-
 type Theme struct {
 	Header       lipgloss.Style
 	SectionTitle lipgloss.Style

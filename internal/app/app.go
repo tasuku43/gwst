@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/manifoldco/promptui"
+	"github.com/mattn/go-isatty"
 	"github.com/tasuku43/gws/internal/config"
 	"github.com/tasuku43/gws/internal/doctor"
 	"github.com/tasuku43/gws/internal/gc"
@@ -24,9 +24,10 @@ import (
 	"github.com/tasuku43/gws/internal/output"
 	"github.com/tasuku43/gws/internal/paths"
 	"github.com/tasuku43/gws/internal/repo"
+	"github.com/tasuku43/gws/internal/repospec"
 	"github.com/tasuku43/gws/internal/template"
+	"github.com/tasuku43/gws/internal/ui"
 	"github.com/tasuku43/gws/internal/workspace"
-	texttmpl "text/template"
 )
 
 // Run is a placeholder for the CLI entrypoint.
@@ -360,13 +361,17 @@ func runWorkspaceNew(ctx context.Context, rootDir string, args []string, noPromp
 		workspaceID = newFlags.Arg(0)
 	}
 
+	theme := ui.DefaultTheme()
+	useColor := isatty.IsTerminal(os.Stdout.Fd())
+	prompted := false
+
 	if templateName == "" || workspaceID == "" {
 		if noPrompt {
 			return fmt.Errorf("template name and workspace id are required without prompt")
 		}
-		fmt.Fprintln(os.Stdout)
+		prompted = true
 		var err error
-		templateName, workspaceID, err = promptTemplateAndID(rootDir, templateName, workspaceID)
+		templateName, workspaceID, err = promptTemplateAndID(rootDir, templateName, workspaceID, theme, useColor)
 		if err != nil {
 			return err
 		}
@@ -389,13 +394,38 @@ func runWorkspaceNew(ctx context.Context, rootDir string, args []string, noPromp
 	if err != nil {
 		return err
 	}
+	renderer := ui.NewRenderer(os.Stdout, theme, useColor)
+	output.SetStepLogger(renderer)
+	defer output.SetStepLogger(nil)
+
+	header := "gws new"
+	var headerParts []string
+	if templateName != "" {
+		headerParts = append(headerParts, fmt.Sprintf("template: %s", templateName))
+	}
+	if workspaceID != "" {
+		headerParts = append(headerParts, fmt.Sprintf("workspace id: %s", workspaceID))
+	}
+	if len(headerParts) > 0 {
+		header = fmt.Sprintf("%s (%s)", header, strings.Join(headerParts, ", "))
+	}
+	if !prompted {
+		renderer.Header(header)
+		renderer.Blank()
+	} else {
+		renderer.Blank()
+	}
+	renderer.Section("Steps")
+
 	if len(missing) > 0 {
 		if noPrompt {
 			return fmt.Errorf("repo get required for: %s", strings.Join(missing, ", "))
 		}
-		fmt.Fprintf(os.Stdout, "%srepo get required for %d repos.\n", output.Indent, len(missing))
-		printRepoGetCommands(missing)
-		confirm, err := promptConfirm("run now?")
+		output.Step(fmt.Sprintf("repo get required for %d repos", len(missing)))
+		for _, repoSpec := range missing {
+			output.Log(fmt.Sprintf("gws repo get %s", repoSpec))
+		}
+		confirm, err := ui.PromptConfirmInline("run now?", theme, useColor)
 		if err != nil {
 			return err
 		}
@@ -403,6 +433,7 @@ func runWorkspaceNew(ctx context.Context, rootDir string, args []string, noPromp
 			return fmt.Errorf("repo get required for: %s", strings.Join(missing, ", "))
 		}
 		for _, repoSpec := range missing {
+			output.Step(fmt.Sprintf("repo get %s", repoSpec))
 			if _, err := repo.Get(ctx, rootDir, repoSpec); err != nil {
 				return err
 			}
@@ -414,7 +445,6 @@ func runWorkspaceNew(ctx context.Context, rootDir string, args []string, noPromp
 		return err
 	}
 
-	fmt.Fprintln(os.Stdout)
 	if err := applyTemplate(ctx, rootDir, workspaceID, tmpl, cfg); err != nil {
 		if rollbackErr := workspace.Remove(ctx, rootDir, workspaceID); rollbackErr != nil {
 			return fmt.Errorf("apply template failed: %w (rollback failed: %v)", err, rollbackErr)
@@ -422,9 +452,10 @@ func runWorkspaceNew(ctx context.Context, rootDir string, args []string, noPromp
 		return err
 	}
 
-	fmt.Fprintln(os.Stdout)
-	fmt.Fprintf(os.Stdout, "%s\x1b[32mWorkspace ready!\x1b[0m\n\n", output.Indent)
-	if err := printWorkspaceTree(wsDir); err != nil {
+	renderer.Blank()
+	renderer.Section("Result")
+	renderer.Result(wsDir)
+	if err := printWorkspaceTree(wsDir, renderer); err != nil {
 		return err
 	}
 	return nil
@@ -490,6 +521,9 @@ func runReview(ctx context.Context, rootDir string, args []string, noPrompt bool
 		return fmt.Errorf("cannot determine repo url for PR")
 	}
 
+	theme := ui.DefaultTheme()
+	useColor := isatty.IsTerminal(os.Stdout.Fd())
+
 	_, exists, err := repo.Exists(rootDir, repoURL)
 	if err != nil {
 		return err
@@ -500,7 +534,7 @@ func runReview(ctx context.Context, rootDir string, args []string, noPrompt bool
 		}
 		fmt.Fprintf(os.Stdout, "%srepo get required for 1 repo.\n", output.Indent)
 		printRepoGetCommands([]string{repoURL})
-		confirm, err := promptConfirm("run now?")
+		confirm, err := ui.PromptConfirmInline("run now?", theme, useColor)
 		if err != nil {
 			return err
 		}
@@ -536,7 +570,7 @@ func runReview(ctx context.Context, rootDir string, args []string, noPrompt bool
 
 	fmt.Fprintln(os.Stdout)
 	fmt.Fprintf(os.Stdout, "%s\x1b[32mWorkspace ready!\x1b[0m\n\n", output.Indent)
-	if err := printWorkspaceTree(wsDir); err != nil {
+	if err := printWorkspaceTree(wsDir, nil); err != nil {
 		return err
 	}
 	return nil
@@ -662,7 +696,7 @@ func fetchPRHead(ctx context.Context, storePath, headRef string) error {
 	return nil
 }
 
-func promptTemplateAndID(rootDir, templateName, workspaceID string) (string, string, error) {
+func promptTemplateAndID(rootDir, templateName, workspaceID string, theme ui.Theme, useColor bool) (string, string, error) {
 	file, err := template.Load(rootDir)
 	if err != nil {
 		return "", "", err
@@ -671,27 +705,14 @@ func promptTemplateAndID(rootDir, templateName, workspaceID string) (string, str
 	if len(names) == 0 {
 		return "", "", fmt.Errorf("no templates found in %s", filepath.Join(rootDir, template.FileName))
 	}
-
-	if templateName == "" {
-		selected, err := promptSelect("template", names)
-		if err != nil {
-			return "", "", err
-		}
-		templateName = selected
+	templateName, workspaceID, err = ui.PromptNewWorkspaceInputs("gws new", names, templateName, workspaceID, theme, useColor)
+	if err != nil {
+		return "", "", err
 	}
-
-	if workspaceID == "" {
-		input, err := promptText("workspace id", true)
-		if err != nil {
-			return "", "", err
-		}
-		workspaceID = input
-	}
-
 	return templateName, workspaceID, nil
 }
 
-func printWorkspaceTree(wsDir string) error {
+func printWorkspaceTree(wsDir string, r *ui.Renderer) error {
 	entries, err := os.ReadDir(wsDir)
 	if err != nil {
 		return fmt.Errorf("read workspace dir: %w", err)
@@ -707,108 +728,30 @@ func printWorkspaceTree(wsDir string) error {
 		names = append(names, entry.Name())
 	}
 	if len(names) == 0 {
-		fmt.Fprintf(os.Stdout, "%s\x1b[33m%s\x1b[0m\n", output.Indent, wsDir)
+		if r != nil {
+			r.Result(wsDir)
+			return nil
+		}
+		fmt.Fprintf(os.Stdout, "%s%s\n", output.Indent, wsDir)
 		return nil
 	}
-	fmt.Fprintf(os.Stdout, "%s\x1b[33m%s\x1b[0m\n", output.Indent, wsDir)
+	if r != nil {
+		// Path already printed by caller.
+	} else {
+		fmt.Fprintf(os.Stdout, "%s%s\n", output.Indent, wsDir)
+	}
 	for i, name := range names {
 		prefix := "├─ "
 		if i == len(names)-1 {
 			prefix = "└─ "
 		}
-		fmt.Fprintf(os.Stdout, "%s\x1b[33m%s%s\x1b[0m\n", output.Indent, prefix, name)
+		if r != nil {
+			r.TreeLine(prefix, name)
+		} else {
+			fmt.Fprintf(os.Stdout, "%s%s%s\n", output.Indent, prefix, name)
+		}
 	}
 	return nil
-}
-
-func promptText(label string, required bool) (string, error) {
-	validate := func(input string) error {
-		if required && strings.TrimSpace(input) == "" {
-			return fmt.Errorf("required")
-		}
-		return nil
-	}
-	funcMap := cloneFuncMap(promptui.FuncMap)
-	prompt := promptui.Prompt{
-		Label:    label,
-		Validate: validate,
-		Stdout:   output.NewIndentWriter(os.Stdout),
-		Templates: &promptui.PromptTemplates{
-			Prompt:  "{{ . }}: ",
-			Valid:   "{{ . }}: ",
-			Invalid: "{{ . }}: ",
-			Success: "{{ . }}",
-			FuncMap: funcMap,
-		},
-	}
-	value, err := prompt.Run()
-	if err != nil {
-		return "", err
-	}
-	return strings.TrimSpace(value), nil
-}
-
-func promptSelect(label string, items []string) (string, error) {
-	if len(items) == 0 {
-		return "", fmt.Errorf("no items to select")
-	}
-	displayItem := func(value string) string {
-		if value == "done" {
-			return value
-		}
-		return strings.TrimSuffix(value, ".git")
-	}
-	funcMap := cloneFuncMap(promptui.FuncMap)
-	funcMap["trimGit"] = func(item string) string {
-		return displayItem(item)
-	}
-	sel := promptui.Select{
-		Label:             label,
-		Items:             items,
-		Size:              min(10, len(items)),
-		HideHelp:          false,
-		StartInSearchMode: true,
-		Stdout:            output.NewIndentWriter(os.Stdout),
-		Searcher: func(input string, index int) bool {
-			item := displayItem(items[index])
-			input = strings.ToLower(strings.TrimSpace(input))
-			item = strings.ToLower(item)
-			return strings.Contains(item, input)
-		},
-		Templates: &promptui.SelectTemplates{
-			Label:    "{{ . }}",
-			Active:   "> {{ . | trimGit }}",
-			Inactive: "  {{ . | trimGit }}",
-			Selected: "{{ . | trimGit }}",
-			FuncMap:  funcMap,
-		},
-	}
-	_, result, err := sel.Run()
-	if err != nil {
-		return "", err
-	}
-	return result, nil
-}
-
-func promptConfirm(label string) (bool, error) {
-	items := []string{"yes", "no"}
-	sel := promptui.Select{
-		Label:  label,
-		Items:  items,
-		Size:   len(items),
-		Stdout: output.NewIndentWriter(os.Stdout),
-		Templates: &promptui.SelectTemplates{
-			Label:    "{{ . }}",
-			Active:   "> {{ . }}",
-			Inactive: "  {{ . }}",
-			Selected: "{{ . }}",
-		},
-	}
-	_, result, err := sel.Run()
-	if err != nil {
-		return false, err
-	}
-	return result == "yes", nil
 }
 
 func printRepoGetCommands(repos []string) {
@@ -816,21 +759,6 @@ func printRepoGetCommands(repos []string) {
 	for _, repoSpec := range repos {
 		fmt.Fprintf(os.Stdout, "%sgws repo get %s\n", output.Indent+output.Indent, repoSpec)
 	}
-}
-
-func cloneFuncMap(src texttmpl.FuncMap) texttmpl.FuncMap {
-	dest := texttmpl.FuncMap{}
-	for key, value := range src {
-		dest[key] = value
-	}
-	return dest
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }
 
 func preflightTemplateRepos(ctx context.Context, rootDir string, tmpl template.Template) ([]string, error) {
@@ -852,6 +780,11 @@ func preflightTemplateRepos(ctx context.Context, rootDir string, tmpl template.T
 
 func applyTemplate(ctx context.Context, rootDir, workspaceID string, tmpl template.Template, cfg config.Config) error {
 	for _, repoSpec := range tmpl.Repos {
+		display := repoSpec
+		if spec, err := repospec.Normalize(repoSpec); err == nil {
+			display = spec.Repo
+		}
+		output.Step(fmt.Sprintf("worktree add %s", display))
 		if _, err := workspace.Add(ctx, rootDir, workspaceID, repoSpec, "", cfg, true); err != nil {
 			return err
 		}
