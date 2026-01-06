@@ -290,8 +290,10 @@ func runWorkspaceNew(ctx context.Context, rootDir string, args []string, noPromp
 		if !confirm {
 			return fmt.Errorf("repo get required for: %s", strings.Join(missing, ", "))
 		}
-		if err := fetchReposParallel(ctx, rootDir, missing); err != nil {
-			return err
+		for _, repoSpec := range missing {
+			if _, err := repo.Get(ctx, rootDir, repoSpec); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -448,33 +450,6 @@ func printRepoGetHint(repos []string) {
 	for _, repoSpec := range repos {
 		fmt.Fprintf(os.Stdout, "  gws repo get %s\n", repoSpec)
 	}
-}
-
-func fetchReposParallel(ctx context.Context, rootDir string, repos []string) error {
-	type result struct {
-		repo string
-		err  error
-	}
-	results := make(chan result, len(repos))
-	for _, repoSpec := range repos {
-		repoSpec := repoSpec
-		go func() {
-			_, err := repo.Get(ctx, rootDir, repoSpec)
-			results <- result{repo: repoSpec, err: err}
-		}()
-	}
-
-	var failed []string
-	for range repos {
-		res := <-results
-		if res.err != nil {
-			failed = append(failed, fmt.Sprintf("%s: %v", res.repo, res.err))
-		}
-	}
-	if len(failed) > 0 {
-		return fmt.Errorf("repo get failed: %s", strings.Join(failed, "; "))
-	}
-	return nil
 }
 
 func cloneFuncMap(src texttmpl.FuncMap) texttmpl.FuncMap {
