@@ -9,7 +9,6 @@ MVPでは “人間向け表示” を中心にしつつ、将来の agent 統�
 - `gws doctor --json`
 - `gws template ls --json`
 - `gws init --json`
-- `gws template show <name> --json`
 
 JSON は schema_version を含める:
 ```json

@@ -71,21 +71,6 @@ func Load(rootDir string) (File, error) {
 	return file, nil
 }
 
-func Save(rootDir string, file File) error {
-	if rootDir == "" {
-		return fmt.Errorf("root directory is required")
-	}
-	path := filepath.Join(rootDir, FileName)
-	data, err := yaml.Marshal(file)
-	if err != nil {
-		return err
-	}
-	if err := os.WriteFile(path, data, 0o644); err != nil {
-		return err
-	}
-	return nil
-}
-
 func Names(file File) []string {
 	var names []string
 	for name := range file.Templates {

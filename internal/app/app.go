@@ -93,68 +93,11 @@ func runTemplate(ctx context.Context, rootDir string, jsonFlag bool, args []stri
 		return fmt.Errorf("template subcommand is required")
 	}
 	switch args[0] {
-	case "add":
-		return runTemplateAdd(ctx, rootDir, args[1:])
 	case "ls":
 		return runTemplateList(ctx, rootDir, jsonFlag, args[1:])
-	case "show":
-		return runTemplateShow(ctx, rootDir, jsonFlag, args[1:])
-	case "rm":
-		return runTemplateRemove(ctx, rootDir, jsonFlag, args[1:])
 	default:
 		return fmt.Errorf("unknown template subcommand: %s", args[0])
 	}
-}
-
-func runTemplateAdd(ctx context.Context, rootDir string, args []string) error {
-	if len(args) != 0 {
-		return fmt.Errorf("usage: gws template add")
-	}
-	name, err := promptText("template name", true)
-	if err != nil {
-		return err
-	}
-
-	file, err := template.Load(rootDir)
-	if err != nil {
-		return err
-	}
-	if _, exists := file.Templates[name]; exists {
-		return fmt.Errorf("template already exists: %s", name)
-	}
-
-	var repos []string
-	knownRepos, repoWarnings, err := listRepoKeys(rootDir)
-	if err != nil {
-		return err
-	}
-	for _, warning := range repoWarnings {
-		fmt.Fprintf(os.Stderr, "warning: %v\n", warning)
-	}
-	available := make([]string, len(knownRepos))
-	copy(available, knownRepos)
-	for {
-		repoSpec, remaining, err := promptRepoSelect(available)
-		if err != nil {
-			return err
-		}
-		if repoSpec == "" {
-			break
-		}
-		repos = append(repos, repoSpec)
-		available = remaining
-	}
-	if len(repos) == 0 {
-		return fmt.Errorf("at least one repo is required")
-	}
-
-	file.Templates[name] = template.Template{Repos: repos}
-	if err := template.Save(rootDir, file); err != nil {
-		return err
-	}
-
-	fmt.Fprintf(os.Stdout, "added template: %s\n", name)
-	return nil
 }
 
 func runTemplateList(ctx context.Context, rootDir string, jsonFlag bool, args []string) error {
@@ -170,47 +113,6 @@ func runTemplateList(ctx context.Context, rootDir string, jsonFlag bool, args []
 		return writeTemplateListJSON(names)
 	}
 	writeTemplateListText(names)
-	return nil
-}
-
-func runTemplateShow(ctx context.Context, rootDir string, jsonFlag bool, args []string) error {
-	if len(args) != 1 {
-		return fmt.Errorf("usage: gws template show <name>")
-	}
-	file, err := template.Load(rootDir)
-	if err != nil {
-		return err
-	}
-	tmpl, ok := file.Templates[args[0]]
-	if !ok {
-		return fmt.Errorf("template not found: %s", args[0])
-	}
-	if jsonFlag {
-		return writeTemplateShowJSON(args[0], tmpl)
-	}
-	writeTemplateShowText(args[0], tmpl)
-	return nil
-}
-
-func runTemplateRemove(ctx context.Context, rootDir string, jsonFlag bool, args []string) error {
-	if len(args) != 1 {
-		return fmt.Errorf("usage: gws template rm <name>")
-	}
-	file, err := template.Load(rootDir)
-	if err != nil {
-		return err
-	}
-	if _, ok := file.Templates[args[0]]; !ok {
-		return fmt.Errorf("template not found: %s", args[0])
-	}
-	delete(file.Templates, args[0])
-	if err := template.Save(rootDir, file); err != nil {
-		return err
-	}
-	if jsonFlag {
-		return writeTemplateRemoveJSON(args[0])
-	}
-	fmt.Fprintf(os.Stdout, "removed template: %s\n", args[0])
 	return nil
 }
 
@@ -512,49 +414,6 @@ func cloneFuncMap(src texttmpl.FuncMap) texttmpl.FuncMap {
 		dest[key] = value
 	}
 	return dest
-}
-
-func promptRepoSelect(repos []string) (string, []string, error) {
-	options := make([]string, 0, len(repos)+1)
-	seen := map[string]struct{}{}
-	for _, repo := range repos {
-		if strings.TrimSpace(repo) == "" {
-			continue
-		}
-		if _, ok := seen[repo]; ok {
-			continue
-		}
-		seen[repo] = struct{}{}
-		options = append(options, repo)
-	}
-	options = append(options, "done")
-	selected, err := promptSelect("repo", options)
-	if err != nil {
-		return "", repos, err
-	}
-	if selected == "done" {
-		return "", repos, nil
-	}
-	remaining := make([]string, 0, len(repos))
-	for _, repo := range repos {
-		if repo == selected {
-			continue
-		}
-		remaining = append(remaining, repo)
-	}
-	return selected, remaining, nil
-}
-
-func listRepoKeys(rootDir string) ([]string, []error, error) {
-	entries, warnings, err := repo.List(rootDir)
-	if err != nil {
-		return nil, warnings, err
-	}
-	var repos []string
-	for _, entry := range entries {
-		repos = append(repos, entry.RepoKey)
-	}
-	return repos, warnings, nil
 }
 
 func min(a, b int) int {

@@ -30,9 +30,6 @@
 - `gws repo get <repo>`
 - `gws repo ls`
 - `gws template ls`
-- `gws template add`
-- `gws template show <name>`
-- `gws template rm <name>`
 
 ## repo
 
@@ -61,17 +58,7 @@ MVP出力:
 目的:
 - `$GWS_ROOT/templates.yaml` に定義されたテンプレート名を一覧する
 
-### gws template add
-目的:
-- 対話形式でテンプレートを追加する
-
-### gws template show <name>
-目的:
-- テンプレートの内容（repos）を表示する
-
-### gws template rm <name>
-目的:
-- テンプレートを削除する
+テンプレートは `templates.yaml` を直接編集する
 
 ## init
 
