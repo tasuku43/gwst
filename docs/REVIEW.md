@@ -24,7 +24,7 @@
    - headRepository（fork でないことを確認）
 3. repo store が未取得なら `repo get` と同等の導線で取得（対話）
 4. workspace を作成
-   - workspace ID は `review-pr-<number>` を使用（例: `review-pr-123`）
+   - workspace ID は `REVIEW-PR-<number>` を使用（例: `REVIEW-PR-123`）
    - 既存 workspace がある場合はエラー
 5. PR の head を取得して worktree を作成
    - `git fetch origin <headRefName>` で PR ブランチを取得

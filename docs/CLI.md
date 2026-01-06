@@ -169,3 +169,4 @@ MVP対象:
 制約:
 - GitHub のみ（fork PR は対象外）
 - 既存 workspace がある場合はエラー
+- workspace ID は `REVIEW-PR-<number>`

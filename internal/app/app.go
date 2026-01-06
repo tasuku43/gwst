@@ -1,11 +1,15 @@
 package app
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
+	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -32,19 +36,44 @@ func Run() error {
 	var jsonFlag bool
 	var noPrompt bool
 	verboseFlag := envBool("GWS_VERBOSE")
+	var helpFlag bool
 	fs.StringVar(&rootFlag, "root", "", "override gws root")
 	fs.BoolVar(&jsonFlag, "json", false, "machine readable output")
 	fs.BoolVar(&noPrompt, "no-prompt", false, "disable interactive prompt")
 	fs.BoolVar(&verboseFlag, "verbose", verboseFlag, "show detailed logs")
 	fs.BoolVar(&verboseFlag, "v", verboseFlag, "show detailed logs")
+	fs.BoolVar(&helpFlag, "help", false, "show help")
+	fs.BoolVar(&helpFlag, "h", false, "show help")
+	fs.SetOutput(os.Stdout)
+	fs.Usage = func() {
+		printGlobalHelp(os.Stdout)
+	}
 	if err := fs.Parse(os.Args[1:]); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return nil
+		}
 		return err
 	}
 	gitcmd.SetVerbose(verboseFlag)
 
 	args := fs.Args()
+	if helpFlag {
+		if len(args) > 0 && printCommandHelp(args[0], os.Stdout) {
+			return nil
+		}
+		printGlobalHelp(os.Stdout)
+		return nil
+	}
 	if len(args) == 0 {
-		return fmt.Errorf("command is required")
+		printGlobalHelp(os.Stdout)
+		return nil
+	}
+	if args[0] == "help" {
+		if len(args) > 1 && printCommandHelp(args[1], os.Stdout) {
+			return nil
+		}
+		printGlobalHelp(os.Stdout)
+		return nil
 	}
 
 	rootDir, err := paths.ResolveRoot(rootFlag)
@@ -66,6 +95,8 @@ func Run() error {
 		return runTemplate(ctx, rootDir, jsonFlag, args[1:])
 	case "new":
 		return runWorkspaceNew(ctx, rootDir, args[1:], noPrompt)
+	case "review":
+		return runReview(ctx, rootDir, args[1:], noPrompt)
 	case "add":
 		return runWorkspaceAdd(ctx, rootDir, args[1:])
 	case "ls":
@@ -80,6 +111,10 @@ func Run() error {
 }
 
 func runInit(rootDir string, jsonFlag bool, args []string) error {
+	if len(args) == 1 && isHelpArg(args[0]) {
+		printInitHelp(os.Stdout)
+		return nil
+	}
 	if len(args) != 0 {
 		return fmt.Errorf("usage: gws init")
 	}
@@ -108,8 +143,9 @@ func envBool(key string) bool {
 }
 
 func runTemplate(ctx context.Context, rootDir string, jsonFlag bool, args []string) error {
-	if len(args) == 0 {
-		return fmt.Errorf("template subcommand is required")
+	if len(args) == 0 || isHelpArg(args[0]) {
+		printTemplateHelp(os.Stdout)
+		return nil
 	}
 	switch args[0] {
 	case "ls":
@@ -120,6 +156,10 @@ func runTemplate(ctx context.Context, rootDir string, jsonFlag bool, args []stri
 }
 
 func runTemplateList(ctx context.Context, rootDir string, jsonFlag bool, args []string) error {
+	if len(args) == 1 && isHelpArg(args[0]) {
+		printTemplateLsHelp(os.Stdout)
+		return nil
+	}
 	if len(args) != 0 {
 		return fmt.Errorf("usage: gws template ls")
 	}
@@ -138,9 +178,23 @@ func runTemplateList(ctx context.Context, rootDir string, jsonFlag bool, args []
 func runDoctor(ctx context.Context, rootDir string, jsonFlag bool, args []string) error {
 	doctorFlags := flag.NewFlagSet("doctor", flag.ContinueOnError)
 	var fix bool
+	var helpFlag bool
+	doctorFlags.SetOutput(os.Stdout)
+	doctorFlags.Usage = func() {
+		printDoctorHelp(os.Stdout)
+	}
 	doctorFlags.BoolVar(&fix, "fix", false, "remove stale locks only")
+	doctorFlags.BoolVar(&helpFlag, "help", false, "show help")
+	doctorFlags.BoolVar(&helpFlag, "h", false, "show help")
 	if err := doctorFlags.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return nil
+		}
 		return err
+	}
+	if helpFlag {
+		printDoctorHelp(os.Stdout)
+		return nil
 	}
 	if doctorFlags.NArg() != 0 {
 		return fmt.Errorf("usage: gws doctor [--fix]")
@@ -173,10 +227,24 @@ func runGC(ctx context.Context, rootDir string, jsonFlag bool, args []string) er
 	gcFlags := flag.NewFlagSet("gc", flag.ContinueOnError)
 	var dryRun bool
 	var older string
+	var helpFlag bool
+	gcFlags.SetOutput(os.Stdout)
+	gcFlags.Usage = func() {
+		printGCHelp(os.Stdout)
+	}
 	gcFlags.BoolVar(&dryRun, "dry-run", false, "only list candidates")
 	gcFlags.StringVar(&older, "older", "", "older than duration (e.g. 30d, 720h)")
+	gcFlags.BoolVar(&helpFlag, "help", false, "show help")
+	gcFlags.BoolVar(&helpFlag, "h", false, "show help")
 	if err := gcFlags.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return nil
+		}
 		return err
+	}
+	if helpFlag {
+		printGCHelp(os.Stdout)
+		return nil
 	}
 	if gcFlags.NArg() != 0 {
 		return fmt.Errorf("usage: gws gc [--dry-run] [--older <duration>]")
@@ -213,8 +281,9 @@ func runGC(ctx context.Context, rootDir string, jsonFlag bool, args []string) er
 }
 
 func runRepo(ctx context.Context, rootDir string, jsonFlag bool, args []string) error {
-	if len(args) == 0 {
-		return fmt.Errorf("repo subcommand is required")
+	if len(args) == 0 || isHelpArg(args[0]) {
+		printRepoHelp(os.Stdout)
+		return nil
 	}
 	switch args[0] {
 	case "get":
@@ -227,6 +296,10 @@ func runRepo(ctx context.Context, rootDir string, jsonFlag bool, args []string) 
 }
 
 func runRepoGet(ctx context.Context, rootDir string, args []string) error {
+	if len(args) == 0 || (len(args) == 1 && isHelpArg(args[0])) {
+		printRepoGetHelp(os.Stdout)
+		return nil
+	}
 	if len(args) != 1 {
 		return fmt.Errorf("usage: gws repo get <repo>")
 	}
@@ -239,6 +312,10 @@ func runRepoGet(ctx context.Context, rootDir string, args []string) error {
 }
 
 func runRepoList(ctx context.Context, rootDir string, jsonFlag bool, args []string) error {
+	if len(args) == 1 && isHelpArg(args[0]) {
+		printRepoLsHelp(os.Stdout)
+		return nil
+	}
 	if len(args) != 0 {
 		return fmt.Errorf("usage: gws repo ls")
 	}
@@ -256,9 +333,23 @@ func runRepoList(ctx context.Context, rootDir string, jsonFlag bool, args []stri
 func runWorkspaceNew(ctx context.Context, rootDir string, args []string, noPrompt bool) error {
 	newFlags := flag.NewFlagSet("new", flag.ContinueOnError)
 	var templateName string
+	var helpFlag bool
 	newFlags.StringVar(&templateName, "template", "", "template name")
+	newFlags.BoolVar(&helpFlag, "help", false, "show help")
+	newFlags.BoolVar(&helpFlag, "h", false, "show help")
+	newFlags.SetOutput(os.Stdout)
+	newFlags.Usage = func() {
+		printNewHelp(os.Stdout)
+	}
 	if err := newFlags.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return nil
+		}
 		return err
+	}
+	if helpFlag {
+		printNewHelp(os.Stdout)
+		return nil
 	}
 	if newFlags.NArg() > 1 {
 		return fmt.Errorf("usage: gws new [--template <name>] [<WORKSPACE_ID>]")
@@ -340,6 +431,10 @@ func runWorkspaceNew(ctx context.Context, rootDir string, args []string, noPromp
 }
 
 func runWorkspaceAdd(ctx context.Context, rootDir string, args []string) error {
+	if len(args) == 1 && isHelpArg(args[0]) {
+		printAddHelp(os.Stdout)
+		return nil
+	}
 	if len(args) != 2 {
 		return fmt.Errorf("usage: gws add <WORKSPACE_ID> <repo>")
 	}
@@ -354,6 +449,216 @@ func runWorkspaceAdd(ctx context.Context, rootDir string, args []string) error {
 		return err
 	}
 	fmt.Fprintf(os.Stdout, "%s\t%s\n", repoEntry.Alias, repoEntry.WorktreePath)
+	return nil
+}
+
+func runReview(ctx context.Context, rootDir string, args []string, noPrompt bool) error {
+	if len(args) == 0 || (len(args) == 1 && isHelpArg(args[0])) {
+		printReviewHelp(os.Stdout)
+		return nil
+	}
+	if len(args) != 1 {
+		return fmt.Errorf("usage: gws review <PR URL>")
+	}
+	prURL := strings.TrimSpace(args[0])
+	if prURL == "" {
+		return fmt.Errorf("PR URL is required")
+	}
+
+	owner, repoName, number, err := parseGitHubPRURL(prURL)
+	if err != nil {
+		return err
+	}
+
+	cfg, err := config.Load(rootDir)
+	if err != nil {
+		return err
+	}
+
+	info, err := fetchGitHubPR(ctx, owner, repoName, number)
+	if err != nil {
+		return err
+	}
+	if info.HeadRepoFullName == "" || info.BaseRepoFullName == "" {
+		return fmt.Errorf("failed to resolve PR repositories")
+	}
+	if info.HeadRepoFullName != info.BaseRepoFullName {
+		return fmt.Errorf("fork PR is not supported")
+	}
+	repoURL := selectRepoURL(info, cfg)
+	if repoURL == "" {
+		return fmt.Errorf("cannot determine repo url for PR")
+	}
+
+	_, exists, err := repo.Exists(rootDir, repoURL)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		if noPrompt {
+			return fmt.Errorf("repo get required for: %s", repoURL)
+		}
+		fmt.Fprintf(os.Stdout, "%srepo get required for 1 repo.\n", output.Indent)
+		printRepoGetCommands([]string{repoURL})
+		confirm, err := promptConfirm("run now?")
+		if err != nil {
+			return err
+		}
+		if !confirm {
+			return fmt.Errorf("repo get required for: %s", repoURL)
+		}
+		if _, err := repo.Get(ctx, rootDir, repoURL); err != nil {
+			return err
+		}
+	}
+
+	workspaceID := fmt.Sprintf("REVIEW-PR-%d", info.Number)
+	wsDir, err := workspace.New(ctx, rootDir, workspaceID, cfg)
+	if err != nil {
+		return err
+	}
+
+	store, err := repo.Open(ctx, rootDir, repoURL, false)
+	if err != nil {
+		return err
+	}
+	if err := fetchPRHead(ctx, store.StorePath, info.HeadRefName); err != nil {
+		return err
+	}
+
+	baseRef := fmt.Sprintf("refs/remotes/origin/%s", info.HeadRefName)
+	if _, err := workspace.AddWithBranch(ctx, rootDir, workspaceID, repoURL, "", info.HeadRefName, baseRef, cfg, false); err != nil {
+		if rollbackErr := workspace.Remove(ctx, rootDir, workspaceID); rollbackErr != nil {
+			return fmt.Errorf("review failed: %w (rollback failed: %v)", err, rollbackErr)
+		}
+		return err
+	}
+
+	fmt.Fprintln(os.Stdout)
+	fmt.Fprintf(os.Stdout, "%s\x1b[32mWorkspace ready!\x1b[0m\n\n", output.Indent)
+	if err := printWorkspaceTree(wsDir); err != nil {
+		return err
+	}
+	return nil
+}
+
+type prInfo struct {
+	Number           int
+	HeadRefName      string
+	HeadRepoFullName string
+	HeadRepoSSHURL   string
+	HeadRepoCloneURL string
+	BaseRepoFullName string
+}
+
+func parseGitHubPRURL(raw string) (string, string, int, error) {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return "", "", 0, fmt.Errorf("invalid PR URL: %w", err)
+	}
+	if u.Hostname() != "github.com" {
+		return "", "", 0, fmt.Errorf("only github.com PR URLs are supported")
+	}
+	parts := strings.Split(strings.Trim(u.Path, "/"), "/")
+	if len(parts) < 4 {
+		return "", "", 0, fmt.Errorf("invalid PR URL path: %s", u.Path)
+	}
+	var owner, repo string
+	var numStr string
+	for i := 0; i < len(parts)-1; i++ {
+		if parts[i] == "pull" {
+			if i < 2 {
+				break
+			}
+			owner = parts[i-2]
+			repo = parts[i-1]
+			numStr = parts[i+1]
+			break
+		}
+	}
+	if owner == "" || repo == "" || numStr == "" {
+		return "", "", 0, fmt.Errorf("invalid PR URL path: %s", u.Path)
+	}
+	number, err := strconv.Atoi(numStr)
+	if err != nil {
+		return "", "", 0, fmt.Errorf("invalid PR number: %s", numStr)
+	}
+	return owner, repo, number, nil
+}
+
+func fetchGitHubPR(ctx context.Context, owner, repo string, number int) (prInfo, error) {
+	path := fmt.Sprintf("repos/%s/%s/pulls/%d", owner, repo, number)
+	cmd := exec.CommandContext(ctx, "gh", "api", path)
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		msg := strings.TrimSpace(stderr.String())
+		if msg == "" {
+			msg = err.Error()
+		}
+		return prInfo{}, fmt.Errorf("gh api failed: %s", msg)
+	}
+
+	var payload struct {
+		Number int `json:"number"`
+		Head   struct {
+			Ref  string `json:"ref"`
+			Repo struct {
+				FullName string `json:"full_name"`
+				SSHURL   string `json:"ssh_url"`
+				CloneURL string `json:"clone_url"`
+			} `json:"repo"`
+		} `json:"head"`
+		Base struct {
+			Repo struct {
+				FullName string `json:"full_name"`
+			} `json:"repo"`
+		} `json:"base"`
+	}
+	if err := json.Unmarshal(stdout.Bytes(), &payload); err != nil {
+		return prInfo{}, fmt.Errorf("parse gh response: %w", err)
+	}
+	info := prInfo{
+		Number:           payload.Number,
+		HeadRefName:      payload.Head.Ref,
+		HeadRepoFullName: payload.Head.Repo.FullName,
+		HeadRepoSSHURL:   payload.Head.Repo.SSHURL,
+		HeadRepoCloneURL: payload.Head.Repo.CloneURL,
+		BaseRepoFullName: payload.Base.Repo.FullName,
+	}
+	if info.Number == 0 {
+		info.Number = number
+	}
+	return info, nil
+}
+
+func selectRepoURL(info prInfo, cfg config.Config) string {
+	switch strings.ToLower(strings.TrimSpace(cfg.Repo.DefaultProtocol)) {
+	case "ssh":
+		if info.HeadRepoSSHURL != "" {
+			return info.HeadRepoSSHURL
+		}
+	case "https":
+		if info.HeadRepoCloneURL != "" {
+			return info.HeadRepoCloneURL
+		}
+	}
+	if info.HeadRepoSSHURL != "" {
+		return info.HeadRepoSSHURL
+	}
+	return info.HeadRepoCloneURL
+}
+
+func fetchPRHead(ctx context.Context, storePath, headRef string) error {
+	if strings.TrimSpace(headRef) == "" {
+		return fmt.Errorf("PR head ref is empty")
+	}
+	gitcmd.Logf("git fetch origin %s", headRef)
+	if _, err := gitcmd.Run(ctx, []string{"fetch", "origin", headRef}, gitcmd.Options{Dir: storePath}); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -555,6 +860,10 @@ func applyTemplate(ctx context.Context, rootDir, workspaceID string, tmpl templa
 }
 
 func runWorkspaceList(ctx context.Context, rootDir string, jsonFlag bool, args []string) error {
+	if len(args) == 1 && isHelpArg(args[0]) {
+		printLsHelp(os.Stdout)
+		return nil
+	}
 	if len(args) != 0 {
 		return fmt.Errorf("usage: gws ls")
 	}
@@ -570,6 +879,10 @@ func runWorkspaceList(ctx context.Context, rootDir string, jsonFlag bool, args [
 }
 
 func runWorkspaceStatus(ctx context.Context, rootDir string, jsonFlag bool, args []string) error {
+	if len(args) == 1 && isHelpArg(args[0]) {
+		printStatusHelp(os.Stdout)
+		return nil
+	}
 	if len(args) != 1 {
 		return fmt.Errorf("usage: gws status <WORKSPACE_ID>")
 	}
@@ -587,6 +900,10 @@ func runWorkspaceStatus(ctx context.Context, rootDir string, jsonFlag bool, args
 }
 
 func runWorkspaceRemove(ctx context.Context, rootDir string, args []string) error {
+	if len(args) == 1 && isHelpArg(args[0]) {
+		printRmHelp(os.Stdout)
+		return nil
+	}
 	if len(args) != 1 {
 		return fmt.Errorf("usage: gws rm <WORKSPACE_ID>")
 	}

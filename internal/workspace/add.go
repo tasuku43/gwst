@@ -14,7 +14,14 @@ import (
 )
 
 func Add(ctx context.Context, rootDir, workspaceID, repoSpec, alias string, cfg config.Config, fetch bool) (Repo, error) {
+	return AddWithBranch(ctx, rootDir, workspaceID, repoSpec, alias, workspaceID, "", cfg, fetch)
+}
+
+func AddWithBranch(ctx context.Context, rootDir, workspaceID, repoSpec, alias, branch, baseRef string, cfg config.Config, fetch bool) (Repo, error) {
 	if err := validateWorkspaceID(ctx, workspaceID); err != nil {
+		return Repo{}, err
+	}
+	if err := validateBranchName(ctx, branch); err != nil {
 		return Repo{}, err
 	}
 	if rootDir == "" {
@@ -60,10 +67,12 @@ func Add(ctx context.Context, rootDir, workspaceID, repoSpec, alias string, cfg 
 		return Repo{}, fmt.Errorf("worktree already exists: %s", worktreePath)
 	}
 
-	branch := workspaceID
-	baseRef, err := resolveBaseRef(ctx, store.StorePath, cfg)
-	if err != nil {
-		return Repo{}, err
+	if baseRef == "" {
+		var err error
+		baseRef, err = resolveBaseRef(ctx, store.StorePath, cfg)
+		if err != nil {
+			return Repo{}, err
+		}
 	}
 
 	branchExists, err := branchExistsInStore(ctx, store.StorePath, branch)
@@ -226,6 +235,17 @@ func branchExistsInStore(ctx context.Context, storePath, branch string) (bool, e
 		return false, nil
 	}
 	return false, err
+}
+
+func validateBranchName(ctx context.Context, branch string) error {
+	if strings.TrimSpace(branch) == "" {
+		return fmt.Errorf("branch is required")
+	}
+	_, err := gitcmd.Run(ctx, []string{"check-ref-format", "--branch", branch}, gitcmd.Options{})
+	if err != nil {
+		return fmt.Errorf("invalid branch name: %w", err)
+	}
+	return nil
 }
 
 func ensureRepoNotRegistered(manifest Manifest, alias, repoKey string) error {
