@@ -17,6 +17,7 @@ import (
 	"github.com/tasuku43/gws/internal/gc"
 	"github.com/tasuku43/gws/internal/gitcmd"
 	"github.com/tasuku43/gws/internal/initcmd"
+	"github.com/tasuku43/gws/internal/output"
 	"github.com/tasuku43/gws/internal/paths"
 	"github.com/tasuku43/gws/internal/repo"
 	"github.com/tasuku43/gws/internal/template"
@@ -233,7 +234,7 @@ func runRepoGet(ctx context.Context, rootDir string, args []string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(os.Stdout, "%s\t%s\n", store.RepoKey, store.StorePath)
+	fmt.Fprintf(os.Stdout, "%s%s\t%s\n", output.Indent, store.RepoKey, store.StorePath)
 	return nil
 }
 
@@ -329,7 +330,7 @@ func runWorkspaceNew(ctx context.Context, rootDir string, args []string, noPromp
 	}
 
 	fmt.Fprintln(os.Stdout)
-	fmt.Fprintf(os.Stdout, "\x1b[32mWorkspace ready!\x1b[0m\n\n")
+	fmt.Fprintf(os.Stdout, "%s\x1b[32mWorkspace ready!\x1b[0m\n\n", output.Indent)
 	if err := printWorkspaceTree(wsDir); err != nil {
 		return err
 	}
@@ -346,7 +347,7 @@ func runWorkspaceAdd(ctx context.Context, rootDir string, args []string) error {
 	if err != nil {
 		return err
 	}
-	repoEntry, err := workspace.Add(ctx, rootDir, workspaceID, repoSpec, "", cfg)
+	repoEntry, err := workspace.Add(ctx, rootDir, workspaceID, repoSpec, "", cfg, false)
 	if err != nil {
 		return err
 	}
@@ -402,13 +403,13 @@ func printWorkspaceTree(wsDir string) error {
 		fmt.Fprintf(os.Stdout, "\x1b[33m%s\x1b[0m\n", wsDir)
 		return nil
 	}
-	fmt.Fprintf(os.Stdout, "\x1b[33m%s\x1b[0m\n", wsDir)
+	fmt.Fprintf(os.Stdout, "%s\x1b[33m%s\x1b[0m\n", output.Indent, wsDir)
 	for i, name := range names {
 		prefix := "├─ "
 		if i == len(names)-1 {
 			prefix = "└─ "
 		}
-		fmt.Fprintf(os.Stdout, "\x1b[33m%s%s\x1b[0m\n", prefix, name)
+		fmt.Fprintf(os.Stdout, "%s\x1b[33m%s%s\x1b[0m\n", output.Indent, prefix, name)
 	}
 	return nil
 }
@@ -539,7 +540,7 @@ func preflightTemplateRepos(ctx context.Context, rootDir string, tmpl template.T
 
 func applyTemplate(ctx context.Context, rootDir, workspaceID string, tmpl template.Template, cfg config.Config) error {
 	for _, repoSpec := range tmpl.Repos {
-		if _, err := workspace.Add(ctx, rootDir, workspaceID, repoSpec, "", cfg); err != nil {
+		if _, err := workspace.Add(ctx, rootDir, workspaceID, repoSpec, "", cfg, true); err != nil {
 			return err
 		}
 	}

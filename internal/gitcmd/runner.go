@@ -5,9 +5,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"strings"
+
+	"github.com/tasuku43/gws/internal/output"
 )
 
 type Result struct {
@@ -41,7 +44,7 @@ func Run(ctx context.Context, args []string, opts Options) (Result, error) {
 	cmd.Stderr = &stderr
 
 	if verbose {
-		fmt.Fprintf(os.Stderr, "\x1b[36m$ git %s\x1b[0m\n", strings.Join(args, " "))
+		fmt.Fprintf(os.Stderr, "\x1b[36m%s$ git %s\x1b[0m\n", output.Indent, strings.Join(args, " "))
 	}
 	err := cmd.Run()
 	result := Result{
@@ -51,19 +54,13 @@ func Run(ctx context.Context, args []string, opts Options) (Result, error) {
 	}
 	if verbose || opts.ShowOutput {
 		if result.Stdout != "" {
-			fmt.Fprint(os.Stderr, result.Stdout)
-			if result.Stdout[len(result.Stdout)-1] != '\n' {
-				fmt.Fprintln(os.Stderr)
-			}
+			writeIndented(os.Stderr, result.Stdout, output.Indent)
 		}
 		if result.Stderr != "" {
-			fmt.Fprint(os.Stderr, result.Stderr)
-			if result.Stderr[len(result.Stderr)-1] != '\n' {
-				fmt.Fprintln(os.Stderr)
-			}
+			writeIndented(os.Stderr, result.Stderr, output.Indent)
 		}
 		if verbose {
-			fmt.Fprintf(os.Stderr, "exit: %d\n", result.ExitCode)
+			fmt.Fprintf(os.Stderr, "%sexit: %d\n", output.Indent, result.ExitCode)
 		}
 	}
 	if err != nil {
@@ -85,6 +82,24 @@ func validateArgs(args []string) error {
 func isAllowedSubcommand(subcommand string) bool {
 	_, ok := allowedSubcommands[subcommand]
 	return ok
+}
+
+func writeIndented(w io.Writer, text, prefix string) {
+	lines := strings.SplitAfter(text, "\n")
+	for _, line := range lines {
+		if line == "" {
+			continue
+		}
+		if line == "\n" {
+			fmt.Fprint(w, prefix)
+			continue
+		}
+		fmt.Fprint(w, prefix)
+		fmt.Fprint(w, line)
+	}
+	if !strings.HasSuffix(text, "\n") {
+		fmt.Fprintln(w)
+	}
 }
 
 var allowedSubcommands = map[string]struct{}{

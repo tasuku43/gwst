@@ -41,11 +41,11 @@ func Get(ctx context.Context, rootDir string, repo string) (Store, error) {
 		}
 	}
 
-	if err := normalizeStore(ctx, storePath, spec.RepoKey); err != nil {
+	if err := normalizeStore(ctx, storePath, spec.RepoKey, false); err != nil {
 		return Store{}, err
 	}
 
-	if err := ensureSrc(ctx, rootDir, spec, storePath, remoteURL); err != nil {
+	if err := ensureSrc(ctx, rootDir, spec, storePath, remoteURL, false); err != nil {
 		return Store{}, err
 	}
 
@@ -56,7 +56,7 @@ func Get(ctx context.Context, rootDir string, repo string) (Store, error) {
 	}, nil
 }
 
-func Open(ctx context.Context, rootDir string, repo string) (Store, error) {
+func Open(ctx context.Context, rootDir string, repo string, fetch bool) (Store, error) {
 	spec, err := repospec.Normalize(repo)
 	if err != nil {
 		return Store{}, err
@@ -73,7 +73,7 @@ func Open(ctx context.Context, rootDir string, repo string) (Store, error) {
 		return Store{}, fmt.Errorf("repo store not found, run: gws repo get %s", repo)
 	}
 
-	if err := normalizeStore(ctx, storePath, spec.RepoKey); err != nil {
+	if err := normalizeStore(ctx, storePath, spec.RepoKey, fetch); err != nil {
 		return Store{}, err
 	}
 
@@ -84,14 +84,16 @@ func Open(ctx context.Context, rootDir string, repo string) (Store, error) {
 	}, nil
 }
 
-func ensureSrc(ctx context.Context, rootDir string, spec repospec.Spec, storePath, remoteURL string) error {
+func ensureSrc(ctx context.Context, rootDir string, spec repospec.Spec, storePath, remoteURL string, fetch bool) error {
 	srcPath := filepath.Join(rootDir, "src", spec.Host, spec.Owner, spec.Repo)
 	if exists, err := pathExists(srcPath); err != nil {
 		return err
 	} else if exists {
-		gitcmd.Logf("git fetch --prune")
-		if _, err := gitcmd.Run(ctx, []string{"fetch", "--prune"}, gitcmd.Options{Dir: srcPath}); err != nil {
-			return err
+		if fetch {
+			gitcmd.Logf("git fetch --prune")
+			if _, err := gitcmd.Run(ctx, []string{"fetch", "--prune"}, gitcmd.Options{Dir: srcPath}); err != nil {
+				return err
+			}
 		}
 		return nil
 	}
@@ -124,7 +126,7 @@ func storePathForSpec(rootDir string, spec repospec.Spec) string {
 	return filepath.Join(rootDir, "bare", spec.Host, spec.Owner, spec.Repo+".git")
 }
 
-func normalizeStore(ctx context.Context, storePath, display string) error {
+func normalizeStore(ctx context.Context, storePath, display string, fetch bool) error {
 	if _, err := gitcmd.Run(ctx, []string{"config", "remote.origin.fetch", "+refs/heads/*:refs/remotes/origin/*"}, gitcmd.Options{Dir: storePath}); err != nil {
 		return err
 	}
@@ -136,7 +138,7 @@ func normalizeStore(ctx context.Context, storePath, display string) error {
 		_, _ = gitcmd.Run(ctx, []string{"symbolic-ref", "refs/remotes/origin/HEAD", fmt.Sprintf("refs/remotes/origin/%s", defaultBranch)}, gitcmd.Options{Dir: storePath})
 	}
 
-	needsFetch := true
+	needsFetch := fetch
 	if defaultBranch != "" && remoteHash != "" {
 		localHash, err := localRemoteHash(ctx, storePath, defaultBranch)
 		if err != nil {

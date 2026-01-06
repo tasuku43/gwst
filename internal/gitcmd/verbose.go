@@ -3,6 +3,8 @@ package gitcmd
 import (
 	"fmt"
 	"os"
+
+	"github.com/tasuku43/gws/internal/output"
 )
 
 var verbose bool
@@ -19,5 +21,5 @@ func Logf(format string, args ...any) {
 	if verbose {
 		return
 	}
-	fmt.Fprintf(os.Stderr, "\x1b[36m$ "+format+"\x1b[0m\n", args...)
+	fmt.Fprintf(os.Stderr, "\x1b[36m%s$ "+format+"\x1b[0m\n", append([]any{output.Indent}, args...)...)
 }

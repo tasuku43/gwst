@@ -59,7 +59,7 @@ func TestRepoGetWorkspaceAddRemove(t *testing.T) {
 	if _, err := workspace.New(ctx, rootDir, "TEST-1", cfg); err != nil {
 		t.Fatalf("workspace.New error: %v", err)
 	}
-	if _, err := workspace.Add(ctx, rootDir, "TEST-1", repoSpec, "", cfg); err != nil {
+	if _, err := workspace.Add(ctx, rootDir, "TEST-1", repoSpec, "", cfg, false); err != nil {
 		t.Fatalf("workspace.Add error: %v", err)
 	}
 

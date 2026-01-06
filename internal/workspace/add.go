@@ -13,7 +13,7 @@ import (
 	"github.com/tasuku43/gws/internal/repospec"
 )
 
-func Add(ctx context.Context, rootDir, workspaceID, repoSpec, alias string, cfg config.Config) (Repo, error) {
+func Add(ctx context.Context, rootDir, workspaceID, repoSpec, alias string, cfg config.Config, fetch bool) (Repo, error) {
 	if err := validateWorkspaceID(ctx, workspaceID); err != nil {
 		return Repo{}, err
 	}
@@ -48,7 +48,7 @@ func Add(ctx context.Context, rootDir, workspaceID, repoSpec, alias string, cfg 
 		return Repo{}, err
 	}
 
-	store, err := repo.Open(ctx, rootDir, repoSpec)
+	store, err := repo.Open(ctx, rootDir, repoSpec, fetch)
 	if err != nil {
 		return Repo{}, err
 	}

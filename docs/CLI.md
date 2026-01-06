@@ -38,8 +38,8 @@
 
 挙動:
 - repo store が無い: `git clone --bare <remote> <store>`
-- ある: `git -C <store> fetch --prune`
-- `src/<host>/<owner>/<repo>` に作業ツリーを作成（既存なら fetch）
+- ある: `fetch` は行わない（`gws new` 時に最新化する）
+- `src/<host>/<owner>/<repo>` に作業ツリーを作成（既存なら何もしない）
 
 入力形式:
 - `git@github.com:owner/repo.git`
