@@ -315,11 +315,11 @@ func runRepoGet(ctx context.Context, rootDir string, args []string) error {
 	output.SetStepLogger(renderer)
 	defer output.SetStepLogger(nil)
 
-	header := fmt.Sprintf("gws repo get (%s)", repoSpec)
+	header := fmt.Sprintf("gws repo get (%s)", truncateMiddle(repoSpec, 80))
 	renderer.Header(header)
 	renderer.Blank()
 	renderer.Section("Steps")
-	output.Step(fmt.Sprintf("repo get %s", repoSpec))
+	output.Step(formatStep("repo get", displayRepoSpec(repoSpec), repoDestForSpec(rootDir, repoSpec)))
 
 	store, err := repo.Get(ctx, rootDir, repoSpec)
 	if err != nil {
@@ -442,7 +442,7 @@ func runWorkspaceNew(ctx context.Context, rootDir string, args []string, noPromp
 		}
 		output.Step(fmt.Sprintf("repo get required for %d repos", len(missing)))
 		for _, repoSpec := range missing {
-			output.Log(fmt.Sprintf("gws repo get %s", repoSpec))
+			output.Log(fmt.Sprintf("gws repo get %s", displayRepoSpec(repoSpec)))
 		}
 		confirm, err := ui.PromptConfirmInline("run now?", theme, useColor)
 		if err != nil {
@@ -451,14 +451,15 @@ func runWorkspaceNew(ctx context.Context, rootDir string, args []string, noPromp
 		if !confirm {
 			return fmt.Errorf("repo get required for: %s", strings.Join(missing, ", "))
 		}
-		for _, repoSpec := range missing {
-			output.Step(fmt.Sprintf("repo get %s", repoSpec))
+		for i, repoSpec := range missing {
+			output.Step(formatStepWithIndex("repo get", displayRepoSpec(repoSpec), repoDestForSpec(rootDir, repoSpec), i+1, len(missing)))
 			if _, err := repo.Get(ctx, rootDir, repoSpec); err != nil {
 				return err
 			}
 		}
 	}
 
+	output.Step(formatStep("create workspace", workspaceID, relPath(rootDir, filepath.Join(rootDir, "ws", workspaceID))))
 	wsDir, err := workspace.New(ctx, rootDir, workspaceID, cfg)
 	if err != nil {
 		return err
@@ -547,7 +548,7 @@ func runWorkspaceAdd(ctx context.Context, rootDir string, args []string) error {
 		headerParts = append(headerParts, fmt.Sprintf("workspace id: %s", workspaceID))
 	}
 	if strings.TrimSpace(repoSpec) != "" {
-		headerParts = append(headerParts, fmt.Sprintf("repo: %s", repoSpec))
+		headerParts = append(headerParts, fmt.Sprintf("repo: %s", truncateMiddle(repoSpec, 80)))
 	}
 	if len(headerParts) > 0 {
 		header = fmt.Sprintf("%s (%s)", header, strings.Join(headerParts, ", "))
@@ -559,12 +560,7 @@ func runWorkspaceAdd(ctx context.Context, rootDir string, args []string) error {
 		renderer.Blank()
 	}
 	renderer.Section("Steps")
-
-	display := repoSpec
-	if spec, err := repospec.Normalize(repoSpec); err == nil && spec.Repo != "" {
-		display = spec.Repo
-	}
-	output.Step(fmt.Sprintf("worktree add %s", display))
+	output.Step(formatStep("worktree add", displayRepoName(repoSpec), worktreeDest(rootDir, workspaceID, repoSpec)))
 
 	_, err = workspace.Add(ctx, rootDir, workspaceID, repoSpec, "", cfg, false)
 	if err != nil {
@@ -628,7 +624,7 @@ func runReview(ctx context.Context, rootDir string, args []string, noPrompt bool
 	output.SetStepLogger(renderer)
 	defer output.SetStepLogger(nil)
 
-	header := fmt.Sprintf("gws review (pr: %s, workspace id: %s)", prURL, workspaceID)
+	header := fmt.Sprintf("gws review (pr: %s, workspace id: %s)", truncateMiddle(prURL, 80), workspaceID)
 	renderer.Header(header)
 	renderer.Blank()
 	renderer.Section("Steps")
@@ -638,7 +634,7 @@ func runReview(ctx context.Context, rootDir string, args []string, noPrompt bool
 			return fmt.Errorf("repo get required for: %s", repoURL)
 		}
 		output.Step("repo get required for 1 repo")
-		output.Log(fmt.Sprintf("gws repo get %s", repoURL))
+		output.Log(fmt.Sprintf("gws repo get %s", displayRepoSpec(repoURL)))
 		confirm, err := ui.PromptConfirmInline("run now?", theme, useColor)
 		if err != nil {
 			return err
@@ -646,12 +642,13 @@ func runReview(ctx context.Context, rootDir string, args []string, noPrompt bool
 		if !confirm {
 			return fmt.Errorf("repo get required for: %s", repoURL)
 		}
-		output.Step(fmt.Sprintf("repo get %s", repoURL))
+		output.Step(formatStep("repo get", displayRepoSpec(repoURL), repoDestForSpec(rootDir, repoURL)))
 		if _, err := repo.Get(ctx, rootDir, repoURL); err != nil {
 			return err
 		}
 	}
 
+	output.Step(formatStep("create workspace", workspaceID, relPath(rootDir, filepath.Join(rootDir, "ws", workspaceID))))
 	wsDir, err := workspace.New(ctx, rootDir, workspaceID, cfg)
 	if err != nil {
 		return err
@@ -661,17 +658,13 @@ func runReview(ctx context.Context, rootDir string, args []string, noPrompt bool
 	if err != nil {
 		return err
 	}
-	output.Step(fmt.Sprintf("fetch PR head %s", info.HeadRefName))
+	output.Step(formatStep("fetch PR head", info.HeadRefName, repoStoreRel(rootDir, repoURL)))
 	if err := fetchPRHead(ctx, store.StorePath, info.HeadRefName); err != nil {
 		return err
 	}
 
 	baseRef := fmt.Sprintf("refs/remotes/origin/%s", info.HeadRefName)
-	display := repoURL
-	if spec, err := repospec.Normalize(repoURL); err == nil && spec.Repo != "" {
-		display = spec.Repo
-	}
-	output.Step(fmt.Sprintf("worktree add %s", display))
+	output.Step(formatStep("worktree add", displayRepoName(repoURL), worktreeDest(rootDir, workspaceID, repoURL)))
 	if _, err := workspace.AddWithBranch(ctx, rootDir, workspaceID, repoURL, "", info.HeadRefName, baseRef, cfg, false); err != nil {
 		if rollbackErr := workspace.Remove(ctx, rootDir, workspaceID); rollbackErr != nil {
 			return fmt.Errorf("review failed: %w (rollback failed: %v)", err, rollbackErr)
@@ -922,6 +915,107 @@ func displayTemplateRepo(repoSpec string) string {
 	return fmt.Sprintf("git@%s:%s/%s.git", spec.Host, spec.Owner, spec.Repo)
 }
 
+func displayRepoSpec(repoSpec string) string {
+	return displayTemplateRepo(repoSpec)
+}
+
+func displayRepoName(repoSpec string) string {
+	trimmed := strings.TrimSpace(repoSpec)
+	if trimmed == "" {
+		return ""
+	}
+	spec, err := repospec.Normalize(trimmed)
+	if err != nil || spec.Repo == "" {
+		return trimmed
+	}
+	return spec.Repo
+}
+
+func repoDestForSpec(rootDir, repoSpec string) string {
+	store := repoStoreRel(rootDir, repoSpec)
+	src := repoSrcRel(rootDir, repoSpec)
+	if store != "" && src != "" {
+		return fmt.Sprintf("%s, %s", store, src)
+	}
+	if store != "" {
+		return store
+	}
+	return src
+}
+
+func repoStoreRel(rootDir, repoSpec string) string {
+	spec, err := repospec.Normalize(strings.TrimSpace(repoSpec))
+	if err != nil {
+		return ""
+	}
+	storePath := filepath.Join(rootDir, "bare", spec.Host, spec.Owner, spec.Repo+".git")
+	return relPath(rootDir, storePath)
+}
+
+func repoSrcRel(rootDir, repoSpec string) string {
+	spec, err := repospec.Normalize(strings.TrimSpace(repoSpec))
+	if err != nil {
+		return ""
+	}
+	srcPath := filepath.Join(rootDir, "src", spec.Host, spec.Owner, spec.Repo)
+	return relPath(rootDir, srcPath)
+}
+
+func worktreeDest(rootDir, workspaceID, repoSpec string) string {
+	spec, err := repospec.Normalize(strings.TrimSpace(repoSpec))
+	if err != nil || spec.Repo == "" {
+		return ""
+	}
+	wsPath := filepath.Join(rootDir, "ws", workspaceID, spec.Repo)
+	return relPath(rootDir, wsPath)
+}
+
+func relPath(rootDir, path string) string {
+	if strings.TrimSpace(rootDir) == "" || strings.TrimSpace(path) == "" {
+		return filepath.ToSlash(path)
+	}
+	rel, err := filepath.Rel(rootDir, path)
+	if err != nil {
+		return filepath.ToSlash(path)
+	}
+	return filepath.ToSlash(rel)
+}
+
+func formatStep(action, target, dest string) string {
+	parts := []string{strings.TrimSpace(action)}
+	if strings.TrimSpace(target) != "" {
+		parts = append(parts, truncateMiddle(strings.TrimSpace(target), 80))
+	}
+	text := strings.Join(parts, " ")
+	if strings.TrimSpace(dest) != "" {
+		return fmt.Sprintf("%s -> %s", text, truncateMiddle(dest, 80))
+	}
+	return text
+}
+
+func formatStepWithIndex(action, target, dest string, index, total int) string {
+	if total > 0 {
+		if strings.TrimSpace(target) != "" {
+			target = fmt.Sprintf("%s (%d/%d)", target, index, total)
+		} else {
+			action = fmt.Sprintf("%s (%d/%d)", action, index, total)
+		}
+	}
+	return formatStep(action, target, dest)
+}
+
+func truncateMiddle(value string, max int) string {
+	trimmed := strings.TrimSpace(value)
+	if max <= 0 || len(trimmed) <= max {
+		return trimmed
+	}
+	if max < 10 {
+		return trimmed[:max]
+	}
+	keep := (max - 3) / 2
+	return fmt.Sprintf("%s...%s", trimmed[:keep], trimmed[len(trimmed)-keep:])
+}
+
 func repoSpecFromKey(repoKey string, cfg config.Config) string {
 	trimmed := strings.TrimSuffix(repoKey, ".git")
 	trimmed = strings.TrimSuffix(trimmed, "/")
@@ -1114,12 +1208,9 @@ func preflightTemplateRepos(ctx context.Context, rootDir string, tmpl template.T
 }
 
 func applyTemplate(ctx context.Context, rootDir, workspaceID string, tmpl template.Template, cfg config.Config) error {
-	for _, repoSpec := range tmpl.Repos {
-		display := repoSpec
-		if spec, err := repospec.Normalize(repoSpec); err == nil {
-			display = spec.Repo
-		}
-		output.Step(fmt.Sprintf("worktree add %s", display))
+	total := len(tmpl.Repos)
+	for i, repoSpec := range tmpl.Repos {
+		output.Step(formatStepWithIndex("worktree add", displayRepoName(repoSpec), worktreeDest(rootDir, workspaceID, repoSpec), i+1, total))
 		if _, err := workspace.Add(ctx, rootDir, workspaceID, repoSpec, "", cfg, true); err != nil {
 			return err
 		}
@@ -1257,7 +1348,7 @@ func runWorkspaceRemove(ctx context.Context, rootDir string, args []string) erro
 		renderer.Blank()
 	}
 	renderer.Section("Steps")
-	output.Step(fmt.Sprintf("remove workspace %s", workspaceID))
+	output.Step(formatStep("remove workspace", workspaceID, relPath(rootDir, filepath.Join(rootDir, "ws", workspaceID))))
 
 	if err := workspace.Remove(ctx, rootDir, workspaceID); err != nil {
 		return err
@@ -1424,11 +1515,19 @@ func writeWorkspaceListText(entries []workspace.Entry, warnings []error) {
 		renderWorkspaceBlock(renderer, entry.WorkspaceID, repos)
 
 		if entry.Warning != nil {
-			renderer.Warn(fmt.Sprintf("warning: %s: %v", entry.WorkspaceID, entry.Warning))
+			renderer.Bullet(fmt.Sprintf("%s warning", entry.WorkspaceID))
+			renderTreeLines(renderer, []string{entry.Warning.Error()}, treeLineWarn)
 		}
 	}
-	for _, warning := range warnings {
-		renderer.Warn(fmt.Sprintf("warning: %v", warning))
+	if len(warnings) > 0 {
+		renderer.Blank()
+		renderer.Section("Info")
+		renderer.Bullet("warnings")
+		var lines []string
+		for _, warning := range warnings {
+			lines = append(lines, warning.Error())
+		}
+		renderTreeLines(renderer, lines, treeLineWarn)
 	}
 }
 
@@ -1478,8 +1577,15 @@ func writeRepoListText(entries []repo.Entry, warnings []error) {
 	for _, entry := range entries {
 		renderer.Result(fmt.Sprintf("%s\t%s", entry.RepoKey, entry.StorePath))
 	}
-	for _, warning := range warnings {
-		renderer.Warn(fmt.Sprintf("warning: %v", warning))
+	if len(warnings) > 0 {
+		renderer.Blank()
+		renderer.Section("Info")
+		renderer.Bullet("warnings")
+		var lines []string
+		for _, warning := range warnings {
+			lines = append(lines, warning.Error())
+		}
+		renderTreeLines(renderer, lines, treeLineWarn)
 	}
 }
 

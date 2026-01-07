@@ -13,7 +13,7 @@ Status: draft (MVP+)
 - JSON/format switching: MVP では扱わない
 
 ## Layout (common)
-Sectioned layout with 3 sections (interactive may insert Inputs):
+Sectioned layout with 3 sections (interactive may insert Inputs; Info is optional):
 
 ```
 Header
@@ -29,6 +29,9 @@ Steps
 Result
   <result line>
   <tree>
+
+Info
+  <warnings / skipped / blocked>
 ```
 
 Rules:
@@ -49,8 +52,8 @@ Prefix coloring:
 Example:
 ```
 Steps
-  • repo get git@github.com:org/repo.git
-  • worktree add repo
+  • repo get git@github.com:org/repo.git -> bare/github.com/org/repo.git, src/github.com/org/repo
+  • worktree add repo -> ws/PROJ-123/repo
 ```
 
 ## Command execution logs
@@ -61,7 +64,7 @@ Steps
 Example:
 ```
 Steps
-  › repo get git@github.com:org/repo.git
+  • repo get git@github.com:org/repo.git
     └─ $ git clone --bare ...
     └─ $ git clone ... /src/...
 ```
@@ -137,4 +140,5 @@ Result
 ## Notes
 - Prefix token is a theme value and can be changed later.
 - All prompts and labels are English.
-- Info section is optional and can include contextual warnings (e.g. blocked workspaces); blocked entries use warn color.
+- Info section is optional and contains warnings / skipped / blocked items.
+- Errors should be emphasized with a red prefix and red text.
