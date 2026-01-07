@@ -26,8 +26,8 @@
 | MVP-050 | Unit tests for normalization & config | Done |
 | MVP-051 | Integration tests for repo get + ws add/rm | Done |
 | MVP-060 | Basic Makefile or justfile | Done |
-| MVP-080 | template (workspace templates) | To Do |
-| MVP-090 | init (bootstrap) | To Do |
+| MVP-080 | template (workspace templates) | Done |
+| MVP-090 | init (bootstrap) | Done |
 | MVP-100 | UI: gws new (Bubble Tea inputs + sectioned output) | Done |
 | MVP-101 | UI: gws repo get | Done |
 | MVP-102 | UI: gws repo ls | Done |
@@ -347,7 +347,7 @@ Acceptance:
 - `gws template ls` でテンプレート名を一覧できる
 - `gws new --template <name> <id>` で template の repos が `ws` に追加される
 - template 未指定時は対話で template と workspace id を入力できる
-- repo get 未実行の repo があればエラーで中断する
+- repo get 未実行の repo があれば実行確認し、拒否時はエラーで中断する（`--no-prompt` では即エラー）
 
 ---
 
