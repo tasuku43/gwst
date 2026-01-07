@@ -36,7 +36,7 @@
 | MVP-103 | UI: gws add | Done |
 | MVP-104 | UI: gws ls | Done |
 | MVP-105 | UI: gws status | Done |
-| MVP-106 | UI: gws rm | To Do |
+| MVP-106 | UI: gws rm | Done |
 | MVP-107 | UI: gws gc --dry-run | To Do |
 | MVP-108 | UI: gws gc (execute) | To Do |
 | MVP-109 | UI: gws doctor | To Do |
