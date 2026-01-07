@@ -8,4 +8,3 @@ exit code（提案）:
 - 40: lock acquisition failure
 
 MVPでは、stderr に人間向け説明を出す。
-`--json` 時は、可能なら JSON で error を返す（将来拡張で安定化）。

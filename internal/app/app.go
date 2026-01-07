@@ -34,12 +34,10 @@ import (
 func Run() error {
 	fs := flag.NewFlagSet("gws", flag.ContinueOnError)
 	var rootFlag string
-	var jsonFlag bool
 	var noPrompt bool
 	verboseFlag := envBool("GWS_VERBOSE")
 	var helpFlag bool
 	fs.StringVar(&rootFlag, "root", "", "override gws root")
-	fs.BoolVar(&jsonFlag, "json", false, "machine readable output")
 	fs.BoolVar(&noPrompt, "no-prompt", false, "disable interactive prompt")
 	fs.BoolVar(&verboseFlag, "verbose", verboseFlag, "show detailed logs")
 	fs.BoolVar(&verboseFlag, "v", verboseFlag, "show detailed logs")
@@ -85,15 +83,15 @@ func Run() error {
 	ctx := context.Background()
 	switch args[0] {
 	case "init":
-		return runInit(rootDir, jsonFlag, args[1:])
+		return runInit(rootDir, args[1:])
 	case "doctor":
-		return runDoctor(ctx, rootDir, jsonFlag, args[1:])
+		return runDoctor(ctx, rootDir, args[1:])
 	case "gc":
-		return runGC(ctx, rootDir, jsonFlag, args[1:])
+		return runGC(ctx, rootDir, args[1:])
 	case "repo":
-		return runRepo(ctx, rootDir, jsonFlag, args[1:])
+		return runRepo(ctx, rootDir, args[1:])
 	case "template":
-		return runTemplate(ctx, rootDir, jsonFlag, args[1:])
+		return runTemplate(ctx, rootDir, args[1:])
 	case "new":
 		return runWorkspaceNew(ctx, rootDir, args[1:], noPrompt)
 	case "review":
@@ -101,9 +99,9 @@ func Run() error {
 	case "add":
 		return runWorkspaceAdd(ctx, rootDir, args[1:])
 	case "ls":
-		return runWorkspaceList(ctx, rootDir, jsonFlag, args[1:])
+		return runWorkspaceList(ctx, rootDir, args[1:])
 	case "status":
-		return runWorkspaceStatus(ctx, rootDir, jsonFlag, args[1:])
+		return runWorkspaceStatus(ctx, rootDir, args[1:])
 	case "rm":
 		return runWorkspaceRemove(ctx, rootDir, args[1:])
 	default:
@@ -111,7 +109,7 @@ func Run() error {
 	}
 }
 
-func runInit(rootDir string, jsonFlag bool, args []string) error {
+func runInit(rootDir string, args []string) error {
 	if len(args) == 1 && isHelpArg(args[0]) {
 		printInitHelp(os.Stdout)
 		return nil
@@ -122,9 +120,6 @@ func runInit(rootDir string, jsonFlag bool, args []string) error {
 	result, err := initcmd.Run(rootDir)
 	if err != nil {
 		return err
-	}
-	if jsonFlag {
-		return writeInitJSON(result)
 	}
 	writeInitText(result)
 	return nil
@@ -143,20 +138,20 @@ func envBool(key string) bool {
 	}
 }
 
-func runTemplate(ctx context.Context, rootDir string, jsonFlag bool, args []string) error {
+func runTemplate(ctx context.Context, rootDir string, args []string) error {
 	if len(args) == 0 || isHelpArg(args[0]) {
 		printTemplateHelp(os.Stdout)
 		return nil
 	}
 	switch args[0] {
 	case "ls":
-		return runTemplateList(ctx, rootDir, jsonFlag, args[1:])
+		return runTemplateList(ctx, rootDir, args[1:])
 	default:
 		return fmt.Errorf("unknown template subcommand: %s", args[0])
 	}
 }
 
-func runTemplateList(ctx context.Context, rootDir string, jsonFlag bool, args []string) error {
+func runTemplateList(ctx context.Context, rootDir string, args []string) error {
 	if len(args) == 1 && isHelpArg(args[0]) {
 		printTemplateLsHelp(os.Stdout)
 		return nil
@@ -169,14 +164,11 @@ func runTemplateList(ctx context.Context, rootDir string, jsonFlag bool, args []
 		return err
 	}
 	names := template.Names(file)
-	if jsonFlag {
-		return writeTemplateListJSON(names)
-	}
 	writeTemplateListText(file, names)
 	return nil
 }
 
-func runDoctor(ctx context.Context, rootDir string, jsonFlag bool, args []string) error {
+func runDoctor(ctx context.Context, rootDir string, args []string) error {
 	doctorFlags := flag.NewFlagSet("doctor", flag.ContinueOnError)
 	var fix bool
 	var helpFlag bool
@@ -206,9 +198,6 @@ func runDoctor(ctx context.Context, rootDir string, jsonFlag bool, args []string
 		if err != nil {
 			return err
 		}
-		if jsonFlag {
-			return writeDoctorJSON(result.Result, result.Fixed)
-		}
 		writeDoctorText(result.Result, result.Fixed)
 		return nil
 	}
@@ -217,14 +206,11 @@ func runDoctor(ctx context.Context, rootDir string, jsonFlag bool, args []string
 	if err != nil {
 		return err
 	}
-	if jsonFlag {
-		return writeDoctorJSON(result, nil)
-	}
 	writeDoctorText(result, nil)
 	return nil
 }
 
-func runGC(ctx context.Context, rootDir string, jsonFlag bool, args []string) error {
+func runGC(ctx context.Context, rootDir string, args []string) error {
 	gcFlags := flag.NewFlagSet("gc", flag.ContinueOnError)
 	var dryRun bool
 	var older string
@@ -263,9 +249,6 @@ func runGC(ctx context.Context, rootDir string, jsonFlag bool, args []string) er
 		if err != nil {
 			return err
 		}
-		if jsonFlag {
-			return writeGCJSON(result, true, older)
-		}
 		writeGCText(result, true, older)
 		return nil
 	}
@@ -274,14 +257,11 @@ func runGC(ctx context.Context, rootDir string, jsonFlag bool, args []string) er
 	if err != nil {
 		return err
 	}
-	if jsonFlag {
-		return writeGCJSON(result, false, older)
-	}
 	writeGCText(result, false, older)
 	return nil
 }
 
-func runRepo(ctx context.Context, rootDir string, jsonFlag bool, args []string) error {
+func runRepo(ctx context.Context, rootDir string, args []string) error {
 	if len(args) == 0 || isHelpArg(args[0]) {
 		printRepoHelp(os.Stdout)
 		return nil
@@ -290,7 +270,7 @@ func runRepo(ctx context.Context, rootDir string, jsonFlag bool, args []string) 
 	case "get":
 		return runRepoGet(ctx, rootDir, args[1:])
 	case "ls":
-		return runRepoList(ctx, rootDir, jsonFlag, args[1:])
+		return runRepoList(ctx, rootDir, args[1:])
 	default:
 		return fmt.Errorf("unknown repo subcommand: %s", args[0])
 	}
@@ -328,10 +308,11 @@ func runRepoGet(ctx context.Context, rootDir string, args []string) error {
 	renderer.Blank()
 	renderer.Section("Result")
 	renderer.Result(fmt.Sprintf("%s\t%s", store.RepoKey, store.StorePath))
+	renderSuggestion(renderer, useColor, repoSrcAbs(rootDir, repoSpec))
 	return nil
 }
 
-func runRepoList(ctx context.Context, rootDir string, jsonFlag bool, args []string) error {
+func runRepoList(ctx context.Context, rootDir string, args []string) error {
 	if len(args) == 1 && isHelpArg(args[0]) {
 		printRepoLsHelp(os.Stdout)
 		return nil
@@ -342,9 +323,6 @@ func runRepoList(ctx context.Context, rootDir string, jsonFlag bool, args []stri
 	entries, warnings, err := repo.List(rootDir)
 	if err != nil {
 		return err
-	}
-	if jsonFlag {
-		return writeRepoListJSON(entries, warnings)
 	}
 	writeRepoListText(entries, warnings)
 	return nil
@@ -476,6 +454,7 @@ func runWorkspaceNew(ctx context.Context, rootDir string, args []string, noPromp
 	renderer.Section("Result")
 	repos, _ := loadWorkspaceRepos(wsDir)
 	renderWorkspaceBlock(renderer, workspaceID, repos)
+	renderSuggestion(renderer, useColor, wsDir)
 	return nil
 }
 
@@ -571,6 +550,7 @@ func runWorkspaceAdd(ctx context.Context, rootDir string, args []string) error {
 	renderer.Blank()
 	renderer.Section("Result")
 	renderWorkspaceBlock(renderer, workspaceID, repos)
+	renderSuggestion(renderer, useColor, filepath.Join(rootDir, "ws", workspaceID))
 	return nil
 }
 
@@ -676,6 +656,7 @@ func runReview(ctx context.Context, rootDir string, args []string, noPrompt bool
 	renderer.Section("Result")
 	repos, _ := loadWorkspaceRepos(wsDir)
 	renderWorkspaceBlock(renderer, workspaceID, repos)
+	renderSuggestion(renderer, useColor, wsDir)
 	return nil
 }
 
@@ -961,6 +942,14 @@ func repoSrcRel(rootDir, repoSpec string) string {
 	return relPath(rootDir, srcPath)
 }
 
+func repoSrcAbs(rootDir, repoSpec string) string {
+	spec, err := repospec.Normalize(strings.TrimSpace(repoSpec))
+	if err != nil {
+		return ""
+	}
+	return filepath.Join(rootDir, "src", spec.Host, spec.Owner, spec.Repo)
+}
+
 func worktreeDest(rootDir, workspaceID, repoSpec string) string {
 	spec, err := repospec.Normalize(strings.TrimSpace(repoSpec))
 	if err != nil || spec.Repo == "" {
@@ -1014,6 +1003,18 @@ func truncateMiddle(value string, max int) string {
 	}
 	keep := (max - 3) / 2
 	return fmt.Sprintf("%s...%s", trimmed[:keep], trimmed[len(trimmed)-keep:])
+}
+
+func renderSuggestion(r *ui.Renderer, useColor bool, path string) {
+	if !useColor {
+		return
+	}
+	if strings.TrimSpace(path) == "" {
+		return
+	}
+	r.Blank()
+	r.Section("Suggestion")
+	r.Bullet(fmt.Sprintf("cd %s", path))
 }
 
 func repoSpecFromKey(repoKey string, cfg config.Config) string {
@@ -1218,7 +1219,7 @@ func applyTemplate(ctx context.Context, rootDir, workspaceID string, tmpl templa
 	return nil
 }
 
-func runWorkspaceList(ctx context.Context, rootDir string, jsonFlag bool, args []string) error {
+func runWorkspaceList(ctx context.Context, rootDir string, args []string) error {
 	if len(args) == 1 && isHelpArg(args[0]) {
 		printLsHelp(os.Stdout)
 		return nil
@@ -1230,14 +1231,11 @@ func runWorkspaceList(ctx context.Context, rootDir string, jsonFlag bool, args [
 	if err != nil {
 		return err
 	}
-	if jsonFlag {
-		return writeWorkspaceListJSON(entries, warnings)
-	}
 	writeWorkspaceListText(entries, warnings)
 	return nil
 }
 
-func runWorkspaceStatus(ctx context.Context, rootDir string, jsonFlag bool, args []string) error {
+func runWorkspaceStatus(ctx context.Context, rootDir string, args []string) error {
 	if len(args) == 1 && isHelpArg(args[0]) {
 		printStatusHelp(os.Stdout)
 		return nil
@@ -1275,9 +1273,6 @@ func runWorkspaceStatus(ctx context.Context, rootDir string, jsonFlag bool, args
 		return err
 	}
 
-	if jsonFlag {
-		return writeWorkspaceStatusJSON(result)
-	}
 	writeWorkspaceStatusText(result, showHeader)
 	return nil
 }
@@ -1360,52 +1355,6 @@ func runWorkspaceRemove(ctx context.Context, rootDir string, args []string) erro
 	return nil
 }
 
-type workspaceStatusJSON struct {
-	SchemaVersion int                       `json:"schema_version"`
-	Command       string                    `json:"command"`
-	WorkspaceID   string                    `json:"workspace_id"`
-	Repos         []workspaceStatusRepoJSON `json:"repos"`
-}
-
-type workspaceStatusRepoJSON struct {
-	Alias          string `json:"alias"`
-	Branch         string `json:"branch"`
-	Head           string `json:"head,omitempty"`
-	Dirty          bool   `json:"dirty"`
-	UntrackedCount int    `json:"untracked_count"`
-	StagedCount    int    `json:"staged_count,omitempty"`
-	UnstagedCount  int    `json:"unstaged_count,omitempty"`
-	UnmergedCount  int    `json:"unmerged_count,omitempty"`
-	Error          string `json:"error,omitempty"`
-}
-
-func writeWorkspaceStatusJSON(result workspace.StatusResult) error {
-	out := workspaceStatusJSON{
-		SchemaVersion: 1,
-		Command:       "status",
-		WorkspaceID:   result.WorkspaceID,
-	}
-	for _, repo := range result.Repos {
-		repoOut := workspaceStatusRepoJSON{
-			Alias:          repo.Alias,
-			Branch:         repo.Branch,
-			Head:           repo.Head,
-			Dirty:          repo.Dirty,
-			UntrackedCount: repo.UntrackedCount,
-			StagedCount:    repo.StagedCount,
-			UnstagedCount:  repo.UnstagedCount,
-			UnmergedCount:  repo.UnmergedCount,
-		}
-		if repo.Error != nil {
-			repoOut.Error = repo.Error.Error()
-		}
-		out.Repos = append(out.Repos, repoOut)
-	}
-	enc := json.NewEncoder(os.Stdout)
-	enc.SetIndent("", "  ")
-	return enc.Encode(out)
-}
-
 func writeWorkspaceStatusText(result workspace.StatusResult, showHeader bool) {
 	theme := ui.DefaultTheme()
 	useColor := isatty.IsTerminal(os.Stdout.Fd())
@@ -1452,52 +1401,6 @@ func writeWorkspaceStatusText(result workspace.StatusResult, showHeader bool) {
 	}
 }
 
-type workspaceListJSON struct {
-	SchemaVersion int                      `json:"schema_version"`
-	Command       string                   `json:"command"`
-	Workspaces    []workspaceListEntryJSON `json:"workspaces"`
-}
-
-type workspaceListEntryJSON struct {
-	WorkspaceID   string `json:"workspace_id"`
-	WorkspacePath string `json:"workspace_path"`
-	ManifestPath  string `json:"manifest_path"`
-	RepoCount     int    `json:"repo_count"`
-	Warning       string `json:"warning,omitempty"`
-}
-
-func writeWorkspaceListJSON(entries []workspace.Entry, warnings []error) error {
-	out := workspaceListJSON{
-		SchemaVersion: 1,
-		Command:       "ls",
-	}
-	for _, entry := range entries {
-		repoCount := 0
-		if entry.Manifest != nil {
-			repoCount = len(entry.Manifest.Repos)
-		}
-		item := workspaceListEntryJSON{
-			WorkspaceID:   entry.WorkspaceID,
-			WorkspacePath: entry.WorkspacePath,
-			ManifestPath:  entry.ManifestPath,
-			RepoCount:     repoCount,
-		}
-		if entry.Warning != nil {
-			item.Warning = entry.Warning.Error()
-		}
-		out.Workspaces = append(out.Workspaces, item)
-	}
-	enc := json.NewEncoder(os.Stdout)
-	enc.SetIndent("", "  ")
-	if err := enc.Encode(out); err != nil {
-		return err
-	}
-	for _, warning := range warnings {
-		fmt.Fprintf(os.Stderr, "warning: %v\n", warning)
-	}
-	return nil
-}
-
 func writeWorkspaceListText(entries []workspace.Entry, warnings []error) {
 	theme := ui.DefaultTheme()
 	useColor := isatty.IsTerminal(os.Stdout.Fd())
@@ -1531,41 +1434,6 @@ func writeWorkspaceListText(entries []workspace.Entry, warnings []error) {
 	}
 }
 
-type repoListJSON struct {
-	SchemaVersion int                 `json:"schema_version"`
-	Command       string              `json:"command"`
-	Repos         []repoListEntryJSON `json:"repos"`
-}
-
-type repoListEntryJSON struct {
-	RepoKey   string `json:"repo_key"`
-	StorePath string `json:"store_path"`
-	Warning   string `json:"warning,omitempty"`
-}
-
-func writeRepoListJSON(entries []repo.Entry, warnings []error) error {
-	out := repoListJSON{
-		SchemaVersion: 1,
-		Command:       "repo.ls",
-	}
-	for _, entry := range entries {
-		item := repoListEntryJSON{
-			RepoKey:   entry.RepoKey,
-			StorePath: entry.StorePath,
-		}
-		out.Repos = append(out.Repos, item)
-	}
-	enc := json.NewEncoder(os.Stdout)
-	enc.SetIndent("", "  ")
-	if err := enc.Encode(out); err != nil {
-		return err
-	}
-	for _, warning := range warnings {
-		fmt.Fprintf(os.Stderr, "warning: %v\n", warning)
-	}
-	return nil
-}
-
 func writeRepoListText(entries []repo.Entry, warnings []error) {
 	theme := ui.DefaultTheme()
 	useColor := isatty.IsTerminal(os.Stdout.Fd())
@@ -1587,37 +1455,6 @@ func writeRepoListText(entries []repo.Entry, warnings []error) {
 		}
 		renderTreeLines(renderer, lines, treeLineWarn)
 	}
-}
-
-type templateListJSON struct {
-	SchemaVersion int      `json:"schema_version"`
-	Command       string   `json:"command"`
-	Templates     []string `json:"templates"`
-}
-
-type templateShowJSON struct {
-	SchemaVersion int      `json:"schema_version"`
-	Command       string   `json:"command"`
-	Name          string   `json:"name"`
-	Repos         []string `json:"repos"`
-}
-
-type templateRemoveJSON struct {
-	SchemaVersion int    `json:"schema_version"`
-	Command       string `json:"command"`
-	Name          string `json:"name"`
-	Removed       bool   `json:"removed"`
-}
-
-func writeTemplateListJSON(names []string) error {
-	out := templateListJSON{
-		SchemaVersion: 1,
-		Command:       "template.ls",
-		Templates:     names,
-	}
-	enc := json.NewEncoder(os.Stdout)
-	enc.SetIndent("", "  ")
-	return enc.Encode(out)
 }
 
 func writeTemplateListText(file template.File, names []string) {
@@ -1650,60 +1487,11 @@ func writeTemplateListText(file template.File, names []string) {
 	}
 }
 
-func writeTemplateShowJSON(name string, tmpl template.Template) error {
-	out := templateShowJSON{
-		SchemaVersion: 1,
-		Command:       "template.show",
-		Name:          name,
-		Repos:         tmpl.Repos,
-	}
-	enc := json.NewEncoder(os.Stdout)
-	enc.SetIndent("", "  ")
-	return enc.Encode(out)
-}
-
 func writeTemplateShowText(name string, tmpl template.Template) {
 	fmt.Fprintf(os.Stdout, "%s\n", name)
 	for _, repo := range tmpl.Repos {
 		fmt.Fprintf(os.Stdout, " - %s\n", repo)
 	}
-}
-
-func writeTemplateRemoveJSON(name string) error {
-	out := templateRemoveJSON{
-		SchemaVersion: 1,
-		Command:       "template.rm",
-		Name:          name,
-		Removed:       true,
-	}
-	enc := json.NewEncoder(os.Stdout)
-	enc.SetIndent("", "  ")
-	return enc.Encode(out)
-}
-
-type initJSON struct {
-	SchemaVersion int      `json:"schema_version"`
-	Command       string   `json:"command"`
-	RootDir       string   `json:"root_dir"`
-	CreatedDirs   []string `json:"created_dirs"`
-	CreatedFiles  []string `json:"created_files"`
-	SkippedDirs   []string `json:"skipped_dirs"`
-	SkippedFiles  []string `json:"skipped_files"`
-}
-
-func writeInitJSON(result initcmd.Result) error {
-	out := initJSON{
-		SchemaVersion: 1,
-		Command:       "init",
-		RootDir:       result.RootDir,
-		CreatedDirs:   result.CreatedDirs,
-		CreatedFiles:  result.CreatedFiles,
-		SkippedDirs:   result.SkippedDirs,
-		SkippedFiles:  result.SkippedFiles,
-	}
-	enc := json.NewEncoder(os.Stdout)
-	enc.SetIndent("", "  ")
-	return enc.Encode(out)
 }
 
 func writeInitText(result initcmd.Result) {
@@ -1743,48 +1531,6 @@ func writeInitText(result initcmd.Result) {
 		renderTreeLines(renderer, skipped, treeLineNormal)
 	}
 }
-
-type gcJSON struct {
-	SchemaVersion int               `json:"schema_version"`
-	Command       string            `json:"command"`
-	DryRun        bool              `json:"dry_run"`
-	Older         string            `json:"older,omitempty"`
-	Candidates    []gcCandidateJSON `json:"candidates"`
-}
-
-type gcCandidateJSON struct {
-	WorkspaceID   string `json:"workspace_id"`
-	WorkspacePath string `json:"workspace_path"`
-	LastUsedAt    string `json:"last_used_at"`
-	Reason        string `json:"reason"`
-}
-
-func writeGCJSON(result gc.Result, dryRun bool, older string) error {
-	out := gcJSON{
-		SchemaVersion: 1,
-		Command:       "gc",
-		DryRun:        dryRun,
-		Older:         strings.TrimSpace(older),
-	}
-	for _, candidate := range result.Candidates {
-		out.Candidates = append(out.Candidates, gcCandidateJSON{
-			WorkspaceID:   candidate.WorkspaceID,
-			WorkspacePath: candidate.WorkspacePath,
-			LastUsedAt:    candidate.LastUsedAt,
-			Reason:        candidate.Reason,
-		})
-	}
-	enc := json.NewEncoder(os.Stdout)
-	enc.SetIndent("", "  ")
-	if err := enc.Encode(out); err != nil {
-		return err
-	}
-	for _, warning := range result.Warnings {
-		fmt.Fprintf(os.Stderr, "warning: %v\n", warning)
-	}
-	return nil
-}
-
 func writeGCText(result gc.Result, dryRun bool, older string) {
 	action := "gc"
 	if dryRun {
@@ -1824,46 +1570,6 @@ func parseOlder(value string) (time.Duration, error) {
 	}
 	return parsed, nil
 }
-
-type doctorJSON struct {
-	SchemaVersion int               `json:"schema_version"`
-	Command       string            `json:"command"`
-	Issues        []doctorIssueJSON `json:"issues"`
-	Fixed         []string          `json:"fixed,omitempty"`
-}
-
-type doctorIssueJSON struct {
-	Kind    string `json:"kind"`
-	Path    string `json:"path"`
-	Message string `json:"message"`
-}
-
-func writeDoctorJSON(result doctor.Result, fixed []string) error {
-	out := doctorJSON{
-		SchemaVersion: 1,
-		Command:       "doctor",
-	}
-	for _, issue := range result.Issues {
-		out.Issues = append(out.Issues, doctorIssueJSON{
-			Kind:    issue.Kind,
-			Path:    issue.Path,
-			Message: issue.Message,
-		})
-	}
-	if len(fixed) > 0 {
-		out.Fixed = fixed
-	}
-	enc := json.NewEncoder(os.Stdout)
-	enc.SetIndent("", "  ")
-	if err := enc.Encode(out); err != nil {
-		return err
-	}
-	for _, warning := range result.Warnings {
-		fmt.Fprintf(os.Stderr, "warning: %v\n", warning)
-	}
-	return nil
-}
-
 func writeDoctorText(result doctor.Result, fixed []string) {
 	theme := ui.DefaultTheme()
 	useColor := isatty.IsTerminal(os.Stdout.Fd())

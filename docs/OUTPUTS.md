@@ -1,22 +1,4 @@
 # 出力仕様（MVP）
 
-MVPでは “人間向け表示” を中心にしつつ、将来の agent 統合を見越して `--json` を用意する。
-
-## `--json`（MVPで実装推奨）
-- `gws ls --json`
-- `gws status <ID> --json`
-- `gws gc --dry-run --json`
-- `gws doctor --json`
-- `gws template ls --json`
-- `gws init --json`
-
-JSON は schema_version を含める:
-```json
-{
-  "schema_version": 1,
-  "command": "status",
-  "workspace_id": "PROJ-1234",
-  "repos": [
-    { "alias": "backend", "branch": "PROJ-1234", "dirty": false }
-  ]
-}
+MVPでは “人間向け表示” を優先する。
+JSON 出力は将来の拡張対象とし、現時点では提供しない。

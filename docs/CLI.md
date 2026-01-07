@@ -10,7 +10,6 @@
 ### 共通フラグ（MVP）
 - `--root <path>`: GWS_ROOT を上書き
 - `--no-prompt`: 対話を行わない（MVPでは破壊的操作を拒否してもよい）
-- `--json`: 機械可読出力（MVPでは ls/status のみでも可）
 - `--verbose` / `-v`: 実行ログを増やす（`GWS_VERBOSE=1` でも可）
 
 ### ルート解決

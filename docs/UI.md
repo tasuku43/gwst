@@ -13,7 +13,7 @@ Status: draft (MVP+)
 - JSON/format switching: MVP では扱わない
 
 ## Layout (common)
-Sectioned layout with 3 sections (interactive may insert Inputs; Info is optional):
+Sectioned layout with 3 sections (interactive may insert Inputs; Info/Suggestion are optional):
 
 ```
 Header
@@ -32,6 +32,9 @@ Result
 
 Info
   <warnings / skipped / blocked>
+
+Suggestion
+  <next command>
 ```
 
 Rules:
@@ -142,3 +145,4 @@ Result
 - All prompts and labels are English.
 - Info section is optional and contains warnings / skipped / blocked items.
 - Errors should be emphasized with a red prefix and red text.
+- Suggestion section is optional and shown on TTY only (e.g. `cd <path>`).
