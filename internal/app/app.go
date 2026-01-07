@@ -960,6 +960,42 @@ func buildStatusDetails(repo workspace.RepoStatus) []statusDetail {
 	return details
 }
 
+func issueDetails(issue doctor.Issue) []string {
+	var details []string
+	if strings.TrimSpace(issue.Path) != "" {
+		details = append(details, fmt.Sprintf("path: %s", issue.Path))
+	}
+	if strings.TrimSpace(issue.Message) != "" {
+		details = append(details, fmt.Sprintf("message: %s", issue.Message))
+	}
+	return details
+}
+
+type treeLineStyle int
+
+const (
+	treeLineNormal treeLineStyle = iota
+	treeLineWarn
+	treeLineError
+)
+
+func renderTreeLines(r *ui.Renderer, lines []string, style treeLineStyle) {
+	for i, line := range lines {
+		prefix := "├─ "
+		if i == len(lines)-1 {
+			prefix = "└─ "
+		}
+		switch style {
+		case treeLineWarn:
+			r.TreeLineWarn(output.Indent+prefix, line)
+		case treeLineError:
+			r.TreeLineError(output.Indent+prefix, line)
+		default:
+			r.TreeLine(output.Indent+prefix, line)
+		}
+	}
+}
+
 func classifyWorkspaceRemoval(ctx context.Context, rootDir string, entries []workspace.Entry) ([]ui.WorkspaceChoice, []ui.BlockedChoice) {
 	var removable []ui.WorkspaceChoice
 	var blocked []ui.BlockedChoice
@@ -1662,16 +1698,41 @@ func writeDoctorJSON(result doctor.Result, fixed []string) error {
 }
 
 func writeDoctorText(result doctor.Result, fixed []string) {
-	fmt.Fprintln(os.Stdout, "kind\tpath\tmessage")
-	for _, issue := range result.Issues {
-		fmt.Fprintf(os.Stdout, "%s\t%s\t%s\n", issue.Kind, issue.Path, issue.Message)
-	}
-	for _, warning := range result.Warnings {
-		fmt.Fprintf(os.Stderr, "warning: %v\n", warning)
-	}
-	if len(fixed) > 0 {
-		for _, path := range fixed {
-			fmt.Fprintf(os.Stdout, "fixed\t%s\n", path)
+	theme := ui.DefaultTheme()
+	useColor := isatty.IsTerminal(os.Stdout.Fd())
+	renderer := ui.NewRenderer(os.Stdout, theme, useColor)
+
+	renderer.Header("gws doctor")
+	renderer.Blank()
+	renderer.Section("Result")
+
+	if len(result.Issues) == 0 {
+		renderer.Bullet("no issues found")
+	} else {
+		for _, issue := range result.Issues {
+			renderer.BulletError(issue.Kind)
+			details := issueDetails(issue)
+			renderTreeLines(renderer, details, treeLineError)
 		}
+	}
+
+	if len(fixed) > 0 {
+		renderer.Bullet(fmt.Sprintf("fixed (%d)", len(fixed)))
+		var lines []string
+		for _, path := range fixed {
+			lines = append(lines, path)
+		}
+		renderTreeLines(renderer, lines, treeLineNormal)
+	}
+
+	if len(result.Warnings) > 0 {
+		renderer.Blank()
+		renderer.Section("Info")
+		renderer.Bullet("warnings")
+		var lines []string
+		for _, warning := range result.Warnings {
+			lines = append(lines, warning.Error())
+		}
+		renderTreeLines(renderer, lines, treeLineWarn)
 	}
 }

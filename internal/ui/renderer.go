@@ -55,6 +55,15 @@ func (r *Renderer) Bullet(text string) {
 	r.bullet(text)
 }
 
+func (r *Renderer) BulletError(text string) {
+	prefix := output.StepPrefix + " "
+	if r.useColor {
+		prefix = r.theme.Error.Render(prefix)
+		text = r.theme.Error.Render(text)
+	}
+	r.writeLine(output.Indent + prefix + text)
+}
+
 func (r *Renderer) Warn(text string) {
 	r.writeLine(output.Indent + r.style(text, r.theme.Warn))
 }
@@ -90,6 +99,14 @@ func (r *Renderer) TreeLineWarn(prefix, text string) {
 	line := output.Indent + prefix + text
 	if r.useColor {
 		line = r.style(line, r.theme.Warn)
+	}
+	r.writeLine(line)
+}
+
+func (r *Renderer) TreeLineError(prefix, text string) {
+	line := output.Indent + prefix + text
+	if r.useColor {
+		line = r.style(line, r.theme.Error)
 	}
 	r.writeLine(line)
 }
