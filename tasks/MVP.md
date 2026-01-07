@@ -36,7 +36,7 @@
 | MVP-105 | UI: gws status | Done |
 | MVP-106 | UI: gws rm | Done |
 | MVP-109 | UI: gws doctor | Done |
-| MVP-110 | UI: gws template ls | To Do |
+| MVP-110 | UI: gws template ls | Done |
 | MVP-111 | UI: gws init | To Do |
 | MVP-112 | UI: gws review | To Do |
 | MVP-113 | gws cd (workspace chooser) | To Do |

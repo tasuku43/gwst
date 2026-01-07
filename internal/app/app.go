@@ -1500,8 +1500,19 @@ func writeTemplateListJSON(names []string) error {
 }
 
 func writeTemplateListText(names []string) {
+	theme := ui.DefaultTheme()
+	useColor := isatty.IsTerminal(os.Stdout.Fd())
+	renderer := ui.NewRenderer(os.Stdout, theme, useColor)
+
+	renderer.Header("gws template ls")
+	renderer.Blank()
+	renderer.Section("Result")
+	if len(names) == 0 {
+		renderer.Bullet("no templates found")
+		return
+	}
 	for _, name := range names {
-		fmt.Fprintln(os.Stdout, name)
+		renderer.Bullet(name)
 	}
 }
 
