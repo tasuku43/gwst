@@ -483,20 +483,118 @@ func runWorkspaceAdd(ctx context.Context, rootDir string, args []string) error {
 		printAddHelp(os.Stdout)
 		return nil
 	}
-	if len(args) != 2 {
-		return fmt.Errorf("usage: gws add <WORKSPACE_ID> <repo>")
+	if len(args) > 2 {
+		return fmt.Errorf("usage: gws add [<WORKSPACE_ID>] [<repo>]")
 	}
-	workspaceID := args[0]
-	repoSpec := args[1]
+	workspaceID := ""
+	repoSpec := ""
+	if len(args) >= 1 {
+		workspaceID = args[0]
+	}
+	if len(args) == 2 {
+		repoSpec = args[1]
+	}
 	cfg, err := config.Load(rootDir)
 	if err != nil {
 		return err
 	}
-	repoEntry, err := workspace.Add(ctx, rootDir, workspaceID, repoSpec, "", cfg, false)
+	theme := ui.DefaultTheme()
+	useColor := isatty.IsTerminal(os.Stdout.Fd())
+	renderer := ui.NewRenderer(os.Stdout, theme, useColor)
+	output.SetStepLogger(renderer)
+	defer output.SetStepLogger(nil)
+
+	prompted := false
+	if workspaceID == "" || repoSpec == "" {
+		prompted = true
+		workspaces, wsWarn, err := workspace.List(rootDir)
+		if err != nil {
+			return err
+		}
+		if len(wsWarn) > 0 {
+			// ignore warnings for selection
+		}
+		var workspaceChoices []ui.WorkspaceChoice
+		for _, entry := range workspaces {
+			choice := ui.WorkspaceChoice{ID: entry.WorkspaceID}
+			if entry.Manifest != nil {
+				for _, repoEntry := range entry.Manifest.Repos {
+					name := repoEntry.Alias
+					if strings.TrimSpace(name) == "" {
+						name = repoEntry.RepoKey
+					}
+					label := name
+					if strings.TrimSpace(repoEntry.Branch) != "" {
+						label = fmt.Sprintf("%s (branch: %s)", name, repoEntry.Branch)
+					}
+					choice.Repos = append(choice.Repos, ui.PromptChoice{
+						Label: label,
+						Value: displayRepoKey(repoEntry.RepoKey),
+					})
+				}
+			}
+			workspaceChoices = append(workspaceChoices, choice)
+		}
+		if len(workspaceChoices) == 0 {
+			return fmt.Errorf("no workspaces found")
+		}
+
+		repos, _, err := repo.List(rootDir)
+		if err != nil {
+			return err
+		}
+		var repoChoices []ui.PromptChoice
+		for _, entry := range repos {
+			label := displayRepoKey(entry.RepoKey)
+			value := repoSpecFromKey(entry.RepoKey, cfg)
+			repoChoices = append(repoChoices, ui.PromptChoice{Label: label, Value: value})
+		}
+		if len(repoChoices) == 0 {
+			return fmt.Errorf("no repos found")
+		}
+
+		if workspaceID == "" || repoSpec == "" {
+			workspaceID, repoSpec, err = ui.PromptWorkspaceAndRepo("gws add", workspaceChoices, repoChoices, workspaceID, repoSpec, theme, useColor)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	header := "gws add"
+	var headerParts []string
+	if workspaceID != "" {
+		headerParts = append(headerParts, fmt.Sprintf("workspace id: %s", workspaceID))
+	}
+	if strings.TrimSpace(repoSpec) != "" {
+		headerParts = append(headerParts, fmt.Sprintf("repo: %s", repoSpec))
+	}
+	if len(headerParts) > 0 {
+		header = fmt.Sprintf("%s (%s)", header, strings.Join(headerParts, ", "))
+	}
+	if !prompted {
+		renderer.Header(header)
+		renderer.Blank()
+	} else {
+		renderer.Blank()
+	}
+	renderer.Section("Steps")
+
+	display := repoSpec
+	if spec, err := repospec.Normalize(repoSpec); err == nil && spec.Repo != "" {
+		display = spec.Repo
+	}
+	output.Step(fmt.Sprintf("worktree add %s", display))
+
+	_, err = workspace.Add(ctx, rootDir, workspaceID, repoSpec, "", cfg, false)
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(os.Stdout, "%s\t%s\n", repoEntry.Alias, repoEntry.WorktreePath)
+	wsDir := filepath.Join(rootDir, "ws", workspaceID)
+	repos, _ := loadWorkspaceRepos(wsDir)
+	renderer.Blank()
+	renderer.Section("Result")
+	renderWorkspaceBlock(renderer, workspaceID, repos)
 	return nil
 }
 
@@ -791,6 +889,28 @@ func loadWorkspaceRepos(wsDir string) ([]workspace.Repo, error) {
 		repos = append(repos, workspace.Repo{Alias: entry.Name()})
 	}
 	return repos, nil
+}
+
+func displayRepoKey(repoKey string) string {
+	display := strings.TrimSuffix(repoKey, ".git")
+	display = strings.TrimSuffix(display, "/")
+	return display
+}
+
+func repoSpecFromKey(repoKey string, cfg config.Config) string {
+	trimmed := strings.TrimSuffix(repoKey, ".git")
+	trimmed = strings.TrimSuffix(trimmed, "/")
+	parts := strings.Split(trimmed, "/")
+	if len(parts) < 3 {
+		return repoKey
+	}
+	host := parts[0]
+	owner := parts[1]
+	repo := parts[2]
+	if strings.EqualFold(strings.TrimSpace(cfg.Repo.DefaultProtocol), "ssh") {
+		return fmt.Sprintf("git@%s:%s/%s.git", host, owner, repo)
+	}
+	return fmt.Sprintf("https://%s/%s/%s.git", host, owner, repo)
 }
 
 func printRepoGetCommands(repos []string) {
