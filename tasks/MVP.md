@@ -80,17 +80,11 @@ Acceptance:
 - 未指定時は `~/gws`
 
 Files:
-- internal/config
 - internal/paths
 
 ### MVP-011: Implement config loader
 Goal:
-- `$GWS_ROOT/settings.yaml` をロードし、デフォルト値を埋める
-
-Acceptance:
-- YAML が読める
-- 想定キー（docs/CONFIG.md）を解釈できる
-- 未設定でもクラッシュしない
+- 廃止（settings.yaml は廃止し、デフォルトはハードコード）
 
 ### MVP-012: Git command runner
 Goal:
@@ -157,7 +151,7 @@ Goal:
 
 Rules:
 - branch = workspace_id
-- base_ref = defaults.base_ref（origin/main 既定）
+- base_ref = origin/HEAD を優先して自動検出（必要なら main/master/develop を順に探索）
 
 Acceptance:
 - ブランチがなければ base_ref から作成される
@@ -349,4 +343,4 @@ Goal:
 
 Acceptance:
 - `bare/`, `src/`, `ws/` を作成する（既存ならスキップ）
-- `settings.yaml` と `templates.yaml` を作成する（既存ならスキップ）
+- `templates.yaml` を作成する（既存ならスキップ）

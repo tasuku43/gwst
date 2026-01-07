@@ -130,7 +130,7 @@ func checkRootLayout(rootDir string) []Issue {
 		}
 	}
 
-	files := []string{"settings.yaml", "templates.yaml"}
+	files := []string{"templates.yaml"}
 	for _, name := range files {
 		path := filepath.Join(rootDir, name)
 		info, err := os.Stat(path)

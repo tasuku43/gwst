@@ -41,18 +41,6 @@ func Run(rootDir string) (Result, error) {
 		result.CreatedDirs = append(result.CreatedDirs, dir)
 	}
 
-	settingsPath := filepath.Join(rootDir, "settings.yaml")
-	if exists, err := fileExists(settingsPath); err != nil {
-		return Result{}, err
-	} else if exists {
-		result.SkippedFiles = append(result.SkippedFiles, settingsPath)
-	} else {
-		if err := writeSettings(settingsPath); err != nil {
-			return Result{}, err
-		}
-		result.CreatedFiles = append(result.CreatedFiles, settingsPath)
-	}
-
 	templatesPath := filepath.Join(rootDir, "templates.yaml")
 	if exists, err := fileExists(templatesPath); err != nil {
 		return Result{}, err
@@ -90,36 +78,6 @@ func fileExists(path string) (bool, error) {
 	return !info.IsDir(), nil
 }
 
-type settingsFile struct {
-	Version  int `yaml:"version"`
-	Defaults struct {
-		BaseRef string `yaml:"base_ref"`
-		TTLDays int    `yaml:"ttl_days"`
-	} `yaml:"defaults"`
-	Repo struct {
-		DefaultHost     string `yaml:"default_host"`
-		DefaultProtocol string `yaml:"default_protocol"`
-	} `yaml:"repo"`
-}
-
-func writeSettings(path string) error {
-	var file settingsFile
-	file.Version = 1
-	file.Defaults.BaseRef = ""
-	file.Defaults.TTLDays = 30
-	file.Repo.DefaultHost = "github.com"
-	file.Repo.DefaultProtocol = "https"
-
-	data, err := yaml.Marshal(file)
-	if err != nil {
-		return fmt.Errorf("marshal settings: %w", err)
-	}
-	if err := os.WriteFile(path, data, 0o644); err != nil {
-		return fmt.Errorf("write settings: %w", err)
-	}
-	return nil
-}
-
 type templatesFile struct {
 	Templates map[string]struct {
 		Repos []string `yaml:"repos"`
@@ -130,7 +88,14 @@ func writeTemplates(path string) error {
 	file := templatesFile{
 		Templates: map[string]struct {
 			Repos []string `yaml:"repos"`
-		}{},
+		}{
+			"example": {
+				Repos: []string{
+					"git@github.com:github/docs.git",
+					"git@github.com:github/opensource.guide.git",
+				},
+			},
+		},
 	}
 	data, err := yaml.Marshal(file)
 	if err != nil {

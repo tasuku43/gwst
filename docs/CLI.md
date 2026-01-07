@@ -74,7 +74,8 @@ MVP出力:
 
 挙動:
 - `bare/`, `src/`, `ws/` を作成（既存ならスキップ）
-- `settings.yaml` と `templates.yaml` を作成（既存ならスキップ）
+- `templates.yaml` を作成（既存ならスキップ）
+  - `example` テンプレート（複数 repo）を同梱
 
 ## workspace
 
@@ -92,7 +93,7 @@ MVP出力:
 
 既定ルール:
 - branch = WORKSPACE_ID
-- base_ref = defaults.base_ref（空なら origin/HEAD から自動検出）
+- base_ref = origin/HEAD（空なら自動検出。必要なら main/master/develop を順に探索）
 
 挙動:
 1. repo get 済みであることを前提に store を最新化（未取得ならエラー）

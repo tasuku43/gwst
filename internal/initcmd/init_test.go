@@ -3,6 +3,7 @@ package initcmd
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -25,10 +26,23 @@ func TestRunCreatesAndSkips(t *testing.T) {
 			t.Fatalf("missing dir %s: %v", dir, err)
 		}
 	}
-	for _, file := range []string{"settings.yaml", "templates.yaml"} {
-		if _, err := os.Stat(filepath.Join(rootDir, file)); err != nil {
-			t.Fatalf("missing file %s: %v", file, err)
-		}
+	templatesPath := filepath.Join(rootDir, "templates.yaml")
+	if _, err := os.Stat(templatesPath); err != nil {
+		t.Fatalf("missing file templates.yaml: %v", err)
+	}
+	data, err := os.ReadFile(templatesPath)
+	if err != nil {
+		t.Fatalf("read templates.yaml: %v", err)
+	}
+	content := string(data)
+	if !strings.Contains(content, "example:") {
+		t.Fatalf("expected example template in templates.yaml")
+	}
+	if !strings.Contains(content, "git@github.com:github/docs.git") {
+		t.Fatalf("expected github/docs repo in templates.yaml")
+	}
+	if !strings.Contains(content, "git@github.com:github/opensource.guide.git") {
+		t.Fatalf("expected github/opensource.guide repo in templates.yaml")
 	}
 
 	second, err := Run(rootDir)

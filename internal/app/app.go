@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/mattn/go-isatty"
-	"github.com/tasuku43/gws/internal/config"
 	"github.com/tasuku43/gws/internal/doctor"
 	"github.com/tasuku43/gws/internal/gc"
 	"github.com/tasuku43/gws/internal/gitcmd"
@@ -29,6 +28,8 @@ import (
 	"github.com/tasuku43/gws/internal/ui"
 	"github.com/tasuku43/gws/internal/workspace"
 )
+
+const defaultRepoProtocol = "ssh"
 
 // Run is a placeholder for the CLI entrypoint.
 func Run() error {
@@ -374,11 +375,6 @@ func runWorkspaceNew(ctx context.Context, rootDir string, args []string, noPromp
 		}
 	}
 
-	cfg, err := config.Load(rootDir)
-	if err != nil {
-		return err
-	}
-
 	file, err := template.Load(rootDir)
 	if err != nil {
 		return err
@@ -438,12 +434,12 @@ func runWorkspaceNew(ctx context.Context, rootDir string, args []string, noPromp
 	}
 
 	output.Step(formatStep("create workspace", workspaceID, relPath(rootDir, filepath.Join(rootDir, "ws", workspaceID))))
-	wsDir, err := workspace.New(ctx, rootDir, workspaceID, cfg)
+	wsDir, err := workspace.New(ctx, rootDir, workspaceID)
 	if err != nil {
 		return err
 	}
 
-	if err := applyTemplate(ctx, rootDir, workspaceID, tmpl, cfg); err != nil {
+	if err := applyTemplate(ctx, rootDir, workspaceID, tmpl); err != nil {
 		if rollbackErr := workspace.Remove(ctx, rootDir, workspaceID); rollbackErr != nil {
 			return fmt.Errorf("apply template failed: %w (rollback failed: %v)", err, rollbackErr)
 		}
@@ -474,10 +470,6 @@ func runWorkspaceAdd(ctx context.Context, rootDir string, args []string) error {
 	if len(args) == 2 {
 		repoSpec = args[1]
 	}
-	cfg, err := config.Load(rootDir)
-	if err != nil {
-		return err
-	}
 	theme := ui.DefaultTheme()
 	useColor := isatty.IsTerminal(os.Stdout.Fd())
 	renderer := ui.NewRenderer(os.Stdout, theme, useColor)
@@ -506,7 +498,7 @@ func runWorkspaceAdd(ctx context.Context, rootDir string, args []string) error {
 		var repoChoices []ui.PromptChoice
 		for _, entry := range repos {
 			label := displayRepoKey(entry.RepoKey)
-			value := repoSpecFromKey(entry.RepoKey, cfg)
+			value := repoSpecFromKey(entry.RepoKey)
 			repoChoices = append(repoChoices, ui.PromptChoice{Label: label, Value: value})
 		}
 		if len(repoChoices) == 0 {
@@ -541,8 +533,7 @@ func runWorkspaceAdd(ctx context.Context, rootDir string, args []string) error {
 	renderer.Section("Steps")
 	output.Step(formatStep("worktree add", displayRepoName(repoSpec), worktreeDest(rootDir, workspaceID, repoSpec)))
 
-	_, err = workspace.Add(ctx, rootDir, workspaceID, repoSpec, "", cfg, false)
-	if err != nil {
+	if _, err := workspace.Add(ctx, rootDir, workspaceID, repoSpec, "", false); err != nil {
 		return err
 	}
 	wsDir := filepath.Join(rootDir, "ws", workspaceID)
@@ -572,11 +563,6 @@ func runReview(ctx context.Context, rootDir string, args []string, noPrompt bool
 		return err
 	}
 
-	cfg, err := config.Load(rootDir)
-	if err != nil {
-		return err
-	}
-
 	info, err := fetchGitHubPR(ctx, owner, repoName, number)
 	if err != nil {
 		return err
@@ -587,7 +573,7 @@ func runReview(ctx context.Context, rootDir string, args []string, noPrompt bool
 	if info.HeadRepoFullName != info.BaseRepoFullName {
 		return fmt.Errorf("fork PR is not supported")
 	}
-	repoURL := selectRepoURL(info, cfg)
+	repoURL := selectRepoURL(info)
 	if repoURL == "" {
 		return fmt.Errorf("cannot determine repo url for PR")
 	}
@@ -633,7 +619,7 @@ func runReview(ctx context.Context, rootDir string, args []string, noPrompt bool
 	}
 
 	output.Step(formatStep("create workspace", workspaceID, relPath(rootDir, filepath.Join(rootDir, "ws", workspaceID))))
-	wsDir, err := workspace.New(ctx, rootDir, workspaceID, cfg)
+	wsDir, err := workspace.New(ctx, rootDir, workspaceID)
 	if err != nil {
 		return err
 	}
@@ -649,7 +635,7 @@ func runReview(ctx context.Context, rootDir string, args []string, noPrompt bool
 
 	baseRef := fmt.Sprintf("refs/remotes/origin/%s", info.HeadRefName)
 	output.Step(formatStep("worktree add", displayRepoName(repoURL), worktreeDest(rootDir, workspaceID, repoURL)))
-	if _, err := workspace.AddWithBranch(ctx, rootDir, workspaceID, repoURL, "", info.HeadRefName, baseRef, cfg, false); err != nil {
+	if _, err := workspace.AddWithBranch(ctx, rootDir, workspaceID, repoURL, "", info.HeadRefName, baseRef, false); err != nil {
 		if rollbackErr := workspace.Remove(ctx, rootDir, workspaceID); rollbackErr != nil {
 			return fmt.Errorf("review failed: %w (rollback failed: %v)", err, rollbackErr)
 		}
@@ -756,21 +742,21 @@ func fetchGitHubPR(ctx context.Context, owner, repo string, number int) (prInfo,
 	return info, nil
 }
 
-func selectRepoURL(info prInfo, cfg config.Config) string {
-	switch strings.ToLower(strings.TrimSpace(cfg.Repo.DefaultProtocol)) {
-	case "ssh":
-		if info.HeadRepoSSHURL != "" {
-			return info.HeadRepoSSHURL
-		}
+func selectRepoURL(info prInfo) string {
+	switch strings.ToLower(strings.TrimSpace(defaultRepoProtocol)) {
 	case "https":
 		if info.HeadRepoCloneURL != "" {
 			return info.HeadRepoCloneURL
 		}
+	default:
+		if info.HeadRepoSSHURL != "" {
+			return info.HeadRepoSSHURL
+		}
 	}
-	if info.HeadRepoSSHURL != "" {
-		return info.HeadRepoSSHURL
+	if info.HeadRepoCloneURL != "" {
+		return info.HeadRepoCloneURL
 	}
-	return info.HeadRepoCloneURL
+	return info.HeadRepoSSHURL
 }
 
 func fetchPRHead(ctx context.Context, storePath, headRef string) error {
@@ -1037,7 +1023,7 @@ func renderSuggestions(r *ui.Renderer, useColor bool, lines []string) {
 	}
 }
 
-func repoSpecFromKey(repoKey string, cfg config.Config) string {
+func repoSpecFromKey(repoKey string) string {
 	trimmed := strings.TrimSuffix(repoKey, ".git")
 	trimmed = strings.TrimSuffix(trimmed, "/")
 	parts := strings.Split(trimmed, "/")
@@ -1047,7 +1033,7 @@ func repoSpecFromKey(repoKey string, cfg config.Config) string {
 	host := parts[0]
 	owner := parts[1]
 	repo := parts[2]
-	if strings.EqualFold(strings.TrimSpace(cfg.Repo.DefaultProtocol), "ssh") {
+	if strings.EqualFold(strings.TrimSpace(defaultRepoProtocol), "ssh") {
 		return fmt.Sprintf("git@%s:%s/%s.git", host, owner, repo)
 	}
 	return fmt.Sprintf("https://%s/%s/%s.git", host, owner, repo)
@@ -1270,11 +1256,11 @@ func preflightTemplateRepos(ctx context.Context, rootDir string, tmpl template.T
 	return missing, nil
 }
 
-func applyTemplate(ctx context.Context, rootDir, workspaceID string, tmpl template.Template, cfg config.Config) error {
+func applyTemplate(ctx context.Context, rootDir, workspaceID string, tmpl template.Template) error {
 	total := len(tmpl.Repos)
 	for i, repoSpec := range tmpl.Repos {
 		output.Step(formatStepWithIndex("worktree add", displayRepoName(repoSpec), worktreeDest(rootDir, workspaceID, repoSpec), i+1, total))
-		if _, err := workspace.Add(ctx, rootDir, workspaceID, repoSpec, "", cfg, true); err != nil {
+		if _, err := workspace.Add(ctx, rootDir, workspaceID, repoSpec, "", true); err != nil {
 			return err
 		}
 	}
@@ -1601,9 +1587,10 @@ func writeInitText(result initcmd.Result) {
 	}
 
 	renderSuggestions(renderer, useColor, []string{
-		"gws repo get <repo>",
+		fmt.Sprintf("Edit templates.yaml: %s", filepath.Join(result.RootDir, "templates.yaml")),
 		"gws template ls",
-		"gws new --template <name> <id>",
+		"gws repo get <repo>",
+		"gws new",
 	})
 }
 func writeGCText(result gc.Result, dryRun bool, older string) {

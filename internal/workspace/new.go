@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/tasuku43/gws/internal/config"
 	"github.com/tasuku43/gws/internal/gitcmd"
 	"gopkg.in/yaml.v3"
 )
@@ -15,9 +14,10 @@ import (
 const (
 	manifestDirName  = ".gws"
 	manifestFileName = "manifest.yaml"
+	defaultTTLDays   = 30
 )
 
-func New(ctx context.Context, rootDir string, workspaceID string, cfg config.Config) (string, error) {
+func New(ctx context.Context, rootDir string, workspaceID string) (string, error) {
 	if err := validateWorkspaceID(ctx, workspaceID); err != nil {
 		return "", err
 	}
@@ -45,7 +45,7 @@ func New(ctx context.Context, rootDir string, workspaceID string, cfg config.Con
 		LastUsedAt:    now,
 		Policy: Policy{
 			Pinned:  false,
-			TTLDays: cfg.Defaults.TTLDays,
+			TTLDays: defaultTTLDays,
 		},
 	}
 

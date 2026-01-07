@@ -45,22 +45,19 @@ gws は、作業場を workspace（タスク単位ディレクトリ）へ昇格
 - `$GWS_ROOT/src/`  : human working tree
 - `$GWS_ROOT/ws/`    : workspace 群（タスク単位）
 - `$GWS_ROOT/templates.yaml` : workspace templates
-- `$GWS_ROOT/settings.yaml` : settings
 
-## 4. 設定（Config）
+## 4. 設定
 
 ### 4.1 設定ファイル
-ユーザー設定:
-`$GWS_ROOT/settings.yaml`
+MVP ではユーザー設定ファイルは持たない（デフォルトはハードコード）。
 
 workspace ローカル:
 - `$GWS_ROOT/ws/<WORKSPACE_ID>/.gws/manifest.yaml`
 
-### 4.2 設定の優先順位
+### 4.2 ルート解決の優先順位
 1. CLI フラグ（例: `--root`）
 2. 環境変数（`GWS_ROOT`）
-3. ユーザー設定ファイル（`$GWS_ROOT/settings.yaml`）
-4. デフォルト（`~/gws`）
+3. デフォルト（`~/gws`）
 
 ## 5. Workspace ID とブランチ名（確定ルール）
 
@@ -70,7 +67,7 @@ workspace ローカル:
 
 ### 5.2 ブランチ名は workspace_id と同一
 - v0.1 の既定動作として、各 repo の worktree は `branch = workspace_id` を checkout する
-- ブランチが存在しない場合は `base_ref`（既定 `origin/main`）から作成する
+- ブランチが存在しない場合は `origin/HEAD`（もしくは `HEAD`）から自動検出し、必要なら `main/master/develop` を順に探索する
 
 この制約により、従来の「ブランチ中心の体験」を “workspace中心” に置換し、追跡・回収（GC）を単純化する。
 

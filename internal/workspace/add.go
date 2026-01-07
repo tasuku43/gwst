@@ -7,17 +7,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/tasuku43/gws/internal/config"
 	"github.com/tasuku43/gws/internal/gitcmd"
 	"github.com/tasuku43/gws/internal/repo"
 	"github.com/tasuku43/gws/internal/repospec"
 )
 
-func Add(ctx context.Context, rootDir, workspaceID, repoSpec, alias string, cfg config.Config, fetch bool) (Repo, error) {
-	return AddWithBranch(ctx, rootDir, workspaceID, repoSpec, alias, workspaceID, "", cfg, fetch)
+func Add(ctx context.Context, rootDir, workspaceID, repoSpec, alias string, fetch bool) (Repo, error) {
+	return AddWithBranch(ctx, rootDir, workspaceID, repoSpec, alias, workspaceID, "", fetch)
 }
 
-func AddWithBranch(ctx context.Context, rootDir, workspaceID, repoSpec, alias, branch, baseRef string, cfg config.Config, fetch bool) (Repo, error) {
+func AddWithBranch(ctx context.Context, rootDir, workspaceID, repoSpec, alias, branch, baseRef string, fetch bool) (Repo, error) {
 	if err := validateWorkspaceID(ctx, workspaceID); err != nil {
 		return Repo{}, err
 	}
@@ -69,7 +68,7 @@ func AddWithBranch(ctx context.Context, rootDir, workspaceID, repoSpec, alias, b
 
 	if baseRef == "" {
 		var err error
-		baseRef, err = resolveBaseRef(ctx, store.StorePath, cfg)
+		baseRef, err = resolveBaseRef(ctx, store.StorePath)
 		if err != nil {
 			return Repo{}, err
 		}
@@ -114,13 +113,9 @@ func AddWithBranch(ctx context.Context, rootDir, workspaceID, repoSpec, alias, b
 	return repoEntry, nil
 }
 
-func resolveBaseRef(ctx context.Context, storePath string, cfg config.Config) (string, error) {
+func resolveBaseRef(ctx context.Context, storePath string) (string, error) {
 	if storePath == "" {
 		return "", fmt.Errorf("store path is required")
-	}
-
-	if base := strings.TrimSpace(cfg.Defaults.BaseRef); base != "" {
-		return base, nil
 	}
 
 	localHead, err := detectLocalHeadRef(ctx, storePath)
@@ -156,7 +151,7 @@ func resolveBaseRef(ctx context.Context, storePath string, cfg config.Config) (s
 	if err != nil {
 		return "", err
 	}
-	return "", fmt.Errorf("cannot detect default base ref; set defaults.base_ref")
+	return "", fmt.Errorf("cannot detect default base ref")
 }
 
 func detectLocalHeadRef(ctx context.Context, storePath string) (string, error) {

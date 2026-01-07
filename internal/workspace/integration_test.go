@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/tasuku43/gws/internal/config"
 	"github.com/tasuku43/gws/internal/repo"
 	"github.com/tasuku43/gws/internal/workspace"
 )
@@ -55,11 +54,10 @@ func TestRepoGetWorkspaceAddRemove(t *testing.T) {
 		t.Fatalf("src path missing: %v", err)
 	}
 
-	cfg := config.DefaultConfig()
-	if _, err := workspace.New(ctx, rootDir, "TEST-1", cfg); err != nil {
+	if _, err := workspace.New(ctx, rootDir, "TEST-1"); err != nil {
 		t.Fatalf("workspace.New error: %v", err)
 	}
-	if _, err := workspace.Add(ctx, rootDir, "TEST-1", repoSpec, "", cfg, false); err != nil {
+	if _, err := workspace.Add(ctx, rootDir, "TEST-1", repoSpec, "", false); err != nil {
 		t.Fatalf("workspace.Add error: %v", err)
 	}
 
