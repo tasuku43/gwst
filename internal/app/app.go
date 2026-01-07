@@ -1588,9 +1588,6 @@ func writeInitText(result initcmd.Result) {
 
 	renderSuggestions(renderer, useColor, []string{
 		fmt.Sprintf("Edit templates.yaml: %s", filepath.Join(result.RootDir, "templates.yaml")),
-		"gws template ls",
-		"gws repo get <repo>",
-		"gws new",
 	})
 }
 func writeGCText(result gc.Result, dryRun bool, older string) {
