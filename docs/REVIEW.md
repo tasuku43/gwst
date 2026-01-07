@@ -10,39 +10,33 @@
 - `gws review <PR URL>`
 
 ## 対象範囲（MVP 以降）
-- GitHub の PR URL のみ対応
-- fork PR は対象外
+- GitHub / GitLab / Bitbucket Cloud の PR/MR URL に対応
+- fork PR/MR も対応
+- GitLab は `owner/repo` 一階層のみ対応（サブグループ未対応）
+- Bitbucket Cloud は `bitbucket.org/<owner>/<repo>/pull-requests/<n>` をサポート
 - 既存 workspace がある場合はエラー
 
-## 前提
-- `gh` が利用可能であること（認証済み）
-
 ## 仕様（動作）
-1. PR URL から `owner/repo` と PR 番号を取得
-2. `gh` で PR 情報を取得
-   - headRefName（PR ブランチ名）
-   - headRepository（fork でないことを確認）
-3. repo store が未取得なら `repo get` と同等の導線で取得（対話）
-4. workspace を作成
+1. PR/MR URL から `host/owner/repo` と番号を取得（GitHub: pull/<n>、GitLab: merge_requests/<n>）
+2. repo store が未取得なら `repo get` と同等の導線で取得（対話）
+3. workspace を作成
    - workspace ID は `REVIEW-PR-<number>` を使用（例: `REVIEW-PR-123`）
-   - 既存 workspace がある場合はエラー
-5. PR の head を取得して worktree を作成
-   - `git fetch origin <headRefName>` で PR ブランチを取得
-   - local branch は PR head から作成する
-   - workspace ID と worktree ブランチ名は一致しない
+4. PR/MR の ref を直接 fetch
+   - GitHub: `git fetch origin pull/<n>/head:refs/remotes/gws-review/<id>`
+   - GitLab: `git fetch origin merge-requests/<n>/head:refs/remotes/gws-review/<id>`
+   - Bitbucket: `git fetch origin refs/pull-requests/<n>/from:refs/remotes/gws-review/<id>`
+5. fetch した ref を base に worktree を作成
+   - worktree ブランチ名は workspace ID と同じ
 
 ## 出力
 - `gws new` と同じ UX（インデント/進捗表示）
 - 最後に workspace ツリーを表示
 
 ## エラー
-- PR URL が GitHub 以外: エラー
-- fork PR: エラー
-- `gh` 未インストール/未認証: エラー
+- 対応していないホスト: エラー
 - repo store 未取得で `repo get` を拒否: エラー
 - workspace が既に存在: エラー
 
 ## 今後の検討
-- fork PR 対応
 - `workspace_id` のカスタム（`--id`）
 - `--no-fetch` などのオプション

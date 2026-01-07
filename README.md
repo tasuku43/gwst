@@ -13,7 +13,7 @@ so humans and multiple AI agents can work in parallel without stepping on each o
 
 - Git
 - Go 1.24+ (build/run from source)
-- gh CLI (only for `gws review`)
+- gh CLI (optional; no longer required for `gws review`)
 
 ## Quickstart (5 minutes)
 
@@ -33,15 +33,15 @@ Edit `templates.yaml` and list the repos you want in a workspace:
 templates:
   example:
     repos:
-      - git@github.com:github/docs.git
-      - git@github.com:github/opensource.guide.git
+      - git@github.com:octocat/Hello-World.git
+      - git@github.com:octocat/Spoon-Knife.git
 ```
 
 ### 3) Fetch repos (bare + src)
 
 ```bash
-gws repo get git@github.com:github/docs.git
-gws repo get git@github.com:github/opensource.guide.git
+gws repo get git@github.com:octocat/Hello-World.git
+gws repo get git@github.com:octocat/Spoon-Knife.git
 ```
 
 ### 4) Create a workspace
@@ -62,17 +62,19 @@ gws rm MY-123
 
 gws prints the workspace path so you can `cd` into it.
 
-## Review a PR (GitHub)
+## Review a PR/MR (GitHub, GitLab, Bitbucket)
 
 ```bash
 gws review https://github.com/owner/repo/pull/123
+# or
+gws review https://gitlab.com/owner/repo/-/merge_requests/123
+# or
+gws review https://bitbucket.org/owner/repo/pull-requests/123
 ```
 
 - Creates `REVIEW-PR-123`
-- Checks out the PR head branch in the workspace
-- Requires `gh` to be authenticated
-
-Fork PRs are not supported in MVP.
+- Fetches the PR/MR ref directly (forks supported)
+- No `gh` dependency
 
 ## How gws lays out files
 

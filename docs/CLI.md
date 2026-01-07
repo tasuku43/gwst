@@ -149,11 +149,11 @@ MVP対象:
 - PR レビュー専用の導線で workspace を作成する
 
 挙動:
-1. PR URL から repo/番号/ブランチ情報を取得（GitHub のみ）
+1. PR/MR URL から host/owner/repo/番号を取得（GitHub, GitLab, Bitbucket Cloud）
 2. repo store が未取得なら `repo get` と同等の導線で取得（対話）
-3. workspace を作成し、PR の head から worktree を作成
+3. PR/MR の ref を直接 fetch し、専用ブランチで worktree を作成する
 
 制約:
-- GitHub のみ（fork PR は対象外）
+- GitHub / GitLab / Bitbucket Cloud 対応（fork PR/MR も可）
 - 既存 workspace がある場合はエラー
 - workspace ID は `REVIEW-PR-<number>`

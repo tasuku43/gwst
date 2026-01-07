@@ -90,9 +90,9 @@ func printRmHelp(w io.Writer) {
 
 func printReviewHelp(w io.Writer) {
 	fmt.Fprintln(w, "Usage: gws review <PR URL>")
-	fmt.Fprintln(w, "  Create a review workspace from a GitHub PR URL")
+	fmt.Fprintln(w, "  Create a review workspace from a PR/MR URL (GitHub, GitLab, Bitbucket)")
 	fmt.Fprintln(w, "  workspace id: REVIEW-PR-<number>")
-	fmt.Fprintln(w, "  forks are not supported / requires gh")
+	fmt.Fprintln(w, "  forks supported; gh not required")
 }
 
 func printRepoHelp(w io.Writer) {

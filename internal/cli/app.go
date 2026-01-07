@@ -1,15 +1,12 @@
 package cli
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
 	"net/url"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -465,36 +462,22 @@ func runReview(ctx context.Context, rootDir string, args []string, noPrompt bool
 	if len(args) != 1 {
 		return fmt.Errorf("usage: gws review <PR URL>")
 	}
-	prURL := strings.TrimSpace(args[0])
-	if prURL == "" {
+	raw := strings.TrimSpace(args[0])
+	if raw == "" {
 		return fmt.Errorf("PR URL is required")
 	}
 
-	owner, repoName, number, err := parseGitHubPRURL(prURL)
+	req, err := parsePRURL(raw)
 	if err != nil {
 		return err
 	}
-
-	info, err := fetchGitHubPR(ctx, owner, repoName, number)
-	if err != nil {
-		return err
-	}
-	if info.HeadRepoFullName == "" || info.BaseRepoFullName == "" {
-		return fmt.Errorf("failed to resolve PR repositories")
-	}
-	if info.HeadRepoFullName != info.BaseRepoFullName {
-		return fmt.Errorf("fork PR is not supported")
-	}
-	repoURL := selectRepoURL(info)
-	if repoURL == "" {
-		return fmt.Errorf("cannot determine repo url for PR")
-	}
+	repoURL := buildRepoURL(req)
 
 	_, exists, err := repo.Exists(rootDir, repoURL)
 	if err != nil {
 		return err
 	}
-	workspaceID := fmt.Sprintf("REVIEW-PR-%d", info.Number)
+	workspaceID := fmt.Sprintf("REVIEW-PR-%d", req.Number)
 
 	theme := ui.DefaultTheme()
 	useColor := isatty.IsTerminal(os.Stdout.Fd())
@@ -502,12 +485,12 @@ func runReview(ctx context.Context, rootDir string, args []string, noPrompt bool
 	output.SetStepLogger(renderer)
 	defer output.SetStepLogger(nil)
 
-	header := fmt.Sprintf("gws review (pr: %s, workspace id: %s)", truncateMiddle(prURL, 80), workspaceID)
+	header := fmt.Sprintf("gws review (pr: %s, workspace id: %s)", truncateMiddle(raw, 80), workspaceID)
 	renderer.Header(header)
 	renderer.Blank()
 	renderer.Section("Info")
-	renderer.Bullet("requires: gh (authenticated)")
-	renderer.Bullet("fork PRs are not supported")
+	renderer.Bullet(fmt.Sprintf("provider: %s (%s)", strings.ToLower(req.Provider), req.Host))
+	renderer.Bullet("fork PRs supported (fetches PR ref directly)")
 	renderer.Blank()
 	renderer.Section("Steps")
 
@@ -527,14 +510,14 @@ func runReview(ctx context.Context, rootDir string, args []string, noPrompt bool
 	if err != nil {
 		return err
 	}
-	output.Step(formatStep("fetch PR head", info.HeadRefName, repoStoreRel(rootDir, repoURL)))
-	if err := fetchPRHead(ctx, store.StorePath, info.HeadRefName); err != nil {
+	fetchedRef, err := fetchPRRef(ctx, store.StorePath, req, workspaceID)
+	if err != nil {
 		return err
 	}
 
-	baseRef := fmt.Sprintf("refs/remotes/origin/%s", info.HeadRefName)
+	branch := workspaceID
 	output.Step(formatStep("worktree add", displayRepoName(repoURL), worktreeDest(rootDir, workspaceID, repoURL)))
-	if _, err := workspace.AddWithBranch(ctx, rootDir, workspaceID, repoURL, "", info.HeadRefName, baseRef, false); err != nil {
+	if _, err := workspace.AddWithBranch(ctx, rootDir, workspaceID, repoURL, "", branch, fetchedRef, false); err != nil {
 		if rollbackErr := workspace.Remove(ctx, rootDir, workspaceID); rollbackErr != nil {
 			return fmt.Errorf("review failed: %w (rollback failed: %v)", err, rollbackErr)
 		}
@@ -549,124 +532,125 @@ func runReview(ctx context.Context, rootDir string, args []string, noPrompt bool
 	return nil
 }
 
-type prInfo struct {
-	Number           int
-	HeadRefName      string
-	HeadRepoFullName string
-	HeadRepoSSHURL   string
-	HeadRepoCloneURL string
-	BaseRepoFullName string
+type prRequest struct {
+	Provider string
+	Host     string
+	Owner    string
+	Repo     string
+	Number   int
 }
 
-func parseGitHubPRURL(raw string) (string, string, int, error) {
+func parsePRURL(raw string) (prRequest, error) {
 	u, err := url.Parse(raw)
 	if err != nil {
-		return "", "", 0, fmt.Errorf("invalid PR URL: %w", err)
+		return prRequest{}, fmt.Errorf("invalid PR/MR URL: %w", err)
 	}
-	if u.Hostname() != "github.com" {
-		return "", "", 0, fmt.Errorf("only github.com PR URLs are supported")
-	}
+	host := strings.TrimSpace(u.Hostname())
 	parts := strings.Split(strings.Trim(u.Path, "/"), "/")
 	if len(parts) < 4 {
-		return "", "", 0, fmt.Errorf("invalid PR URL path: %s", u.Path)
+		return prRequest{}, fmt.Errorf("invalid PR/MR URL path: %s", u.Path)
 	}
-	var owner, repo string
-	var numStr string
+
+	// GitHub style: /owner/repo/pull/123
 	for i := 0; i < len(parts)-1; i++ {
-		if parts[i] == "pull" {
-			if i < 2 {
-				break
+		if parts[i] == "pull" && i >= 2 {
+			num, err := strconv.Atoi(parts[i+1])
+			if err != nil {
+				return prRequest{}, fmt.Errorf("invalid PR number: %s", parts[i+1])
 			}
-			owner = parts[i-2]
-			repo = parts[i-1]
-			numStr = parts[i+1]
-			break
+			return prRequest{
+				Provider: "github",
+				Host:     host,
+				Owner:    parts[i-2],
+				Repo:     parts[i-1],
+				Number:   num,
+			}, nil
 		}
 	}
-	if owner == "" || repo == "" || numStr == "" {
-		return "", "", 0, fmt.Errorf("invalid PR URL path: %s", u.Path)
-	}
-	number, err := strconv.Atoi(numStr)
-	if err != nil {
-		return "", "", 0, fmt.Errorf("invalid PR number: %s", numStr)
-	}
-	return owner, repo, number, nil
-}
 
-func fetchGitHubPR(ctx context.Context, owner, repo string, number int) (prInfo, error) {
-	path := fmt.Sprintf("repos/%s/%s/pulls/%d", owner, repo, number)
-	cmd := exec.CommandContext(ctx, "gh", "api", path)
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		msg := strings.TrimSpace(stderr.String())
-		if msg == "" {
-			msg = err.Error()
+	// Bitbucket Cloud style: /owner/repo/pull-requests/123
+	for i := 0; i < len(parts)-1; i++ {
+		if parts[i] == "pull-requests" && i >= 2 {
+			num, err := strconv.Atoi(parts[i+1])
+			if err != nil {
+				return prRequest{}, fmt.Errorf("invalid PR number: %s", parts[i+1])
+			}
+			return prRequest{
+				Provider: "bitbucket",
+				Host:     host,
+				Owner:    parts[i-2],
+				Repo:     parts[i-1],
+				Number:   num,
+			}, nil
 		}
-		return prInfo{}, fmt.Errorf("gh api failed: %s", msg)
 	}
 
-	var payload struct {
-		Number int `json:"number"`
-		Head   struct {
-			Ref  string `json:"ref"`
-			Repo struct {
-				FullName string `json:"full_name"`
-				SSHURL   string `json:"ssh_url"`
-				CloneURL string `json:"clone_url"`
-			} `json:"repo"`
-		} `json:"head"`
-		Base struct {
-			Repo struct {
-				FullName string `json:"full_name"`
-			} `json:"repo"`
-		} `json:"base"`
+	// GitLab style: /group/repo/-/merge_requests/123
+	for i := 0; i < len(parts)-1; i++ {
+		if parts[i] == "merge_requests" && i >= 2 {
+			num, err := strconv.Atoi(parts[i+1])
+			if err != nil {
+				return prRequest{}, fmt.Errorf("invalid MR number: %s", parts[i+1])
+			}
+			repoIdx := i - 1
+			if repoIdx >= 1 && parts[repoIdx] == "-" {
+				repoIdx--
+			}
+			if repoIdx < 1 {
+				return prRequest{}, fmt.Errorf("invalid MR URL path: %s", u.Path)
+			}
+			ownerParts := parts[:repoIdx]
+			if len(ownerParts) != 1 {
+				return prRequest{}, fmt.Errorf("nested groups are not supported: %s", strings.Join(ownerParts, "/"))
+			}
+			return prRequest{
+				Provider: "gitlab",
+				Host:     host,
+				Owner:    ownerParts[0],
+				Repo:     parts[repoIdx],
+				Number:   num,
+			}, nil
+		}
 	}
-	if err := json.Unmarshal(stdout.Bytes(), &payload); err != nil {
-		return prInfo{}, fmt.Errorf("parse gh response: %w", err)
-	}
-	info := prInfo{
-		Number:           payload.Number,
-		HeadRefName:      payload.Head.Ref,
-		HeadRepoFullName: payload.Head.Repo.FullName,
-		HeadRepoSSHURL:   payload.Head.Repo.SSHURL,
-		HeadRepoCloneURL: payload.Head.Repo.CloneURL,
-		BaseRepoFullName: payload.Base.Repo.FullName,
-	}
-	if info.Number == 0 {
-		info.Number = number
-	}
-	return info, nil
+
+	return prRequest{}, fmt.Errorf("unsupported PR/MR URL: %s", raw)
 }
 
-func selectRepoURL(info prInfo) string {
+func buildRepoURL(req prRequest) string {
+	repoName := strings.TrimSuffix(req.Repo, ".git")
 	switch strings.ToLower(strings.TrimSpace(defaultRepoProtocol)) {
 	case "https":
-		if info.HeadRepoCloneURL != "" {
-			return info.HeadRepoCloneURL
-		}
+		return fmt.Sprintf("https://%s/%s/%s.git", req.Host, req.Owner, repoName)
 	default:
-		if info.HeadRepoSSHURL != "" {
-			return info.HeadRepoSSHURL
-		}
+		return fmt.Sprintf("git@%s:%s/%s.git", req.Host, req.Owner, repoName)
 	}
-	if info.HeadRepoCloneURL != "" {
-		return info.HeadRepoCloneURL
-	}
-	return info.HeadRepoSSHURL
 }
 
-func fetchPRHead(ctx context.Context, storePath, headRef string) error {
-	if strings.TrimSpace(headRef) == "" {
-		return fmt.Errorf("PR head ref is empty")
+func fetchPRRef(ctx context.Context, storePath string, req prRequest, workspaceID string) (string, error) {
+	if strings.TrimSpace(storePath) == "" {
+		return "", fmt.Errorf("store path is required")
 	}
-	gitcmd.Logf("git fetch origin %s", headRef)
-	if _, err := gitcmd.Run(ctx, []string{"fetch", "origin", headRef}, gitcmd.Options{Dir: storePath}); err != nil {
-		return err
+	if workspaceID == "" {
+		return "", fmt.Errorf("workspace id is required")
 	}
-	return nil
+	var srcRef string
+	switch strings.ToLower(req.Provider) {
+	case "github":
+		srcRef = fmt.Sprintf("pull/%d/head", req.Number)
+	case "gitlab":
+		srcRef = fmt.Sprintf("merge-requests/%d/head", req.Number)
+	case "bitbucket":
+		srcRef = fmt.Sprintf("refs/pull-requests/%d/from", req.Number)
+	default:
+		return "", fmt.Errorf("unsupported provider: %s", req.Provider)
+	}
+	destRef := fmt.Sprintf("refs/remotes/gws-review/%s", workspaceID)
+	spec := fmt.Sprintf("%s:%s", srcRef, destRef)
+	gitcmd.Logf("git fetch origin %s", spec)
+	if _, err := gitcmd.Run(ctx, []string{"fetch", "origin", spec}, gitcmd.Options{Dir: storePath}); err != nil {
+		return "", err
+	}
+	return destRef, nil
 }
 
 func promptTemplateAndID(rootDir, templateName, workspaceID string, theme ui.Theme, useColor bool) (string, string, error) {
