@@ -473,10 +473,8 @@ func runWorkspaceNew(ctx context.Context, rootDir string, args []string, noPromp
 
 	renderer.Blank()
 	renderer.Section("Result")
-	renderer.Result(wsDir)
-	if err := printWorkspaceTree(wsDir, renderer); err != nil {
-		return err
-	}
+	repos, _ := loadWorkspaceRepos(wsDir)
+	renderWorkspaceBlock(renderer, workspaceID, repos)
 	return nil
 }
 
@@ -732,59 +730,67 @@ func promptTemplateAndID(rootDir, templateName, workspaceID string, theme ui.The
 }
 
 func printWorkspaceTree(wsDir string, r *ui.Renderer) error {
-	entries, err := os.ReadDir(wsDir)
+	repos, err := loadWorkspaceRepos(wsDir)
 	if err != nil {
-		return fmt.Errorf("read workspace dir: %w", err)
+		return err
 	}
-	branches := map[string]string{}
-	manifestPath := filepath.Join(wsDir, ".gws", "manifest.yaml")
-	if manifest, err := workspace.LoadManifest(manifestPath); err == nil {
-		for _, repo := range manifest.Repos {
-			if repo.Alias != "" && repo.Branch != "" {
-				branches[repo.Alias] = repo.Branch
-			}
-		}
-	}
-	names := make([]string, 0, len(entries))
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
-		}
-		if entry.Name() == ".gws" {
-			continue
-		}
-		names = append(names, entry.Name())
-	}
-	if len(names) == 0 {
-		if r != nil {
-			r.Result(wsDir)
-			return nil
-		}
-		fmt.Fprintf(os.Stdout, "%s%s\n", output.Indent, wsDir)
-		return nil
-	}
-	if r != nil {
-		// Path already printed by caller.
-	} else {
+	if r == nil {
 		fmt.Fprintf(os.Stdout, "%s%s\n", output.Indent, wsDir)
 	}
-	for i, name := range names {
+	renderWorkspaceRepos(r, repos, "")
+	return nil
+}
+
+func renderWorkspaceRepos(r *ui.Renderer, repos []workspace.Repo, extraIndent string) {
+	for i, repo := range repos {
 		prefix := "├─ "
-		if i == len(names)-1 {
+		if i == len(repos)-1 {
 			prefix = "└─ "
 		}
-		branch := branches[name]
-		if r != nil {
-			r.TreeLineBranch(prefix, name, branch)
-		} else {
-			line := fmt.Sprintf("%s%s%s", output.Indent, prefix, name)
-			if strings.TrimSpace(branch) != "" {
-				line += fmt.Sprintf(" (branch: %s)", branch)
-			}
-			fmt.Fprintln(os.Stdout, line)
+		name := repo.Alias
+		if strings.TrimSpace(name) == "" {
+			name = repo.RepoKey
 		}
+		if r != nil {
+			r.TreeLineBranchMuted(extraIndent+prefix, name, repo.Branch)
+			continue
+		}
+		line := fmt.Sprintf("%s%s%s%s", output.Indent, extraIndent, prefix, name)
+		if strings.TrimSpace(repo.Branch) != "" {
+			line += fmt.Sprintf(" (branch: %s)", repo.Branch)
+		}
+		fmt.Fprintln(os.Stdout, line)
 	}
-	return nil
+}
+
+func renderWorkspaceBlock(r *ui.Renderer, workspaceID string, repos []workspace.Repo) {
+	if r != nil {
+		r.Bullet(fmt.Sprintf("%s (repos: %d)", workspaceID, len(repos)))
+		renderWorkspaceRepos(r, repos, output.Indent)
+		return
+	}
+	fmt.Fprintf(os.Stdout, "%s%s %s (repos: %d)\n", output.Indent, output.StepPrefix, workspaceID, len(repos))
+	renderWorkspaceRepos(nil, repos, output.Indent)
+}
+
+func loadWorkspaceRepos(wsDir string) ([]workspace.Repo, error) {
+	manifestPath := filepath.Join(wsDir, ".gws", "manifest.yaml")
+	manifest, err := workspace.LoadManifest(manifestPath)
+	if err == nil {
+		return manifest.Repos, nil
+	}
+	entries, err := os.ReadDir(wsDir)
+	if err != nil {
+		return nil, fmt.Errorf("read workspace dir: %w", err)
+	}
+	var repos []workspace.Repo
+	for _, entry := range entries {
+		if !entry.IsDir() || entry.Name() == ".gws" {
+			continue
+		}
+		repos = append(repos, workspace.Repo{Alias: entry.Name()})
+	}
+	return repos, nil
 }
 
 func printRepoGetCommands(repos []string) {
@@ -973,19 +979,27 @@ func writeWorkspaceListJSON(entries []workspace.Entry, warnings []error) error {
 }
 
 func writeWorkspaceListText(entries []workspace.Entry, warnings []error) {
-	fmt.Fprintln(os.Stdout, "id\tpath\trepos")
+	theme := ui.DefaultTheme()
+	useColor := isatty.IsTerminal(os.Stdout.Fd())
+	renderer := ui.NewRenderer(os.Stdout, theme, useColor)
+
+	renderer.Header("gws ls")
+	renderer.Blank()
+	renderer.Section("Result")
 	for _, entry := range entries {
-		repoCount := 0
+		var repos []workspace.Repo
 		if entry.Manifest != nil {
-			repoCount = len(entry.Manifest.Repos)
+			repos = entry.Manifest.Repos
 		}
-		fmt.Fprintf(os.Stdout, "%s\t%s\t%d\n", entry.WorkspaceID, entry.WorkspacePath, repoCount)
+
+		renderWorkspaceBlock(renderer, entry.WorkspaceID, repos)
+
 		if entry.Warning != nil {
-			fmt.Fprintf(os.Stderr, "warning: %s: %v\n", entry.WorkspaceID, entry.Warning)
+			renderer.Warn(fmt.Sprintf("warning: %s: %v", entry.WorkspaceID, entry.Warning))
 		}
 	}
 	for _, warning := range warnings {
-		fmt.Fprintf(os.Stderr, "warning: %v\n", warning)
+		renderer.Warn(fmt.Sprintf("warning: %v", warning))
 	}
 }
 

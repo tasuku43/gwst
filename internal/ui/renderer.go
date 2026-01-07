@@ -36,7 +36,7 @@ func (r *Renderer) Section(title string) {
 }
 
 func (r *Renderer) Step(text string) {
-	r.writeLine(output.Indent + output.StepPrefix + " " + text)
+	r.bullet(text)
 }
 
 func (r *Renderer) StepLog(text string) {
@@ -49,6 +49,10 @@ func (r *Renderer) StepLogOutput(text string) {
 
 func (r *Renderer) Result(text string) {
 	r.writeLine(output.Indent + text)
+}
+
+func (r *Renderer) Bullet(text string) {
+	r.bullet(text)
 }
 
 func (r *Renderer) Warn(text string) {
@@ -71,11 +75,30 @@ func (r *Renderer) TreeLineBranch(prefix, name, branch string) {
 	r.writeLine(line)
 }
 
+func (r *Renderer) TreeLineBranchMuted(prefix, name, branch string) {
+	line := output.Indent + prefix + name
+	if strings.TrimSpace(branch) != "" {
+		line += fmt.Sprintf(" (branch: %s)", branch)
+	}
+	if r.useColor {
+		line = r.style(line, r.theme.Muted)
+	}
+	r.writeLine(line)
+}
+
 func (r *Renderer) style(text string, style lipgloss.Style) string {
 	if !r.useColor {
 		return text
 	}
 	return style.Render(text)
+}
+
+func (r *Renderer) bullet(text string) {
+	prefix := output.StepPrefix + " "
+	if r.useColor {
+		prefix = r.theme.Muted.Render(prefix)
+	}
+	r.writeLine(output.Indent + prefix + text)
 }
 
 func (r *Renderer) writeLine(text string) {

@@ -185,7 +185,9 @@ func (m inputsModel) View() string {
 	b.WriteString("\n")
 
 	if m.stage == stageTemplate {
-		line := fmt.Sprintf("%s%s template: %s", output.Indent, output.StepPrefix, m.search.View())
+		prefix := promptPrefix(m.theme, m.useColor)
+		label := promptLabel(m.theme, m.useColor, "template")
+		line := fmt.Sprintf("%s%s %s: %s", output.Indent, prefix, label, m.search.View())
 		b.WriteString(line)
 		b.WriteString("\n")
 		if len(m.filtered) == 0 {
@@ -193,24 +195,28 @@ func (m inputsModel) View() string {
 			if m.useColor {
 				msg = m.theme.Muted.Render(msg)
 			}
-			b.WriteString(fmt.Sprintf("%s%s %s\n", output.Indent+output.Indent, output.LogConnector, msg))
+			b.WriteString(fmt.Sprintf("%s%s %s\n", output.Indent+output.Indent, mutedToken(m.theme, m.useColor, output.LogConnector), msg))
 		} else {
 			for i, item := range m.filtered {
 				display := item
 				if i == m.cursor && m.useColor {
 					display = lipgloss.NewStyle().Bold(true).Render(display)
 				}
-				b.WriteString(fmt.Sprintf("%s%s %s\n", output.Indent+output.Indent, output.LogConnector, display))
+				b.WriteString(fmt.Sprintf("%s%s %s\n", output.Indent+output.Indent, mutedToken(m.theme, m.useColor, output.LogConnector), display))
 			}
 		}
 	} else {
-		line := fmt.Sprintf("%s%s template: %s", output.Indent, output.StepPrefix, m.template)
+		prefix := promptPrefix(m.theme, m.useColor)
+		label := promptLabel(m.theme, m.useColor, "template")
+		line := fmt.Sprintf("%s%s %s: %s", output.Indent, prefix, label, m.template)
 		b.WriteString(line)
 		b.WriteString("\n")
 	}
 
 	if m.stage == stageWorkspace {
-		line := fmt.Sprintf("%s%s workspace id: %s", output.Indent, output.StepPrefix, m.idInput.View())
+		prefix := promptPrefix(m.theme, m.useColor)
+		label := promptLabel(m.theme, m.useColor, "workspace id")
+		line := fmt.Sprintf("%s%s %s: %s", output.Indent, prefix, label, m.idInput.View())
 		b.WriteString(line)
 		b.WriteString("\n")
 		if m.errorLine != "" {
@@ -218,10 +224,12 @@ func (m inputsModel) View() string {
 			if m.useColor {
 				msg = m.theme.Error.Render(msg)
 			}
-			b.WriteString(fmt.Sprintf("%s%s %s\n", output.Indent+output.Indent, output.LogConnector, msg))
+			b.WriteString(fmt.Sprintf("%s%s %s\n", output.Indent+output.Indent, mutedToken(m.theme, m.useColor, output.LogConnector), msg))
 		}
 	} else if strings.TrimSpace(m.workspaceID) != "" {
-		line := fmt.Sprintf("%s%s workspace id: %s", output.Indent, output.StepPrefix, m.workspaceID)
+		prefix := promptPrefix(m.theme, m.useColor)
+		label := promptLabel(m.theme, m.useColor, "workspace id")
+		line := fmt.Sprintf("%s%s %s: %s", output.Indent, prefix, label, m.workspaceID)
 		b.WriteString(line)
 		b.WriteString("\n")
 	}
@@ -322,8 +330,32 @@ func (m confirmInlineModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m confirmInlineModel) View() string {
-	line := fmt.Sprintf("%s%s %s (y/n): %s", output.Indent, output.StepPrefix, m.label, m.input.View())
+	prefix := promptPrefix(m.theme, m.useColor)
+	label := promptLabel(m.theme, m.useColor, m.label)
+	line := fmt.Sprintf("%s%s %s (y/n): %s", output.Indent, prefix, label, m.input.View())
 	return line + "\n"
+}
+
+func promptPrefix(theme Theme, useColor bool) string {
+	prefix := output.StepPrefix
+	if useColor {
+		return theme.Accent.Render(prefix)
+	}
+	return prefix
+}
+
+func promptLabel(theme Theme, useColor bool, label string) string {
+	if useColor {
+		return theme.Accent.Render(label)
+	}
+	return label
+}
+
+func mutedToken(theme Theme, useColor bool, token string) string {
+	if useColor {
+		return theme.Muted.Render(token)
+	}
+	return token
 }
 
 func max(a, b int) int {

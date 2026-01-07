@@ -34,7 +34,7 @@
 | MVP-101 | UI: gws repo get | Done |
 | MVP-102 | UI: gws repo ls | Done |
 | MVP-103 | UI: gws add | To Do |
-| MVP-104 | UI: gws ls | To Do |
+| MVP-104 | UI: gws ls | Done |
 | MVP-105 | UI: gws status | To Do |
 | MVP-106 | UI: gws rm | To Do |
 | MVP-107 | UI: gws gc --dry-run | To Do |

@@ -37,15 +37,20 @@ Rules:
 - No success banner; success is implied in Result section
 
 ## Prefix & Indentation
-- Default prefix token: `›` (can be changed later)
-- Steps lines are prefixed with `2 spaces + prefix + space`
+- Default prefix token: `•` (can be changed later)
+- Steps/list lines are prefixed with `2 spaces + prefix + space`
 - Result lines are prefixed with `2 spaces`
+
+Prefix coloring:
+- Info/list (Steps, Results): prefix is muted gray
+- Prompts/questions (e.g. run now?): prefix + label use accent (cyan)
+- Optional details (repo lines under workspace): muted gray
 
 Example:
 ```
 Steps
-  › repo get git@github.com:org/repo.git
-  › worktree add repo
+  • repo get git@github.com:org/repo.git
+  • worktree add repo
 ```
 
 ## Command execution logs
@@ -81,12 +86,12 @@ Steps
 gws new
 
 Inputs
-  › template: hel
+  • template: hel
     └─ helmfiles
-  › workspace id: SREP-123
+  • workspace id: SREP-123
 
 Steps
-  › worktree add helmfiles
+  • worktree add helmfiles
 
 Result
   /Users/me/gws/ws/SREP-123
@@ -112,9 +117,9 @@ Result
 gws review <PR URL>
 
 Steps
-  › repo get required for 1 repo
+  • repo get required for 1 repo
     └─ gws repo get git@github.com:org/repo.git
-  › run now? (y/n)
+  • run now? (y/n)
 ```
 
 ## Notes
