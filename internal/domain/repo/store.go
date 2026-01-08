@@ -138,22 +138,28 @@ func normalizeStore(ctx context.Context, storePath, display string, fetch bool) 
 		_, _ = gitcmd.Run(ctx, []string{"symbolic-ref", "refs/remotes/origin/HEAD", fmt.Sprintf("refs/remotes/origin/%s", defaultBranch)}, gitcmd.Options{Dir: storePath})
 	}
 
-	needsFetch := fetch
-	if defaultBranch != "" && remoteHash != "" {
-		localHash, err := localRemoteHash(ctx, storePath, defaultBranch)
+	needsFetch := false
+	localRemote, err := localRemoteHash(ctx, storePath, defaultBranch)
+	if err != nil {
+		return err
+	}
+	remoteTrackingMissing := localRemote == ""
+	localHash := localRemote
+	if localHash == "" {
+		localHash, err = localHeadHash(ctx, storePath, defaultBranch)
 		if err != nil {
 			return err
 		}
-		if localHash == "" {
-			localHash, err = localHeadHash(ctx, storePath, defaultBranch)
-			if err != nil {
-				return err
-			}
-		}
-		if localHash == remoteHash {
-			needsFetch = false
-		}
 	}
+
+	if fetch {
+		needsFetch = true
+	} else if remoteTrackingMissing {
+		needsFetch = true
+	} else if defaultBranch != "" && remoteHash != "" && localHash != "" && localHash != remoteHash {
+		needsFetch = true
+	}
+
 	if needsFetch {
 		gitcmd.Logf("git fetch --prune")
 		if _, err := gitcmd.Run(ctx, []string{"fetch", "--prune"}, gitcmd.Options{Dir: storePath}); err != nil {
