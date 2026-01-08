@@ -110,14 +110,14 @@ func resolveBaseRef(ctx context.Context, storePath string) (string, error) {
 		return "", fmt.Errorf("store path is required")
 	}
 
-	localHead, err := detectLocalHeadRef(ctx, storePath)
-	if err == nil && localHead != "" {
-		return localHead, nil
+	remoteHead, remoteErr := detectDefaultRemoteRef(ctx, storePath)
+	if remoteErr == nil && remoteHead != "" {
+		return remoteHead, nil
 	}
 
-	remoteHead, err := detectDefaultRemoteRef(ctx, storePath)
-	if err == nil && remoteHead != "" {
-		return remoteHead, nil
+	localHead, localErr := detectLocalHeadRef(ctx, storePath)
+	if localErr == nil && localHead != "" {
+		return localHead, nil
 	}
 
 	for _, candidate := range []string{"main", "master", "develop"} {
@@ -140,8 +140,11 @@ func resolveBaseRef(ctx context.Context, storePath string) (string, error) {
 		}
 	}
 
-	if err != nil {
-		return "", err
+	if remoteErr != nil {
+		return "", remoteErr
+	}
+	if localErr != nil {
+		return "", localErr
 	}
 	return "", fmt.Errorf("cannot detect default base ref")
 }
