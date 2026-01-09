@@ -392,6 +392,108 @@ func (m confirmInlineModel) View() string {
 	return line + "\n"
 }
 
+// PromptInputInline collects a single inline value with an optional default and validation.
+// Empty input accepts the default. Validation errors are shown inline and reprompted.
+func PromptInputInline(label, defaultValue string, validate func(string) error, theme Theme, useColor bool) (string, error) {
+	model := newInputInlineModel(label, defaultValue, validate, theme, useColor)
+	prog := tea.NewProgram(model)
+	out, err := prog.Run()
+	if err != nil {
+		return "", err
+	}
+	final := out.(inputInlineModel)
+	if final.err != nil {
+		return "", final.err
+	}
+	return strings.TrimSpace(final.value), nil
+}
+
+type inputInlineModel struct {
+	label        string
+	defaultValue string
+	validate     func(string) error
+	theme        Theme
+	useColor     bool
+	input        textinput.Model
+	value        string
+	err          error
+	errorLine    string
+}
+
+func newInputInlineModel(label, defaultValue string, validate func(string) error, theme Theme, useColor bool) inputInlineModel {
+	ti := textinput.New()
+	ti.Prompt = ""
+	ti.Placeholder = defaultValue
+	ti.Focus()
+	if defaultValue != "" {
+		ti.SetValue(defaultValue)
+		ti.CursorEnd()
+	}
+	if useColor {
+		ti.PlaceholderStyle = theme.Muted
+	}
+	return inputInlineModel{
+		label:        label,
+		defaultValue: defaultValue,
+		validate:     validate,
+		theme:        theme,
+		useColor:     useColor,
+		input:        ti,
+	}
+}
+
+func (m inputInlineModel) Init() tea.Cmd {
+	return textinput.Blink
+}
+
+func (m inputInlineModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.Type {
+		case tea.KeyCtrlC, tea.KeyEsc:
+			m.err = ErrPromptCanceled
+			return m, tea.Quit
+		case tea.KeyEnter:
+			value := strings.TrimSpace(m.input.Value())
+			if value == "" {
+				value = m.defaultValue
+			}
+			if m.validate != nil {
+				if err := m.validate(value); err != nil {
+					m.errorLine = err.Error()
+					return m, nil
+				}
+			}
+			m.value = value
+			return m, tea.Quit
+		}
+	}
+	var cmd tea.Cmd
+	m.input, cmd = m.input.Update(msg)
+	if strings.TrimSpace(m.input.Value()) != "" {
+		m.errorLine = ""
+	}
+	return m, cmd
+}
+
+func (m inputInlineModel) View() string {
+	prefix := promptPrefix(m.theme, m.useColor)
+	label := promptLabel(m.theme, m.useColor, m.label)
+	defaultText := ""
+	if strings.TrimSpace(m.defaultValue) != "" {
+		defaultText = fmt.Sprintf(" [default: %s]", m.defaultValue)
+	}
+	line := fmt.Sprintf("%s%s %s%s: %s", output.Indent, prefix, label, defaultText, m.input.View())
+	if strings.TrimSpace(m.errorLine) != "" {
+		errLine := m.errorLine
+		if m.useColor {
+			errLine = m.theme.Error.Render(errLine)
+		}
+		line = fmt.Sprintf("%s\n%s%s%s %s", line, output.Indent, output.Indent, mutedToken(m.theme, m.useColor, output.LogConnector), errLine)
+	}
+	return line + "\n"
+}
+
 func promptPrefix(theme Theme, useColor bool) string {
 	prefix := output.StepPrefix
 	if useColor {

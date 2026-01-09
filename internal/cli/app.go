@@ -332,6 +332,14 @@ func runWorkspaceNew(ctx context.Context, rootDir string, args []string, noPromp
 	output.SetStepLogger(renderer)
 	defer output.SetStepLogger(nil)
 
+	var branches []string
+	if !noPrompt {
+		branches, err = promptTemplateBranches(ctx, tmpl, workspaceID, theme, useColor)
+		if err != nil {
+			return err
+		}
+	}
+
 	header := "gws new"
 	var headerParts []string
 	if templateName != "" {
@@ -354,7 +362,7 @@ func runWorkspaceNew(ctx context.Context, rootDir string, args []string, noPromp
 		return err
 	}
 
-	if err := applyTemplate(ctx, rootDir, workspaceID, tmpl); err != nil {
+	if err := applyTemplate(ctx, rootDir, workspaceID, tmpl, branches); err != nil {
 		if rollbackErr := workspace.Remove(ctx, rootDir, workspaceID); rollbackErr != nil {
 			return fmt.Errorf("apply template failed: %w (rollback failed: %v)", err, rollbackErr)
 		}
@@ -667,6 +675,51 @@ func promptTemplateAndID(rootDir, templateName, workspaceID string, theme ui.The
 		return "", "", err
 	}
 	return templateName, workspaceID, nil
+}
+
+func promptTemplateBranches(ctx context.Context, tmpl template.Template, workspaceID string, theme ui.Theme, useColor bool) ([]string, error) {
+	if len(tmpl.Repos) == 0 {
+		return nil, nil
+	}
+	branches := make([]string, len(tmpl.Repos))
+	used := map[string]int{}
+
+	for i, repoSpec := range tmpl.Repos {
+		alias := displayRepoName(repoSpec)
+		if strings.TrimSpace(alias) == "" {
+			alias = fmt.Sprintf("repo #%d", i+1)
+		}
+		label := fmt.Sprintf("branch for %s", alias)
+
+		for {
+			value, err := ui.PromptInputInline(label, workspaceID, func(v string) error {
+				return workspace.ValidateBranchName(ctx, v)
+			}, theme, useColor)
+			if err != nil {
+				return nil, err
+			}
+			if strings.TrimSpace(value) == "" {
+				value = workspaceID
+			}
+
+			if prevIndex, exists := used[value]; exists {
+				warnLabel := fmt.Sprintf("branch %q already used for repo #%d; use again?", value, prevIndex+1)
+				confirm, err := ui.PromptConfirmInline(warnLabel, theme, useColor)
+				if err != nil {
+					return nil, err
+				}
+				if !confirm {
+					continue
+				}
+			}
+
+			branches[i] = value
+			used[value] = i
+			break
+		}
+	}
+
+	return branches, nil
 }
 
 func renderWorkspaceRepos(r *ui.Renderer, repos []workspace.Repo, extraIndent string) {
@@ -1209,11 +1262,15 @@ func preflightTemplateRepos(ctx context.Context, rootDir string, tmpl template.T
 	return missing, nil
 }
 
-func applyTemplate(ctx context.Context, rootDir, workspaceID string, tmpl template.Template) error {
+func applyTemplate(ctx context.Context, rootDir, workspaceID string, tmpl template.Template, branches []string) error {
 	total := len(tmpl.Repos)
 	for i, repoSpec := range tmpl.Repos {
+		branch := workspaceID
+		if len(branches) == len(tmpl.Repos) && i < len(branches) && strings.TrimSpace(branches[i]) != "" {
+			branch = branches[i]
+		}
 		output.Step(formatStepWithIndex("worktree add", displayRepoName(repoSpec), worktreeDest(rootDir, workspaceID, repoSpec), i+1, total))
-		if _, err := workspace.Add(ctx, rootDir, workspaceID, repoSpec, "", true); err != nil {
+		if _, err := workspace.AddWithBranch(ctx, rootDir, workspaceID, repoSpec, "", branch, "", true); err != nil {
 			return err
 		}
 	}
