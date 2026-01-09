@@ -407,6 +407,21 @@ func PromptTemplateRepos(title string, choices []PromptChoice, theme Theme, useC
 	return append([]string(nil), final.selected...), nil
 }
 
+// PromptTemplateName asks for a template name via text input.
+func PromptTemplateName(title string, defaultValue string, theme Theme, useColor bool) (string, error) {
+	model := newTemplateNameModel(title, defaultValue, theme, useColor)
+	prog := tea.NewProgram(model)
+	out, err := prog.Run()
+	if err != nil {
+		return "", err
+	}
+	final := out.(templateNameModel)
+	if final.err != nil {
+		return "", final.err
+	}
+	return strings.TrimSpace(final.value), nil
+}
+
 type templateRepoSelectModel struct {
 	title     string
 	choices   []PromptChoice
@@ -576,6 +591,97 @@ func removeChoice(items []PromptChoice, value string) []PromptChoice {
 		out = append(out, item)
 	}
 	return out
+}
+
+type templateNameModel struct {
+	title     string
+	theme     Theme
+	useColor  bool
+	input     textinput.Model
+	value     string
+	err       error
+	errorLine string
+}
+
+func newTemplateNameModel(title string, defaultValue string, theme Theme, useColor bool) templateNameModel {
+	input := textinput.New()
+	input.Prompt = ""
+	input.Placeholder = "template name"
+	input.SetValue(defaultValue)
+	input.Focus()
+	if useColor {
+		input.PlaceholderStyle = theme.Muted
+	}
+	return templateNameModel{
+		title:    title,
+		theme:    theme,
+		useColor: useColor,
+		input:    input,
+	}
+}
+
+func (m templateNameModel) Init() tea.Cmd {
+	return textinput.Blink
+}
+
+func (m templateNameModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.Type {
+		case tea.KeyCtrlC, tea.KeyEsc:
+			m.err = ErrPromptCanceled
+			return m, tea.Quit
+		case tea.KeyEnter:
+			value := strings.TrimSpace(m.input.Value())
+			if value == "" {
+				m.errorLine = "required"
+				return m, nil
+			}
+			m.value = value
+			return m, tea.Quit
+		}
+	}
+	var cmd tea.Cmd
+	m.input, cmd = m.input.Update(msg)
+	if strings.TrimSpace(m.input.Value()) != "" {
+		m.errorLine = ""
+	}
+	return m, cmd
+}
+
+func (m templateNameModel) View() string {
+	var b strings.Builder
+	header := m.title
+	if strings.TrimSpace(m.value) != "" {
+		header = fmt.Sprintf("%s (template: %s)", m.title, m.value)
+	}
+	if m.useColor {
+		header = m.theme.Header.Render(header)
+	}
+	b.WriteString(header)
+	b.WriteString("\n\n")
+
+	section := "Input"
+	if m.useColor {
+		section = m.theme.SectionTitle.Render(section)
+	}
+	b.WriteString(section)
+	b.WriteString("\n")
+
+	prefix := promptPrefix(m.theme, m.useColor)
+	label := promptLabel(m.theme, m.useColor, "template name")
+	line := fmt.Sprintf("%s%s %s: %s", output.Indent, prefix, label, m.input.View())
+	b.WriteString(line)
+	b.WriteString("\n")
+
+	if m.errorLine != "" {
+		msg := m.errorLine
+		if m.useColor {
+			msg = m.theme.Error.Render(msg)
+		}
+		b.WriteString(fmt.Sprintf("%s%s %s\n", output.Indent+output.Indent, mutedToken(m.theme, m.useColor, output.LogConnector), msg))
+	}
+	return b.String()
 }
 
 func promptPrefix(theme Theme, useColor bool) string {

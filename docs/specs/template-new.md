@@ -10,7 +10,7 @@ status: implemented
 Create a template entry in `templates.yaml` without manual YAML editing, so users can quickly define the repo set for new workspaces.
 
 ## Behavior
-- Requires a template name (`<name>`). Errors if blank or already defined.
+- Requires a template name (`<name>`). Errors if blank or already defined. When omitted and prompts are allowed, asks for the template name interactively.
 - Template name rules: ASCII letters/digits/`-`/`_`, length 1–64, first char may be digit, case-sensitive. Existing name => error.
 - Accepts zero or more `--repo` flags; each must be a valid SSH or HTTPS Git URL. Duplicates are removed while preserving first-seen order.
 - When no `--repo` is provided:

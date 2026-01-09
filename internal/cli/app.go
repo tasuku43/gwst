@@ -197,27 +197,41 @@ func runTemplateNew(ctx context.Context, rootDir string, args []string, noPrompt
 		printTemplateNewHelp(os.Stdout)
 		return nil
 	}
-	if newFlags.NArg() != 1 {
-		return fmt.Errorf("usage: gws template new <name> [--repo <repo> ...]")
+	if newFlags.NArg() > 1 {
+		return fmt.Errorf("usage: gws template new [<name>] [--repo <repo> ...]")
 	}
 
-	name := newFlags.Arg(0)
-	if err := template.ValidateName(name); err != nil {
-		return err
+	name := ""
+	if newFlags.NArg() == 1 {
+		name = newFlags.Arg(0)
 	}
 
 	file, err := template.Load(rootDir)
 	if err != nil {
 		return err
 	}
-	if _, exists := file.Templates[name]; exists {
-		return fmt.Errorf("template already exists: %s", name)
-	}
 
 	repoSpecs := template.NormalizeRepos(repos)
 
 	theme := ui.DefaultTheme()
 	useColor := isatty.IsTerminal(os.Stdout.Fd())
+
+	if strings.TrimSpace(name) == "" {
+		if noPrompt {
+			return fmt.Errorf("template name is required with --no-prompt")
+		}
+		name, err = ui.PromptTemplateName("gws template new", "", theme, useColor)
+		if err != nil {
+			return err
+		}
+	}
+
+	if err := template.ValidateName(name); err != nil {
+		return err
+	}
+	if _, exists := file.Templates[name]; exists {
+		return fmt.Errorf("template already exists: %s", name)
+	}
 
 	if len(repoSpecs) == 0 {
 		if noPrompt {

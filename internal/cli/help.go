@@ -119,7 +119,7 @@ func printTemplateLsHelp(w io.Writer) {
 }
 
 func printTemplateNewHelp(w io.Writer) {
-	fmt.Fprintln(w, "Usage: gws template new <name> [--repo <repo> ...]")
+	fmt.Fprintln(w, "Usage: gws template new [<name>] [--repo <repo> ...]")
 	fmt.Fprintln(w, "  --repo <repo>  repo spec (repeatable)")
 }
 
