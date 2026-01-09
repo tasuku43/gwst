@@ -700,8 +700,6 @@ func runIssue(ctx context.Context, rootDir string, args []string, noPrompt bool)
 	output.SetStepLogger(renderer)
 	defer output.SetStepLogger(nil)
 
-	header := fmt.Sprintf("gws issue (%s#%d, workspace id: %s)", truncateMiddle(fmt.Sprintf("%s/%s", req.Owner, req.Repo), 40), req.Number, workspaceID)
-	renderer.Header(header)
 	renderer.Blank()
 	renderer.Section("Info")
 	renderer.Bullet(fmt.Sprintf("provider: %s (%s)", strings.ToLower(req.Provider), req.Host))

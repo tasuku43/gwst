@@ -409,6 +409,7 @@ func PromptInputInline(label, defaultValue string, validate func(string) error, 
 }
 
 type inputInlineModel struct {
+	title        string
 	label        string
 	defaultValue string
 	validate     func(string) error
@@ -433,6 +434,7 @@ func newInputInlineModel(label, defaultValue string, validate func(string) error
 		ti.PlaceholderStyle = theme.Muted
 	}
 	return inputInlineModel{
+		title:        "Input",
 		label:        label,
 		defaultValue: defaultValue,
 		validate:     validate,
@@ -477,6 +479,17 @@ func (m inputInlineModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m inputInlineModel) View() string {
+	var b strings.Builder
+	title := strings.TrimSpace(m.title)
+	if title == "" {
+		title = "Input"
+	}
+	if m.useColor {
+		title = m.theme.SectionTitle.Render(title)
+	}
+	b.WriteString(title)
+	b.WriteString("\n")
+
 	prefix := promptPrefix(m.theme, m.useColor)
 	label := promptLabel(m.theme, m.useColor, m.label)
 	defaultText := ""
@@ -491,7 +504,9 @@ func (m inputInlineModel) View() string {
 		}
 		line = fmt.Sprintf("%s\n%s%s%s %s", line, output.Indent, output.Indent, mutedToken(m.theme, m.useColor, output.LogConnector), errLine)
 	}
-	return line + "\n"
+	b.WriteString(line)
+	b.WriteString("\n")
+	return b.String()
 }
 
 // PromptTemplateRepos lets users pick one or more repos from a list with filtering.
