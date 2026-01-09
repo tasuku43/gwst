@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/tasuku43/gws/internal/core/gitcmd"
 	"github.com/tasuku43/gws/internal/domain/repospec"
@@ -130,15 +132,23 @@ func normalizeStore(ctx context.Context, storePath, display string, fetch bool) 
 	if _, err := gitcmd.Run(ctx, []string{"config", "remote.origin.fetch", "+refs/heads/*:refs/remotes/origin/*"}, gitcmd.Options{Dir: storePath}); err != nil {
 		return err
 	}
-	defaultBranch, remoteHash, err := defaultBranchFromRemote(ctx, storePath)
-	if err != nil {
-		return err
+	defaultBranch, _ := localDefaultBranch(ctx, storePath)
+
+	var remoteHash string
+	remoteChecked := false
+	grace := fetchGraceDuration()
+	if !recentlyFetched(storePath, grace) || defaultBranch == "" {
+		var err error
+		defaultBranch, remoteHash, err = defaultBranchFromRemote(ctx, storePath)
+		if err != nil {
+			return err
+		}
+		remoteChecked = true
 	}
 	if defaultBranch != "" {
 		_, _ = gitcmd.Run(ctx, []string{"symbolic-ref", "refs/remotes/origin/HEAD", fmt.Sprintf("refs/remotes/origin/%s", defaultBranch)}, gitcmd.Options{Dir: storePath})
 	}
 
-	needsFetch := false
 	localRemote, err := localRemoteHash(ctx, storePath, defaultBranch)
 	if err != nil {
 		return err
@@ -152,11 +162,11 @@ func normalizeStore(ctx context.Context, storePath, display string, fetch bool) 
 		}
 	}
 
-	if fetch {
+	needsFetch := remoteTrackingMissing
+	if remoteChecked && defaultBranch != "" && remoteHash != "" && localHash != "" && localHash != remoteHash {
 		needsFetch = true
-	} else if remoteTrackingMissing {
-		needsFetch = true
-	} else if defaultBranch != "" && remoteHash != "" && localHash != "" && localHash != remoteHash {
+	}
+	if fetch && remoteChecked && (defaultBranch == "" || remoteHash == "") {
 		needsFetch = true
 	}
 
@@ -301,4 +311,42 @@ func pathExists(path string) (bool, error) {
 		return false, fmt.Errorf("path is not a directory: %s", path)
 	}
 	return true, nil
+}
+
+func fetchGraceDuration() time.Duration {
+	val := strings.TrimSpace(os.Getenv("GWS_FETCH_GRACE_SECONDS"))
+	if val == "" {
+		return 30 * time.Second
+	}
+	secs, err := strconv.Atoi(val)
+	if err != nil || secs < 0 {
+		return 30 * time.Second
+	}
+	return time.Duration(secs) * time.Second
+}
+
+func recentlyFetched(storePath string, grace time.Duration) bool {
+	if grace <= 0 {
+		return false
+	}
+	info, err := os.Stat(filepath.Join(storePath, "FETCH_HEAD"))
+	if err != nil {
+		return false
+	}
+	return time.Since(info.ModTime()) <= grace
+}
+
+func localDefaultBranch(ctx context.Context, storePath string) (string, error) {
+	res, err := gitcmd.Run(ctx, []string{"symbolic-ref", "--quiet", "refs/remotes/origin/HEAD"}, gitcmd.Options{Dir: storePath})
+	if err != nil {
+		if res.ExitCode == 1 {
+			return "", nil
+		}
+		return "", err
+	}
+	ref := strings.TrimSpace(res.Stdout)
+	if strings.HasPrefix(ref, "refs/remotes/origin/") {
+		return strings.TrimPrefix(ref, "refs/remotes/origin/"), nil
+	}
+	return "", nil
 }

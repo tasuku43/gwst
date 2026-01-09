@@ -237,3 +237,10 @@ func validateBranchName(ctx context.Context, branch string) error {
 	}
 	return nil
 }
+
+// ValidateBranchName checks whether the given branch name satisfies git's
+// ref format rules. It mirrors the internal validation used by workspace
+// operations so callers outside this package can pre-validate user input.
+func ValidateBranchName(ctx context.Context, branch string) error {
+	return validateBranchName(ctx, branch)
+}

@@ -97,20 +97,6 @@ func PromptConfirmInline(label string, theme Theme, useColor bool) (bool, error)
 	return final.value, nil
 }
 
-func PromptInputInline(label, defaultValue string, theme Theme, useColor bool) (string, error) {
-	model := newInputInlineModel(label, defaultValue, theme, useColor)
-	prog := tea.NewProgram(model)
-	out, err := prog.Run()
-	if err != nil {
-		return "", err
-	}
-	final := out.(inputInlineModel)
-	if final.err != nil {
-		return "", final.err
-	}
-	return strings.TrimSpace(final.value), nil
-}
-
 type inputsStage int
 
 const (
@@ -406,9 +392,26 @@ func (m confirmInlineModel) View() string {
 	return line + "\n"
 }
 
+// PromptInputInline collects a single inline value with an optional default and validation.
+// Empty input accepts the default. Validation errors are shown inline and reprompted.
+func PromptInputInline(label, defaultValue string, validate func(string) error, theme Theme, useColor bool) (string, error) {
+	model := newInputInlineModel(label, defaultValue, validate, theme, useColor)
+	prog := tea.NewProgram(model)
+	out, err := prog.Run()
+	if err != nil {
+		return "", err
+	}
+	final := out.(inputInlineModel)
+	if final.err != nil {
+		return "", final.err
+	}
+	return strings.TrimSpace(final.value), nil
+}
+
 type inputInlineModel struct {
 	label        string
 	defaultValue string
+	validate     func(string) error
 	theme        Theme
 	useColor     bool
 	input        textinput.Model
@@ -417,17 +420,22 @@ type inputInlineModel struct {
 	errorLine    string
 }
 
-func newInputInlineModel(label, defaultValue string, theme Theme, useColor bool) inputInlineModel {
+func newInputInlineModel(label, defaultValue string, validate func(string) error, theme Theme, useColor bool) inputInlineModel {
 	ti := textinput.New()
 	ti.Prompt = ""
-	ti.SetValue(defaultValue)
+	ti.Placeholder = defaultValue
 	ti.Focus()
+	if defaultValue != "" {
+		ti.SetValue(defaultValue)
+		ti.CursorEnd()
+	}
 	if useColor {
 		ti.PlaceholderStyle = theme.Muted
 	}
 	return inputInlineModel{
 		label:        label,
 		defaultValue: defaultValue,
+		validate:     validate,
 		theme:        theme,
 		useColor:     useColor,
 		input:        ti,
@@ -448,11 +456,13 @@ func (m inputInlineModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyEnter:
 			value := strings.TrimSpace(m.input.Value())
 			if value == "" {
-				value = strings.TrimSpace(m.defaultValue)
+				value = m.defaultValue
 			}
-			if value == "" {
-				m.errorLine = "required"
-				return m, nil
+			if m.validate != nil {
+				if err := m.validate(value); err != nil {
+					m.errorLine = err.Error()
+					return m, nil
+				}
 			}
 			m.value = value
 			return m, tea.Quit
@@ -469,15 +479,375 @@ func (m inputInlineModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m inputInlineModel) View() string {
 	prefix := promptPrefix(m.theme, m.useColor)
 	label := promptLabel(m.theme, m.useColor, m.label)
-	line := fmt.Sprintf("%s%s %s: %s", output.Indent, prefix, label, m.input.View())
+	defaultText := ""
+	if strings.TrimSpace(m.defaultValue) != "" {
+		defaultText = fmt.Sprintf(" [default: %s]", m.defaultValue)
+	}
+	line := fmt.Sprintf("%s%s %s%s: %s", output.Indent, prefix, label, defaultText, m.input.View())
+	if strings.TrimSpace(m.errorLine) != "" {
+		errLine := m.errorLine
+		if m.useColor {
+			errLine = m.theme.Error.Render(errLine)
+		}
+		line = fmt.Sprintf("%s\n%s%s%s %s", line, output.Indent, output.Indent, mutedToken(m.theme, m.useColor, output.LogConnector), errLine)
+	}
+	return line + "\n"
+}
+
+// PromptTemplateRepos lets users pick one or more repos from a list with filtering.
+// It can also collect a template name when not provided.
+func PromptTemplateRepos(title string, templateName string, choices []PromptChoice, theme Theme, useColor bool) (string, []string, error) {
+	model := newTemplateRepoSelectModel(title, templateName, choices, theme, useColor)
+	prog := tea.NewProgram(model)
+	out, err := prog.Run()
+	if err != nil {
+		return "", nil, err
+	}
+	final := out.(templateRepoSelectModel)
+	if final.err != nil {
+		return "", nil, final.err
+	}
+	return strings.TrimSpace(final.templateName), append([]string(nil), final.selected...), nil
+}
+
+// PromptTemplateName asks for a template name via text input.
+func PromptTemplateName(title string, defaultValue string, theme Theme, useColor bool) (string, error) {
+	model := newTemplateNameModel(title, defaultValue, theme, useColor)
+	prog := tea.NewProgram(model)
+	out, err := prog.Run()
+	if err != nil {
+		return "", err
+	}
+	final := out.(templateNameModel)
+	if final.err != nil {
+		return "", final.err
+	}
+	return strings.TrimSpace(final.value), nil
+}
+
+type templateRepoSelectModel struct {
+	title        string
+	templateName string
+	choices      []PromptChoice
+	filtered     []PromptChoice
+	selected     []string
+	addedNote    string
+
+	theme    Theme
+	useColor bool
+
+	nameInput textinput.Model
+	repoInput textinput.Model
+
+	stage     templateRepoStage
+	cursor    int
+	err       error
+	errorLine string
+}
+
+type templateRepoStage int
+
+const (
+	stageTemplateName templateRepoStage = iota
+	stageRepoSelect
+)
+
+func newTemplateRepoSelectModel(title string, templateName string, choices []PromptChoice, theme Theme, useColor bool) templateRepoSelectModel {
+	repoInput := textinput.New()
+	repoInput.Prompt = ""
+	repoInput.Placeholder = "search"
+	if useColor {
+		repoInput.PlaceholderStyle = theme.Muted
+	}
+
+	nameInput := textinput.New()
+	nameInput.Prompt = ""
+	nameInput.Placeholder = "template name"
+	nameInput.SetValue(templateName)
+	if useColor {
+		nameInput.PlaceholderStyle = theme.Muted
+	}
+
+	stage := stageRepoSelect
+	if strings.TrimSpace(templateName) == "" {
+		stage = stageTemplateName
+		nameInput.Focus()
+	} else {
+		repoInput.Focus()
+	}
+
+	m := templateRepoSelectModel{
+		title:        title,
+		templateName: templateName,
+		choices:      choices,
+		theme:        theme,
+		useColor:     useColor,
+		nameInput:    nameInput,
+		repoInput:    repoInput,
+		stage:        stage,
+	}
+	m.filtered = m.filterChoices()
+	return m
+}
+
+func (m templateRepoSelectModel) Init() tea.Cmd {
+	return textinput.Blink
+}
+
+func (m templateRepoSelectModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.Type {
+		case tea.KeyCtrlC, tea.KeyEsc:
+			m.err = ErrPromptCanceled
+			return m, tea.Quit
+		case tea.KeyCtrlD:
+			if m.stage == stageTemplateName {
+				if strings.TrimSpace(m.nameInput.Value()) == "" {
+					m.errorLine = "template name is required"
+					return m, nil
+				}
+				m.templateName = strings.TrimSpace(m.nameInput.Value())
+				m.stage = stageRepoSelect
+				m.repoInput.Focus()
+				m.errorLine = ""
+				return m, nil
+			}
+			if len(m.selected) == 0 {
+				m.errorLine = "select at least one repo"
+				return m, nil
+			}
+			return m, tea.Quit
+		case tea.KeyUp:
+			if m.cursor > 0 {
+				m.cursor--
+			}
+			return m, nil
+		case tea.KeyDown:
+			if m.cursor < len(m.filtered)-1 {
+				m.cursor++
+			}
+			return m, nil
+		case tea.KeyEnter:
+			if m.stage == stageTemplateName {
+				value := strings.TrimSpace(m.nameInput.Value())
+				if value == "" {
+					m.errorLine = "template name is required"
+					return m, nil
+				}
+				m.templateName = value
+				m.stage = stageRepoSelect
+				m.repoInput.Focus()
+				m.errorLine = ""
+				return m, nil
+			}
+			value := strings.TrimSpace(m.repoInput.Value())
+			if value == "done" {
+				if len(m.selected) == 0 {
+					m.errorLine = "select at least one repo"
+					return m, nil
+				}
+				return m, tea.Quit
+			}
+			if len(m.filtered) == 0 {
+				return m, nil
+			}
+			choice := m.filtered[m.cursor]
+			m.selected = append(m.selected, choice.Value)
+			m.choices = removeChoice(m.choices, choice.Value)
+			m.repoInput.SetValue("")
+			m.filtered = m.filterChoices()
+			if m.cursor >= len(m.filtered) {
+				m.cursor = max(0, len(m.filtered)-1)
+			}
+			m.addedNote = choice.Label
+			m.errorLine = ""
+			return m, nil
+		}
+	}
+
+	var cmd tea.Cmd
+	if m.stage == stageTemplateName {
+		m.nameInput, cmd = m.nameInput.Update(msg)
+		if strings.TrimSpace(m.nameInput.Value()) != "" {
+			m.errorLine = ""
+		}
+	} else {
+		m.repoInput, cmd = m.repoInput.Update(msg)
+		m.filtered = m.filterChoices()
+		if m.cursor >= len(m.filtered) {
+			m.cursor = max(0, len(m.filtered)-1)
+		}
+	}
+	return m, cmd
+}
+
+func (m templateRepoSelectModel) View() string {
+	var b strings.Builder
+	section := "Input"
+	if m.useColor {
+		section = m.theme.SectionTitle.Render(section)
+	}
+	b.WriteString(section)
+	b.WriteString("\n")
+
+	prefix := promptPrefix(m.theme, m.useColor)
+	labelName := promptLabel(m.theme, m.useColor, "template name")
+	templateName := m.templateName
+	if m.stage == stageTemplateName {
+		templateName = m.nameInput.View()
+	}
+	lineName := fmt.Sprintf("%s%s %s: %s", output.Indent, prefix, labelName, templateName)
+	b.WriteString(lineName)
+	b.WriteString("\n")
+
+	label := promptLabel(m.theme, m.useColor, "repo")
+	repoInput := m.repoInput.View()
+	if m.stage == stageTemplateName {
+		repoInput = ""
+	}
+	line := fmt.Sprintf("%s%s %s: %s", output.Indent, prefix, label, repoInput)
+	b.WriteString(line)
+	b.WriteString("\n")
+	renderRepoChoiceList(&b, m.filtered, m.cursor, m.useColor, m.theme)
+
+	b.WriteString("\n")
+	selTitle := "Selected"
+	if m.useColor {
+		selTitle = m.theme.SectionTitle.Render(selTitle)
+	}
+	b.WriteString(selTitle)
+	b.WriteString("\n")
+	renderSelectedRepoList(&b, m.selected, m.useColor, m.theme)
+
 	if m.errorLine != "" {
 		msg := m.errorLine
 		if m.useColor {
 			msg = m.theme.Error.Render(msg)
 		}
-		line = fmt.Sprintf("%s\n%s%s %s", line, output.Indent+output.Indent, mutedToken(m.theme, m.useColor, output.LogConnector), msg)
+		b.WriteString(fmt.Sprintf("%s%s %s\n", output.Indent, mutedToken(m.theme, m.useColor, output.LogConnector), msg))
 	}
-	return line + "\n"
+
+	infoPrefix := mutedToken(m.theme, m.useColor, output.StepPrefix)
+	b.WriteString(fmt.Sprintf("\n%s%s finish: Ctrl+D or type \"done\"\n", output.Indent, infoPrefix))
+	b.WriteString(fmt.Sprintf("%s%s enter: add highlighted repo\n", output.Indent, infoPrefix))
+	return b.String()
+}
+
+func (m templateRepoSelectModel) filterChoices() []PromptChoice {
+	q := strings.ToLower(strings.TrimSpace(m.repoInput.Value()))
+	if q == "" {
+		return append([]PromptChoice(nil), m.choices...)
+	}
+	var out []PromptChoice
+	for _, item := range m.choices {
+		if strings.Contains(strings.ToLower(item.Label), q) || strings.Contains(strings.ToLower(item.Value), q) {
+			out = append(out, item)
+		}
+	}
+	return out
+}
+
+func removeChoice(items []PromptChoice, value string) []PromptChoice {
+	var out []PromptChoice
+	for _, item := range items {
+		if item.Value == value {
+			continue
+		}
+		out = append(out, item)
+	}
+	return out
+}
+
+type templateNameModel struct {
+	title     string
+	theme     Theme
+	useColor  bool
+	input     textinput.Model
+	value     string
+	err       error
+	errorLine string
+}
+
+func newTemplateNameModel(title string, defaultValue string, theme Theme, useColor bool) templateNameModel {
+	input := textinput.New()
+	input.Prompt = ""
+	input.Placeholder = "template name"
+	input.SetValue(defaultValue)
+	input.Focus()
+	if useColor {
+		input.PlaceholderStyle = theme.Muted
+	}
+	return templateNameModel{
+		title:    title,
+		theme:    theme,
+		useColor: useColor,
+		input:    input,
+	}
+}
+
+func (m templateNameModel) Init() tea.Cmd {
+	return textinput.Blink
+}
+
+func (m templateNameModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.Type {
+		case tea.KeyCtrlC, tea.KeyEsc:
+			m.err = ErrPromptCanceled
+			return m, tea.Quit
+		case tea.KeyEnter:
+			value := strings.TrimSpace(m.input.Value())
+			if value == "" {
+				m.errorLine = "required"
+				return m, nil
+			}
+			m.value = value
+			return m, tea.Quit
+		}
+	}
+	var cmd tea.Cmd
+	m.input, cmd = m.input.Update(msg)
+	if strings.TrimSpace(m.input.Value()) != "" {
+		m.errorLine = ""
+	}
+	return m, cmd
+}
+
+func (m templateNameModel) View() string {
+	var b strings.Builder
+	header := m.title
+	if strings.TrimSpace(m.value) != "" {
+		header = fmt.Sprintf("%s (template: %s)", m.title, m.value)
+	}
+	if m.useColor {
+		header = m.theme.Header.Render(header)
+	}
+	b.WriteString(header)
+	b.WriteString("\n\n")
+
+	section := "Input"
+	if m.useColor {
+		section = m.theme.SectionTitle.Render(section)
+	}
+	b.WriteString(section)
+	b.WriteString("\n")
+
+	prefix := promptPrefix(m.theme, m.useColor)
+	label := promptLabel(m.theme, m.useColor, "template name")
+	line := fmt.Sprintf("%s%s %s: %s", output.Indent, prefix, label, m.input.View())
+	b.WriteString(line)
+	b.WriteString("\n")
+
+	if m.errorLine != "" {
+		msg := m.errorLine
+		if m.useColor {
+			msg = m.theme.Error.Render(msg)
+		}
+		b.WriteString(fmt.Sprintf("%s%s %s\n", output.Indent+output.Indent, mutedToken(m.theme, m.useColor, output.LogConnector), msg))
+	}
+	return b.String()
 }
 
 func promptPrefix(theme Theme, useColor bool) string {
@@ -908,6 +1278,44 @@ func renderChoiceList(b *strings.Builder, items []string, cursor int, useColor b
 			display = lipgloss.NewStyle().Bold(true).Render(display)
 		}
 		b.WriteString(fmt.Sprintf("%s%s %s\n", output.Indent+output.Indent, mutedToken(theme, useColor, output.LogConnector), display))
+	}
+}
+
+func renderRepoChoiceList(b *strings.Builder, items []PromptChoice, cursor int, useColor bool, theme Theme) {
+	if len(items) == 0 {
+		msg := "no matches"
+		if useColor {
+			msg = theme.Muted.Render(msg)
+		}
+		b.WriteString(fmt.Sprintf("%s%s %s\n", output.Indent+output.Indent, mutedToken(theme, useColor, output.LogConnector), msg))
+		return
+	}
+	for i, item := range items {
+		display := item.Label
+		if i == cursor && useColor {
+			display = lipgloss.NewStyle().Bold(true).Render(display)
+		}
+		b.WriteString(fmt.Sprintf("%s%s %s\n", output.Indent+output.Indent, mutedToken(theme, useColor, output.LogConnector), display))
+	}
+}
+
+func renderSelectedRepoList(b *strings.Builder, items []string, useColor bool, theme Theme) {
+	if len(items) == 0 {
+		msg := "none"
+		if useColor {
+			msg = theme.Muted.Render(msg)
+		}
+		b.WriteString(fmt.Sprintf("%s%s %s\n", output.Indent, mutedToken(theme, useColor, output.StepPrefix), msg))
+		return
+	}
+	for _, item := range items {
+		prefix := output.StepPrefix
+		if useColor {
+			prefix = theme.Accent.Render(prefix)
+		}
+		line := fmt.Sprintf("%s%s %s", output.Indent, prefix, item)
+		b.WriteString(line)
+		b.WriteString("\n")
 	}
 }
 

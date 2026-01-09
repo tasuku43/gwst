@@ -86,7 +86,7 @@ func Run() error {
 	case "repo":
 		return runRepo(ctx, rootDir, args[1:])
 	case "template":
-		return runTemplate(ctx, rootDir, args[1:])
+		return runTemplate(ctx, rootDir, args[1:], noPrompt)
 	case "new":
 		return runWorkspaceNew(ctx, rootDir, args[1:], noPrompt)
 	case "review":
@@ -135,7 +135,7 @@ func envBool(key string) bool {
 	}
 }
 
-func runTemplate(ctx context.Context, rootDir string, args []string) error {
+func runTemplate(ctx context.Context, rootDir string, args []string, noPrompt bool) error {
 	if len(args) == 0 || isHelpArg(args[0]) {
 		printTemplateHelp(os.Stdout)
 		return nil
@@ -143,6 +143,8 @@ func runTemplate(ctx context.Context, rootDir string, args []string) error {
 	switch args[0] {
 	case "ls":
 		return runTemplateList(ctx, rootDir, args[1:])
+	case "new":
+		return runTemplateNew(ctx, rootDir, args[1:], noPrompt)
 	default:
 		return fmt.Errorf("unknown template subcommand: %s", args[0])
 	}
@@ -163,6 +165,170 @@ func runTemplateList(ctx context.Context, rootDir string, args []string) error {
 	names := template.Names(file)
 	writeTemplateListText(file, names)
 	return nil
+}
+
+type stringSliceFlag []string
+
+func (s *stringSliceFlag) String() string {
+	return strings.Join(*s, ",")
+}
+
+func (s *stringSliceFlag) Set(value string) error {
+	*s = append(*s, value)
+	return nil
+}
+
+func runTemplateNew(ctx context.Context, rootDir string, args []string, noPrompt bool) error {
+	newFlags := flag.NewFlagSet("template new", flag.ContinueOnError)
+	var helpFlag bool
+	var repos stringSliceFlag
+	newFlags.Var(&repos, "repo", "repo spec (repeatable)")
+	newFlags.BoolVar(&helpFlag, "help", false, "show help")
+	newFlags.BoolVar(&helpFlag, "h", false, "show help")
+	newFlags.SetOutput(os.Stdout)
+	newFlags.Usage = func() {
+		printTemplateNewHelp(os.Stdout)
+	}
+	if err := newFlags.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return nil
+		}
+		return err
+	}
+	if helpFlag {
+		printTemplateNewHelp(os.Stdout)
+		return nil
+	}
+	if newFlags.NArg() > 1 {
+		return fmt.Errorf("usage: gws template new [<name>] [--repo <repo> ...]")
+	}
+
+	name := ""
+	if newFlags.NArg() == 1 {
+		name = newFlags.Arg(0)
+	}
+
+	file, err := template.Load(rootDir)
+	if err != nil {
+		return err
+	}
+
+	repoSpecs := template.NormalizeRepos(repos)
+
+	theme := ui.DefaultTheme()
+	useColor := isatty.IsTerminal(os.Stdout.Fd())
+	prompted := false
+
+	if strings.TrimSpace(name) == "" && len(repoSpecs) == 0 {
+		if noPrompt {
+			return fmt.Errorf("template name and repos are required with --no-prompt")
+		}
+		prompted = true
+		choices, err := buildTemplateRepoChoices(rootDir)
+		if err != nil {
+			return err
+		}
+		if len(choices) == 0 {
+			return fmt.Errorf("no repos found; run gws repo get first")
+		}
+		name, repoSpecs, err = ui.PromptTemplateRepos("gws template new", name, choices, theme, useColor)
+		if err != nil {
+			return err
+		}
+		repoSpecs = template.NormalizeRepos(repoSpecs)
+	} else {
+		if strings.TrimSpace(name) == "" {
+			if noPrompt {
+				return fmt.Errorf("template name is required with --no-prompt")
+			}
+			prompted = true
+			name, err = ui.PromptTemplateName("gws template new", "", theme, useColor)
+			if err != nil {
+				return err
+			}
+		}
+		if len(repoSpecs) == 0 {
+			if noPrompt {
+				return fmt.Errorf("repos are required with --no-prompt")
+			}
+			prompted = true
+			choices, err := buildTemplateRepoChoices(rootDir)
+			if err != nil {
+				return err
+			}
+			if len(choices) == 0 {
+				return fmt.Errorf("no repos found; run gws repo get first")
+			}
+			var selected []string
+			name, selected, err = ui.PromptTemplateRepos("gws template new", name, choices, theme, useColor)
+			if err != nil {
+				return err
+			}
+			repoSpecs = template.NormalizeRepos(selected)
+		}
+	}
+
+	if err := template.ValidateName(name); err != nil {
+		return err
+	}
+	if _, exists := file.Templates[name]; exists {
+		return fmt.Errorf("template already exists: %s", name)
+	}
+
+	if len(repoSpecs) == 0 {
+		return fmt.Errorf("at least one repo is required")
+	}
+
+	for _, repoSpec := range repoSpecs {
+		if _, err := repospec.Normalize(repoSpec); err != nil {
+			return err
+		}
+		if _, exists, err := repo.Exists(rootDir, repoSpec); err != nil {
+			return err
+		} else if !exists {
+			return fmt.Errorf("repo store not found, run: gws repo get %s", repoSpec)
+		}
+	}
+
+	if file.Templates == nil {
+		file.Templates = map[string]template.Template{}
+	}
+	file.Templates[name] = template.Template{Repos: repoSpecs}
+
+	if err := template.Save(rootDir, file); err != nil {
+		return err
+	}
+
+	renderer := ui.NewRenderer(os.Stdout, theme, useColor)
+	header := fmt.Sprintf("gws template new (template: %s)", name)
+	if !prompted {
+		renderer.Header(header)
+		renderer.Blank()
+	} else {
+		renderer.Blank()
+	}
+	renderer.Section("Result")
+	renderer.Bullet(name)
+	var reposDisplay []string
+	for _, repoSpec := range repoSpecs {
+		reposDisplay = append(reposDisplay, displayTemplateRepo(repoSpec))
+	}
+	renderTreeLines(renderer, reposDisplay, treeLineNormal)
+	return nil
+}
+
+func buildTemplateRepoChoices(rootDir string) ([]ui.PromptChoice, error) {
+	repos, _, err := repo.List(rootDir)
+	if err != nil {
+		return nil, err
+	}
+	var choices []ui.PromptChoice
+	for _, entry := range repos {
+		label := displayRepoKey(entry.RepoKey)
+		value := repoSpecFromKey(entry.RepoKey)
+		choices = append(choices, ui.PromptChoice{Label: label, Value: value})
+	}
+	return choices, nil
 }
 
 func runDoctor(ctx context.Context, rootDir string, args []string) error {
@@ -334,6 +500,14 @@ func runWorkspaceNew(ctx context.Context, rootDir string, args []string, noPromp
 	output.SetStepLogger(renderer)
 	defer output.SetStepLogger(nil)
 
+	var branches []string
+	if !noPrompt {
+		branches, err = promptTemplateBranches(ctx, tmpl, workspaceID, theme, useColor)
+		if err != nil {
+			return err
+		}
+	}
+
 	header := "gws new"
 	var headerParts []string
 	if templateName != "" {
@@ -356,7 +530,7 @@ func runWorkspaceNew(ctx context.Context, rootDir string, args []string, noPromp
 		return err
 	}
 
-	if err := applyTemplate(ctx, rootDir, workspaceID, tmpl); err != nil {
+	if err := applyTemplate(ctx, rootDir, workspaceID, tmpl, branches); err != nil {
 		if rollbackErr := workspace.Remove(ctx, rootDir, workspaceID); rollbackErr != nil {
 			return fmt.Errorf("apply template failed: %w (rollback failed: %v)", err, rollbackErr)
 		}
@@ -512,7 +686,7 @@ func runIssue(ctx context.Context, rootDir string, args []string, noPrompt bool)
 	useColor := isatty.IsTerminal(os.Stdout.Fd())
 
 	if !noPrompt && !branchProvided {
-		value, err := ui.PromptInputInline("branch", branch, theme, useColor)
+		value, err := ui.PromptInputInline("branch", branch, nil, theme, useColor)
 		if err != nil {
 			return err
 		}
@@ -855,6 +1029,51 @@ func promptTemplateAndID(rootDir, templateName, workspaceID string, theme ui.The
 		return "", "", err
 	}
 	return templateName, workspaceID, nil
+}
+
+func promptTemplateBranches(ctx context.Context, tmpl template.Template, workspaceID string, theme ui.Theme, useColor bool) ([]string, error) {
+	if len(tmpl.Repos) == 0 {
+		return nil, nil
+	}
+	branches := make([]string, len(tmpl.Repos))
+	used := map[string]int{}
+
+	for i, repoSpec := range tmpl.Repos {
+		alias := displayRepoName(repoSpec)
+		if strings.TrimSpace(alias) == "" {
+			alias = fmt.Sprintf("repo #%d", i+1)
+		}
+		label := fmt.Sprintf("branch for %s", alias)
+
+		for {
+			value, err := ui.PromptInputInline(label, workspaceID, func(v string) error {
+				return workspace.ValidateBranchName(ctx, v)
+			}, theme, useColor)
+			if err != nil {
+				return nil, err
+			}
+			if strings.TrimSpace(value) == "" {
+				value = workspaceID
+			}
+
+			if prevIndex, exists := used[value]; exists {
+				warnLabel := fmt.Sprintf("branch %q already used for repo #%d; use again?", value, prevIndex+1)
+				confirm, err := ui.PromptConfirmInline(warnLabel, theme, useColor)
+				if err != nil {
+					return nil, err
+				}
+				if !confirm {
+					continue
+				}
+			}
+
+			branches[i] = value
+			used[value] = i
+			break
+		}
+	}
+
+	return branches, nil
 }
 
 func renderWorkspaceRepos(r *ui.Renderer, repos []workspace.Repo, extraIndent string) {
@@ -1397,11 +1616,15 @@ func preflightTemplateRepos(ctx context.Context, rootDir string, tmpl template.T
 	return missing, nil
 }
 
-func applyTemplate(ctx context.Context, rootDir, workspaceID string, tmpl template.Template) error {
+func applyTemplate(ctx context.Context, rootDir, workspaceID string, tmpl template.Template, branches []string) error {
 	total := len(tmpl.Repos)
 	for i, repoSpec := range tmpl.Repos {
+		branch := workspaceID
+		if len(branches) == len(tmpl.Repos) && i < len(branches) && strings.TrimSpace(branches[i]) != "" {
+			branch = branches[i]
+		}
 		output.Step(formatStepWithIndex("worktree add", displayRepoName(repoSpec), worktreeDest(rootDir, workspaceID, repoSpec), i+1, total))
-		if _, err := workspace.Add(ctx, rootDir, workspaceID, repoSpec, "", true); err != nil {
+		if _, err := workspace.AddWithBranch(ctx, rootDir, workspaceID, repoSpec, "", branch, "", true); err != nil {
 			return err
 		}
 	}

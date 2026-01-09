@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -19,6 +20,8 @@ type File struct {
 type Template struct {
 	Repos []string `yaml:"repos"`
 }
+
+var namePattern = regexp.MustCompile(`^[A-Za-z0-9_-]{1,64}$`)
 
 func (t *Template) UnmarshalYAML(value *yaml.Node) error {
 	type rawTemplate struct {
@@ -81,4 +84,79 @@ func Names(file File) []string {
 	}
 	sort.Strings(names)
 	return names
+}
+
+// ValidateName checks template name rules.
+func ValidateName(name string) error {
+	trimmed := strings.TrimSpace(name)
+	if trimmed == "" {
+		return fmt.Errorf("template name is required")
+	}
+	if !namePattern.MatchString(trimmed) {
+		return fmt.Errorf("invalid template name: %s", name)
+	}
+	return nil
+}
+
+// NormalizeRepos trims and de-duplicates repo specs while preserving order.
+func NormalizeRepos(repos []string) []string {
+	seen := make(map[string]struct{})
+	var out []string
+	for _, repo := range repos {
+		trimmed := strings.TrimSpace(repo)
+		if trimmed == "" {
+			continue
+		}
+		if _, ok := seen[trimmed]; ok {
+			continue
+		}
+		seen[trimmed] = struct{}{}
+		out = append(out, trimmed)
+	}
+	return out
+}
+
+// Save writes the templates file atomically. It requires the file to already exist.
+func Save(rootDir string, file File) error {
+	if rootDir == "" {
+		return fmt.Errorf("root directory is required")
+	}
+	path := filepath.Join(rootDir, FileName)
+	info, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("templates file not found: %s", path)
+		}
+		return err
+	}
+
+	data, err := yaml.Marshal(file)
+	if err != nil {
+		return err
+	}
+
+	dir := filepath.Dir(path)
+	tmp, err := os.CreateTemp(dir, "templates-*.yaml")
+	if err != nil {
+		return fmt.Errorf("create temp templates file: %w", err)
+	}
+	tmpPath := tmp.Name()
+	if _, err := tmp.Write(data); err != nil {
+		tmp.Close()
+		_ = os.Remove(tmpPath)
+		return fmt.Errorf("write temp templates file: %w", err)
+	}
+	if err := tmp.Close(); err != nil {
+		_ = os.Remove(tmpPath)
+		return fmt.Errorf("close temp templates file: %w", err)
+	}
+
+	if err := os.Rename(tmpPath, path); err != nil {
+		_ = os.Remove(tmpPath)
+		return fmt.Errorf("replace templates file: %w", err)
+	}
+	if err := os.Chmod(path, info.Mode()); err != nil {
+		return fmt.Errorf("chmod templates file: %w", err)
+	}
+	return nil
 }

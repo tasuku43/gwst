@@ -1,8 +1,6 @@
 ---
 title: "gws new"
 status: implemented
-pending:
-  - per_repo_branch_prompt
 ---
 
 ## Synopsis
@@ -22,16 +20,14 @@ Create a new workspace directory under `<root>/workspaces` and populate it with 
 - Applies the template by adding a worktree for each repo:
   - Alias defaults to the repo name.
   - Branch defaults to `WORKSPACE_ID`.
-  - Fetches the bare store before adding the worktree.
+  - Refreshes the bare store only when the default branch is stale or missing (checked via `git ls-remote`, unless a recent fetch exists within `GWS_FETCH_GRACE_SECONDS`, default 30s); skips fetch when already up-to-date.
   - Base ref is auto-detected (prefers `HEAD`, then `origin/HEAD`, then `main`/`master`/`develop` locally or on origin).
-- Renders a summary of created worktrees and suggests `cd` into the workspace.
-
-## Planned enhancement (not implemented yet)
-- Per-repo branch naming prompt (interactive only):
+- When prompting is allowed, collects per-repo branch names interactively:
   - For each repo in the template, prompt: `branch for <alias> [default: <WORKSPACE_ID>]:`
-  - Empty input accepts the default (`WORKSPACE_ID`). Input is validated via `git check-ref-format --branch`.
-  - Duplicate branch names across repos are allowed (mirrors current behavior) but identical input is warned once; user can re-enter.
-  - With `--no-prompt`, current behavior remains: all branches default to `WORKSPACE_ID`.
+  - The input box is pre-filled with `<WORKSPACE_ID>` so users can press Enter to accept or append (e.g., `-hotfix`) without retyping.
+  - Empty input still accepts the default (`WORKSPACE_ID`). Input is validated via `git check-ref-format --branch`.
+  - Duplicate branch names across repos are allowed; a duplicate entry is warned and the user can confirm or re-enter.
+- Renders a summary of created worktrees and suggests `cd` into the workspace.
 
 ## Success Criteria
 - Workspace directory exists with one worktree per template repo, each on branch `WORKSPACE_ID`.
