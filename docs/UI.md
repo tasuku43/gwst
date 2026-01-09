@@ -13,11 +13,9 @@ Status: draft (MVP+)
 - JSON/format switching: MVP では扱わない
 
 ## Layout (common)
-Sectioned layout with 3 sections (interactive may insert Inputs; Info/Suggestion are optional):
+Sectioned layout with no header line. Inputs appear first when present; Info/Suggestion are optional:
 
 ```
-Header
-
 Inputs
   <input line>
   <input line>
@@ -38,6 +36,7 @@ Suggestion
 ```
 
 Rules:
+- No header line; commands start directly with Inputs/Steps.
 - Indent: 2 spaces
 - 1 blank line between sections
 - No success banner; success is implied in Result section
@@ -89,8 +88,6 @@ Steps
 
 ### gws new (interactive)
 ```
-gws new
-
 Inputs
   • template: hel
     └─ helmfiles
@@ -106,8 +103,6 @@ Result
 
 ### gws new (non-interactive)
 ```
-gws new (template: app)
-
 Steps
   › repo get git@github.com:org/repo.git
   › worktree add repo
@@ -120,8 +115,6 @@ Result
 
 ### gws review (interactive)
 ```
-gws review <PR URL>
-
 Steps
   • repo get required for 1 repo
     └─ gws repo get git@github.com:org/repo.git
@@ -130,8 +123,6 @@ Steps
 
 ### gws status
 ```
-gws status (workspace id: PROJ-123)
-
 Result
   • api (branch: PROJ-123)
     ├─ head: 94a67ef

@@ -25,6 +25,7 @@ Current command specs live in this folder:
 - `docs/specs/repo-ls.md`
 - `docs/specs/template-ls.md`
 - `docs/specs/template-new.md`
+- `docs/specs/template-rm.md`
 - `docs/specs/issue.md`
 - `docs/specs/resume.md`
 - `docs/specs/new.md`
