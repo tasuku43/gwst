@@ -1,6 +1,6 @@
 ---
 title: "gws issue"
-status: planned
+status: implemented
 ---
 
 ## Synopsis

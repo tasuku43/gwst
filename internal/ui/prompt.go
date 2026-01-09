@@ -97,6 +97,20 @@ func PromptConfirmInline(label string, theme Theme, useColor bool) (bool, error)
 	return final.value, nil
 }
 
+func PromptInputInline(label, defaultValue string, theme Theme, useColor bool) (string, error) {
+	model := newInputInlineModel(label, defaultValue, theme, useColor)
+	prog := tea.NewProgram(model)
+	out, err := prog.Run()
+	if err != nil {
+		return "", err
+	}
+	final := out.(inputInlineModel)
+	if final.err != nil {
+		return "", final.err
+	}
+	return strings.TrimSpace(final.value), nil
+}
+
 type inputsStage int
 
 const (
@@ -389,6 +403,80 @@ func (m confirmInlineModel) View() string {
 	prefix := promptPrefix(m.theme, m.useColor)
 	label := promptLabel(m.theme, m.useColor, m.label)
 	line := fmt.Sprintf("%s%s %s (y/n): %s", output.Indent, prefix, label, m.input.View())
+	return line + "\n"
+}
+
+type inputInlineModel struct {
+	label        string
+	defaultValue string
+	theme        Theme
+	useColor     bool
+	input        textinput.Model
+	value        string
+	err          error
+	errorLine    string
+}
+
+func newInputInlineModel(label, defaultValue string, theme Theme, useColor bool) inputInlineModel {
+	ti := textinput.New()
+	ti.Prompt = ""
+	ti.SetValue(defaultValue)
+	ti.Focus()
+	if useColor {
+		ti.PlaceholderStyle = theme.Muted
+	}
+	return inputInlineModel{
+		label:        label,
+		defaultValue: defaultValue,
+		theme:        theme,
+		useColor:     useColor,
+		input:        ti,
+	}
+}
+
+func (m inputInlineModel) Init() tea.Cmd {
+	return textinput.Blink
+}
+
+func (m inputInlineModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.Type {
+		case tea.KeyCtrlC, tea.KeyEsc:
+			m.err = ErrPromptCanceled
+			return m, tea.Quit
+		case tea.KeyEnter:
+			value := strings.TrimSpace(m.input.Value())
+			if value == "" {
+				value = strings.TrimSpace(m.defaultValue)
+			}
+			if value == "" {
+				m.errorLine = "required"
+				return m, nil
+			}
+			m.value = value
+			return m, tea.Quit
+		}
+	}
+	var cmd tea.Cmd
+	m.input, cmd = m.input.Update(msg)
+	if strings.TrimSpace(m.input.Value()) != "" {
+		m.errorLine = ""
+	}
+	return m, cmd
+}
+
+func (m inputInlineModel) View() string {
+	prefix := promptPrefix(m.theme, m.useColor)
+	label := promptLabel(m.theme, m.useColor, m.label)
+	line := fmt.Sprintf("%s%s %s: %s", output.Indent, prefix, label, m.input.View())
+	if m.errorLine != "" {
+		msg := m.errorLine
+		if m.useColor {
+			msg = m.theme.Error.Render(msg)
+		}
+		line = fmt.Sprintf("%s\n%s%s %s", line, output.Indent+output.Indent, mutedToken(m.theme, m.useColor, output.LogConnector), msg)
+	}
 	return line + "\n"
 }
 

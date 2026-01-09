@@ -91,6 +91,8 @@ func Run() error {
 		return runWorkspaceNew(ctx, rootDir, args[1:], noPrompt)
 	case "review":
 		return runReview(ctx, rootDir, args[1:], noPrompt)
+	case "issue":
+		return runIssue(ctx, rootDir, args[1:], noPrompt)
 	case "add":
 		return runWorkspaceAdd(ctx, rootDir, args[1:])
 	case "ls":
@@ -454,6 +456,122 @@ func runWorkspaceAdd(ctx context.Context, rootDir string, args []string) error {
 	return nil
 }
 
+func runIssue(ctx context.Context, rootDir string, args []string, noPrompt bool) error {
+	issueFlags := flag.NewFlagSet("issue", flag.ContinueOnError)
+	var workspaceID string
+	var branch string
+	var baseRef string
+	var helpFlag bool
+	issueFlags.StringVar(&workspaceID, "workspace-id", "", "workspace id")
+	issueFlags.StringVar(&branch, "branch", "", "branch name")
+	issueFlags.StringVar(&baseRef, "base", "", "base ref")
+	issueFlags.BoolVar(&helpFlag, "help", false, "show help")
+	issueFlags.BoolVar(&helpFlag, "h", false, "show help")
+	issueFlags.SetOutput(os.Stdout)
+	issueFlags.Usage = func() {
+		printIssueHelp(os.Stdout)
+	}
+	if err := issueFlags.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return nil
+		}
+		return err
+	}
+	if helpFlag {
+		printIssueHelp(os.Stdout)
+		return nil
+	}
+	if issueFlags.NArg() != 1 {
+		return fmt.Errorf("usage: gws issue <ISSUE_URL> [--workspace-id <id>] [--branch <name>] [--base <ref>]")
+	}
+
+	raw := strings.TrimSpace(issueFlags.Arg(0))
+	if raw == "" {
+		return fmt.Errorf("issue URL is required")
+	}
+
+	req, err := parseIssueURL(raw)
+	if err != nil {
+		return err
+	}
+	repoURL := buildRepoURLFromParts(req.Host, req.Owner, req.Repo)
+
+	workspaceID = strings.TrimSpace(workspaceID)
+	branch = strings.TrimSpace(branch)
+	baseRef = strings.TrimSpace(baseRef)
+
+	branchProvided := branch != ""
+	if workspaceID == "" {
+		workspaceID = fmt.Sprintf("ISSUE-%d", req.Number)
+	}
+	if branch == "" {
+		branch = fmt.Sprintf("issue/%d", req.Number)
+	}
+
+	theme := ui.DefaultTheme()
+	useColor := isatty.IsTerminal(os.Stdout.Fd())
+
+	if !noPrompt && !branchProvided {
+		value, err := ui.PromptInputInline("branch", branch, theme, useColor)
+		if err != nil {
+			return err
+		}
+		branch = strings.TrimSpace(value)
+		if branch == "" {
+			branch = fmt.Sprintf("issue/%d", req.Number)
+		}
+	}
+
+	renderer := ui.NewRenderer(os.Stdout, theme, useColor)
+	output.SetStepLogger(renderer)
+	defer output.SetStepLogger(nil)
+
+	header := fmt.Sprintf("gws issue (%s#%d, workspace id: %s)", truncateMiddle(fmt.Sprintf("%s/%s", req.Owner, req.Repo), 40), req.Number, workspaceID)
+	renderer.Header(header)
+	renderer.Blank()
+	renderer.Section("Info")
+	renderer.Bullet(fmt.Sprintf("provider: %s (%s)", strings.ToLower(req.Provider), req.Host))
+	renderer.Bullet(fmt.Sprintf("repo: %s/%s", req.Owner, req.Repo))
+	renderer.Bullet(fmt.Sprintf("issue: #%d", req.Number))
+	renderer.Bullet(fmt.Sprintf("branch: %s", branch))
+	if baseRef != "" {
+		renderer.Bullet(fmt.Sprintf("base: %s", baseRef))
+	}
+	renderer.Blank()
+	renderer.Section("Steps")
+
+	_, exists, err := repo.Exists(rootDir, repoURL)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		if err := ensureRepoGet(ctx, rootDir, []string{repoURL}, noPrompt, theme, useColor); err != nil {
+			return err
+		}
+	}
+
+	output.Step(formatStep("create workspace", workspaceID, relPath(rootDir, filepath.Join(rootDir, "workspaces", workspaceID))))
+	wsDir, err := workspace.New(ctx, rootDir, workspaceID)
+	if err != nil {
+		return err
+	}
+
+	output.Step(formatStep("worktree add", displayRepoName(repoURL), worktreeDest(rootDir, workspaceID, repoURL)))
+	if _, err := workspace.AddWithBranch(ctx, rootDir, workspaceID, repoURL, "", branch, baseRef, true); err != nil {
+		if rollbackErr := workspace.Remove(ctx, rootDir, workspaceID); rollbackErr != nil {
+			return fmt.Errorf("issue setup failed: %w (rollback failed: %v)", err, rollbackErr)
+		}
+		return err
+	}
+
+	renderer.Blank()
+	renderer.Section("Result")
+	repos, _, _ := loadWorkspaceRepos(ctx, wsDir)
+	renderWorkspaceBlock(renderer, workspaceID, repos)
+	renderSuggestion(renderer, useColor, wsDir)
+	return nil
+}
+
 func runReview(ctx context.Context, rootDir string, args []string, noPrompt bool) error {
 	if len(args) == 0 || (len(args) == 1 && isHelpArg(args[0])) {
 		printReviewHelp(os.Stdout)
@@ -530,6 +648,72 @@ func runReview(ctx context.Context, rootDir string, args []string, noPrompt bool
 	renderWorkspaceBlock(renderer, workspaceID, repos)
 	renderSuggestion(renderer, useColor, wsDir)
 	return nil
+}
+
+type issueRequest struct {
+	Provider string
+	Host     string
+	Owner    string
+	Repo     string
+	Number   int
+}
+
+func parseIssueURL(raw string) (issueRequest, error) {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return issueRequest{}, fmt.Errorf("invalid issue URL: %w", err)
+	}
+	host := strings.TrimSpace(u.Hostname())
+	parts := strings.Split(strings.Trim(u.Path, "/"), "/")
+	if len(parts) < 4 {
+		return issueRequest{}, fmt.Errorf("invalid issue URL path: %s", u.Path)
+	}
+
+	for i := 0; i < len(parts)-1; i++ {
+		if parts[i] != "issues" {
+			continue
+		}
+		num, err := strconv.Atoi(parts[i+1])
+		if err != nil {
+			return issueRequest{}, fmt.Errorf("invalid issue number: %s", parts[i+1])
+		}
+		repoIdx := i - 1
+		if repoIdx >= 1 && parts[repoIdx] == "-" {
+			repoIdx--
+		}
+		if repoIdx < 1 {
+			return issueRequest{}, fmt.Errorf("invalid issue URL path: %s", u.Path)
+		}
+		ownerParts := parts[:repoIdx]
+		provider := issueProvider(host, repoIdx, i)
+		if provider == "gitlab" {
+			if len(ownerParts) != 1 {
+				return issueRequest{}, fmt.Errorf("nested groups are not supported: %s", strings.Join(ownerParts, "/"))
+			}
+		} else if len(ownerParts) != 1 {
+			return issueRequest{}, fmt.Errorf("invalid issue URL path: %s", u.Path)
+		}
+		return issueRequest{
+			Provider: provider,
+			Host:     host,
+			Owner:    ownerParts[0],
+			Repo:     parts[repoIdx],
+			Number:   num,
+		}, nil
+	}
+
+	return issueRequest{}, fmt.Errorf("unsupported issue URL: %s", raw)
+}
+
+func issueProvider(host string, repoIdx, issueIdx int) string {
+	lowerHost := strings.ToLower(strings.TrimSpace(host))
+	if repoIdx < issueIdx-1 || strings.Contains(lowerHost, "gitlab") {
+		return "gitlab"
+	}
+	if strings.Contains(lowerHost, "bitbucket") {
+		return "bitbucket"
+	}
+	return "github"
 }
 
 type prRequest struct {
@@ -617,12 +801,16 @@ func parsePRURL(raw string) (prRequest, error) {
 }
 
 func buildRepoURL(req prRequest) string {
-	repoName := strings.TrimSuffix(req.Repo, ".git")
+	return buildRepoURLFromParts(req.Host, req.Owner, req.Repo)
+}
+
+func buildRepoURLFromParts(host, owner, repo string) string {
+	repoName := strings.TrimSuffix(repo, ".git")
 	switch strings.ToLower(strings.TrimSpace(defaultRepoProtocol)) {
 	case "https":
-		return fmt.Sprintf("https://%s/%s/%s.git", req.Host, req.Owner, repoName)
+		return fmt.Sprintf("https://%s/%s/%s.git", host, owner, repoName)
 	default:
-		return fmt.Sprintf("git@%s:%s/%s.git", req.Host, req.Owner, repoName)
+		return fmt.Sprintf("git@%s:%s/%s.git", host, owner, repoName)
 	}
 }
 
