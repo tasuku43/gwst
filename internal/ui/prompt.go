@@ -392,6 +392,192 @@ func (m confirmInlineModel) View() string {
 	return line + "\n"
 }
 
+// PromptTemplateRepos lets users pick one or more repos from a list with filtering.
+func PromptTemplateRepos(title string, choices []PromptChoice, theme Theme, useColor bool) ([]string, error) {
+	model := newTemplateRepoSelectModel(title, choices, theme, useColor)
+	prog := tea.NewProgram(model)
+	out, err := prog.Run()
+	if err != nil {
+		return nil, err
+	}
+	final := out.(templateRepoSelectModel)
+	if final.err != nil {
+		return nil, final.err
+	}
+	return append([]string(nil), final.selected...), nil
+}
+
+type templateRepoSelectModel struct {
+	title     string
+	choices   []PromptChoice
+	filtered  []PromptChoice
+	selected  []string
+	addedNote string
+
+	theme    Theme
+	useColor bool
+
+	input     textinput.Model
+	cursor    int
+	err       error
+	errorLine string
+}
+
+func newTemplateRepoSelectModel(title string, choices []PromptChoice, theme Theme, useColor bool) templateRepoSelectModel {
+	input := textinput.New()
+	input.Prompt = ""
+	input.Placeholder = "search"
+	input.Focus()
+	if useColor {
+		input.PlaceholderStyle = theme.Muted
+	}
+	m := templateRepoSelectModel{
+		title:    title,
+		choices:  choices,
+		theme:    theme,
+		useColor: useColor,
+		input:    input,
+	}
+	m.filtered = m.filterChoices()
+	return m
+}
+
+func (m templateRepoSelectModel) Init() tea.Cmd {
+	return textinput.Blink
+}
+
+func (m templateRepoSelectModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.Type {
+		case tea.KeyCtrlC, tea.KeyEsc:
+			m.err = ErrPromptCanceled
+			return m, tea.Quit
+		case tea.KeyCtrlD:
+			if len(m.selected) == 0 {
+				m.errorLine = "select at least one repo"
+				return m, nil
+			}
+			return m, tea.Quit
+		case tea.KeyUp:
+			if m.cursor > 0 {
+				m.cursor--
+			}
+			return m, nil
+		case tea.KeyDown:
+			if m.cursor < len(m.filtered)-1 {
+				m.cursor++
+			}
+			return m, nil
+		case tea.KeyEnter:
+			value := strings.TrimSpace(m.input.Value())
+			if value == "done" {
+				if len(m.selected) == 0 {
+					m.errorLine = "select at least one repo"
+					return m, nil
+				}
+				return m, tea.Quit
+			}
+			if len(m.filtered) == 0 {
+				return m, nil
+			}
+			choice := m.filtered[m.cursor]
+			m.selected = append(m.selected, choice.Value)
+			m.choices = removeChoice(m.choices, choice.Value)
+			m.input.SetValue("")
+			m.filtered = m.filterChoices()
+			if m.cursor >= len(m.filtered) {
+				m.cursor = max(0, len(m.filtered)-1)
+			}
+			m.addedNote = choice.Label
+			m.errorLine = ""
+			return m, nil
+		}
+	}
+
+	var cmd tea.Cmd
+	m.input, cmd = m.input.Update(msg)
+	m.filtered = m.filterChoices()
+	if m.cursor >= len(m.filtered) {
+		m.cursor = max(0, len(m.filtered)-1)
+	}
+	return m, cmd
+}
+
+func (m templateRepoSelectModel) View() string {
+	var b strings.Builder
+	header := m.title
+	if len(m.selected) > 0 {
+		header = fmt.Sprintf("%s (selected: %d)", m.title, len(m.selected))
+	}
+	if m.useColor {
+		header = m.theme.Header.Render(header)
+	}
+	b.WriteString(header)
+	b.WriteString("\n\n")
+
+	section := "Select repos"
+	if m.useColor {
+		section = m.theme.SectionTitle.Render(section)
+	}
+	b.WriteString(section)
+	b.WriteString("\n")
+
+	prefix := promptPrefix(m.theme, m.useColor)
+	label := promptLabel(m.theme, m.useColor, "repo")
+	line := fmt.Sprintf("%s%s %s: %s", output.Indent, prefix, label, m.input.View())
+	b.WriteString(line)
+	b.WriteString("\n")
+	renderRepoChoiceList(&b, m.filtered, m.cursor, m.useColor, m.theme)
+
+	b.WriteString("\n")
+	selTitle := "Selected"
+	if m.useColor {
+		selTitle = m.theme.SectionTitle.Render(selTitle)
+	}
+	b.WriteString(selTitle)
+	b.WriteString("\n")
+	renderSelectedRepoList(&b, m.selected, m.useColor, m.theme)
+
+	if m.errorLine != "" {
+		msg := m.errorLine
+		if m.useColor {
+			msg = m.theme.Error.Render(msg)
+		}
+		b.WriteString(fmt.Sprintf("%s%s %s\n", output.Indent, mutedToken(m.theme, m.useColor, output.LogConnector), msg))
+	}
+
+	infoPrefix := mutedToken(m.theme, m.useColor, output.StepPrefix)
+	b.WriteString(fmt.Sprintf("\n%s%s finish: Ctrl+D or type \"done\"\n", output.Indent, infoPrefix))
+	b.WriteString(fmt.Sprintf("%s%s enter: add highlighted repo\n", output.Indent, infoPrefix))
+	return b.String()
+}
+
+func (m templateRepoSelectModel) filterChoices() []PromptChoice {
+	q := strings.ToLower(strings.TrimSpace(m.input.Value()))
+	if q == "" {
+		return append([]PromptChoice(nil), m.choices...)
+	}
+	var out []PromptChoice
+	for _, item := range m.choices {
+		if strings.Contains(strings.ToLower(item.Label), q) || strings.Contains(strings.ToLower(item.Value), q) {
+			out = append(out, item)
+		}
+	}
+	return out
+}
+
+func removeChoice(items []PromptChoice, value string) []PromptChoice {
+	var out []PromptChoice
+	for _, item := range items {
+		if item.Value == value {
+			continue
+		}
+		out = append(out, item)
+	}
+	return out
+}
+
 func promptPrefix(theme Theme, useColor bool) string {
 	prefix := output.StepPrefix
 	if useColor {
@@ -820,6 +1006,44 @@ func renderChoiceList(b *strings.Builder, items []string, cursor int, useColor b
 			display = lipgloss.NewStyle().Bold(true).Render(display)
 		}
 		b.WriteString(fmt.Sprintf("%s%s %s\n", output.Indent+output.Indent, mutedToken(theme, useColor, output.LogConnector), display))
+	}
+}
+
+func renderRepoChoiceList(b *strings.Builder, items []PromptChoice, cursor int, useColor bool, theme Theme) {
+	if len(items) == 0 {
+		msg := "no matches"
+		if useColor {
+			msg = theme.Muted.Render(msg)
+		}
+		b.WriteString(fmt.Sprintf("%s%s %s\n", output.Indent+output.Indent, mutedToken(theme, useColor, output.LogConnector), msg))
+		return
+	}
+	for i, item := range items {
+		display := item.Label
+		if i == cursor && useColor {
+			display = lipgloss.NewStyle().Bold(true).Render(display)
+		}
+		b.WriteString(fmt.Sprintf("%s%s %s\n", output.Indent+output.Indent, mutedToken(theme, useColor, output.LogConnector), display))
+	}
+}
+
+func renderSelectedRepoList(b *strings.Builder, items []string, useColor bool, theme Theme) {
+	if len(items) == 0 {
+		msg := "none"
+		if useColor {
+			msg = theme.Muted.Render(msg)
+		}
+		b.WriteString(fmt.Sprintf("%s%s %s\n", output.Indent+output.Indent, mutedToken(theme, useColor, output.StepPrefix), msg))
+		return
+	}
+	for _, item := range items {
+		prefix := output.StepPrefix
+		if useColor {
+			prefix = theme.Accent.Render(prefix)
+		}
+		line := fmt.Sprintf("%s%s %s", output.Indent+output.Indent, prefix, item)
+		b.WriteString(line)
+		b.WriteString("\n")
 	}
 }
 

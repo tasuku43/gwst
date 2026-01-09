@@ -111,11 +111,16 @@ func printRepoLsHelp(w io.Writer) {
 
 func printTemplateHelp(w io.Writer) {
 	fmt.Fprintln(w, "Usage: gws template <subcommand>")
-	fmt.Fprintln(w, "  subcommands: ls")
+	fmt.Fprintln(w, "  subcommands: ls, new")
 }
 
 func printTemplateLsHelp(w io.Writer) {
 	fmt.Fprintln(w, "Usage: gws template ls")
+}
+
+func printTemplateNewHelp(w io.Writer) {
+	fmt.Fprintln(w, "Usage: gws template new <name> [--repo <repo> ...]")
+	fmt.Fprintln(w, "  --repo <repo>  repo spec (repeatable)")
 }
 
 func printDoctorHelp(w io.Writer) {

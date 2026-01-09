@@ -1,6 +1,6 @@
 ---
 title: "gws template new"
-status: planned
+status: implemented
 ---
 
 ## Synopsis
