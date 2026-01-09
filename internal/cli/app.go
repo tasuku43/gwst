@@ -215,11 +215,13 @@ func runTemplateNew(ctx context.Context, rootDir string, args []string, noPrompt
 
 	theme := ui.DefaultTheme()
 	useColor := isatty.IsTerminal(os.Stdout.Fd())
+	prompted := false
 
 	if strings.TrimSpace(name) == "" {
 		if noPrompt {
 			return fmt.Errorf("template name is required with --no-prompt")
 		}
+		prompted = true
 		name, err = ui.PromptTemplateName("gws template new", "", theme, useColor)
 		if err != nil {
 			return err
@@ -237,6 +239,7 @@ func runTemplateNew(ctx context.Context, rootDir string, args []string, noPrompt
 		if noPrompt {
 			return fmt.Errorf("repos are required with --no-prompt")
 		}
+		prompted = true
 		choices, err := buildTemplateRepoChoices(rootDir)
 		if err != nil {
 			return err
@@ -277,8 +280,12 @@ func runTemplateNew(ctx context.Context, rootDir string, args []string, noPrompt
 
 	renderer := ui.NewRenderer(os.Stdout, theme, useColor)
 	header := fmt.Sprintf("gws template new (template: %s)", name)
-	renderer.Header(header)
-	renderer.Blank()
+	if !prompted {
+		renderer.Header(header)
+		renderer.Blank()
+	} else {
+		renderer.Blank()
+	}
 	renderer.Section("Result")
 	renderer.Bullet(name)
 	var reposDisplay []string

@@ -1139,7 +1139,7 @@ func renderSelectedRepoList(b *strings.Builder, items []string, useColor bool, t
 		if useColor {
 			msg = theme.Muted.Render(msg)
 		}
-		b.WriteString(fmt.Sprintf("%s%s %s\n", output.Indent+output.Indent, mutedToken(theme, useColor, output.StepPrefix), msg))
+		b.WriteString(fmt.Sprintf("%s%s %s\n", output.Indent, mutedToken(theme, useColor, output.StepPrefix), msg))
 		return
 	}
 	for _, item := range items {
@@ -1147,7 +1147,7 @@ func renderSelectedRepoList(b *strings.Builder, items []string, useColor bool, t
 		if useColor {
 			prefix = theme.Accent.Render(prefix)
 		}
-		line := fmt.Sprintf("%s%s %s", output.Indent+output.Indent, prefix, item)
+		line := fmt.Sprintf("%s%s %s", output.Indent, prefix, item)
 		b.WriteString(line)
 		b.WriteString("\n")
 	}
