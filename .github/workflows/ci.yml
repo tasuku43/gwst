@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        go-version: ["1.25.x", "1.24.x"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go-version }}
+          check-latest: true
+          cache: true
+
+      - name: gofmt
+        run: |
+          gofmt -w .
+          git diff --stat
+          git diff --exit-code || { echo "Please run gofmt locally before committing."; exit 1; }
+
+      - name: go test
+        run: go test ./...
