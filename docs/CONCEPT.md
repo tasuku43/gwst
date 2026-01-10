@@ -1,124 +1,33 @@
-# gws コンセプト（確定版） v0.1
+# gws Concept
 
-状態: Concept Approved（実装開始可能）  
-実装言語: Go  
-CLI 名: gws（`gws <subcommand>` で呼び出す）
+## 1. Why gws is needed (Problem)
 
-## 1. なぜ gws が必要か（課題）
+In the era of AI agents, multiple actors (humans + multiple agents) make changes in parallel on the same machine and the same codebase. With the traditional workflow of directly editing a single clone directory, the following issues become prominent:
 
-AI エージェント時代では、同一マシン上の同一コードベースに対して「複数主体（人間 + 複数エージェント）」が並列で変更を加えます。従来の clone ディレクトリを直接編集する運用では、次が顕在化します。
+- Context collisions (changes and generated artifacts from different tasks get mixed)
+- The number of working directories grows beyond what humans can reliably organize (it becomes unclear what each directory is for)
+- Cleanup (deletion) feels risky, so leftovers accumulate and the environment becomes even more error-prone
+- Agents are more likely to perform destructive operations by mistake (e.g., `rm -rf`, running commands in the wrong directory)
 
-- 作業コンテキストの衝突（別タスクの変更や生成物が混ざる）
-- “作業場の増殖” に人間の整理能力が追いつかない
-- 削除（片付け）が怖いので残骸が溜まり、結果さらに危険になる
-- agent が誤って破壊的操作をしやすい（rm -rf 等）
+gws promotes working directories into explicit **workspaces (task-scoped working directories)** and enables Git worktrees to be operated in a **standardized, safer, and listable** way.  
+gws focuses on **creating and managing work environments**; downstream development workflows (run, test, PR, etc.) are intentionally left to the user’s existing practices.
 
-gws は、作業場を workspace（タスク単位ディレクトリ）へ昇格させ、worktree を規約化・安全化・一覧性を持って運用できるようにする。
+## 2. Who this tool is for (Target users)
 
-## 2. gws のゴール / 非ゴール
+gws is primarily for developers and teams who work in the terminal and build productivity by composing existing tools (git/gh/tmux/make/just/direnv, etc.).
 
-### ゴール
-- workspace（タスク）単位で作業場を生成し、複数リポジトリを同居させられる
-- “マスター clone” で作業しない（bare repo store に履歴/オブジェクトを集約）
-- 人間もエージェントも使える（非対話/JSON などの拡張余地を残す）
+- Prefer tracking state via text and commands rather than delegating the workflow to a GUI
+- Run multiple tasks (humans + agents) in parallel, but struggle with isolation and cleanup
+- Need to treat changes across multi-repo / monorepo setups as a single “task unit”
+- Want to apply the same workspace concept in remote development and CI environments (future expansion)
 
-### 非ゴール（MVPではやらない）
-- GitHub/PR/Issue 状態連携（将来拡張）
-- 既存リポジトリ管理ツールの完全置換（ghq等）
-- worktree を「同一 repo で同一ブランチを複数同時に checkout」する高度運用
-- Windows ネイティブのフルサポート（将来）
+## 3. What it provides (Minimal primitives)
 
-## 3. コア設計（B案: bare repo store + workspace worktree）
+gws provides a minimal set of management capabilities: **create, extend, list, and safely clean up** workspaces.  
+It does not replace existing development practices; instead, it makes workspaces **composable** with the user’s preferred toolchain and command workflows.
 
-### 3.1 主要概念
-- Repo store: 作業ディレクトリを持たない bare リポジトリを保管する領域（取得結果の保管庫）
-- Workspace: タスク（チケット等）単位の作業ディレクトリ
-- Worktree: Git worktree により生成される “実作業用” のチェックアウトディレクトリ
+## 4. When it helps (Representative scenarios)
 
-### 3.2 ルートディレクトリ
-- 環境変数 `GWS_ROOT` でルートを指定できる
-- 未指定の場合のデフォルトは `~/gws`
-
-`$GWS_ROOT` 配下の固定構造（v0.1）:
-- `$GWS_ROOT/bare/` : repo store（bare repo）
-- `$GWS_ROOT/src/`  : human working tree
-- `$GWS_ROOT/workspaces/`    : workspace 群（タスク単位）
-- `$GWS_ROOT/templates.yaml` : workspace templates
-
-## 4. 設定
-
-### 4.1 設定ファイル
-MVP ではユーザー設定ファイルは持たない（デフォルトはハードコード）。
-
-workspace ローカル:
-
-### 4.2 ルート解決の優先順位
-1. CLI フラグ（例: `--root`）
-2. 環境変数（`GWS_ROOT`）
-3. デフォルト（`~/gws`）
-
-## 5. Workspace ID とブランチ名（確定ルール）
-
-### 5.1 Workspace ID は “Git ブランチ名として妥当” を必須にする
-- v0.1 では workspace_id は refname（ブランチ名）として妥当であることを必須とする
-- 無効な場合はエラーにし、修正候補を提示する（例: スペース→`_` 等）
-
-### 5.2 ブランチ名は workspace_id と同一
-- v0.1 の既定動作として、各 repo の worktree は `branch = workspace_id` を checkout する
-- ブランチが存在しない場合は `origin/HEAD`（もしくは `HEAD`）から自動検出し、必要なら `main/master/develop` を順に探索する
-
-この制約により、従来の「ブランチ中心の体験」を “workspace中心” に置換する。
-
-## 6. Repo 参照（repo spec）と repo store の配置
-
-### 6.1 repo spec の入力形式（MVP）
-- 推奨: フルの remote URL（SSH/HTTPS）
-  - 例: `git@github.com:org/backend.git`
-  - 例: `https://github.com/org/backend.git`
-
-- 省略形（任意・MVPでサポート可）:
-  - `github.com/org/repo`（`.git` は任意）
-
-### 6.2 repo store のパス規約
-repo store の物理パスは下記を基本とする（正規化後）:
-- `$GWS_ROOT/bare/<host>/<owner>/<repo>.git`
-
-正規化:
-- 末尾 `.git` を除去して repo 名を決定
-- `git@host:owner/repo` と `https://host/owner/repo` の双方を同じ repo key に正規化する
-
-## 7. CLI（サブコマンド）— MVP
-
-### 7.1 repo 操作
-- `gws repo get <repo>`: repo store を作成または更新（clone --bare / fetch --prune）
-- `gws repo ls`: repo store の一覧
-
-### 7.2 workspace 操作
-- `gws new <WORKSPACE_ID>`: workspace 作成
-- `gws add <WORKSPACE_ID> <repo> --alias <name>`: repo を workspace に追加（worktree 作成）
-- `gws ls`: workspace 一覧
-- `gws status <WORKSPACE_ID>`: workspace 内の各 repo の状態（dirty等）集計
-- `gws rm <WORKSPACE_ID>`: workspace 削除（安全に worktree remove → ディレクトリ削除）
-
-### 7.3 回収 / 診断
-- `gws doctor [--fix]`: 参照不整合の検出（可能なら修復）
-
-## 8. 安全性（Safe by default）
-
-- dirty（未コミット変更）を検出した場合、削除・回収を拒否するのが既定
-- `--dry-run` を重視し、破壊的操作は二段階を推奨
-
-## 10. 実装方針（Go）
-
-- Git 操作は原則 `git` コマンドを `os/exec` で呼び出す
-- `git worktree list --porcelain` 等の機械向け出力をパースし、表示揺れに依存しない
-- 依存ライブラリは最小化（MVPは標準ライブラリ中心）
-
-## 11. MVP スコープ（確定）
-- repo: get / ls
-- workspace: new / add / ls / status / rm
-- doctor: 最低限の不整合検出（参照不整合の案内）
-
-## 12. 将来拡張（バックログ）
-- テンプレート（複数 repo を一発で workspace new）
-- JSON 出力と安定スキーマ（agent 統合を強化）
+- Run humans and multiple agents in parallel without contaminating each other’s working contexts
+- Group changes spanning multiple repositories into a single task unit (workspace)
+- Quickly spin up multiple environments for PR review or reproduction, and safely dispose of them
