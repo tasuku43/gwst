@@ -29,7 +29,7 @@ Rehydrate work from a remote branch or tag by fetching the ref into the bare sto
     - Without `--reuse`, error.
 - Base ref: when the branch doesn’t exist locally, create it from `origin/<ref>` (for branches) or from the fetched tag commit when `--branch` is specified for tags.
   - If the remote branch/tag does not exist, error (advise to use `gws new` for new branches).
-- Output: standard gws style (header, steps, result, suggestion). Result lists workspace, alias, branch, and path.
+- Output: standard gws style (no header line; steps, result, suggestion). Result lists workspace, alias, branch, and path.
 
 ## Success Criteria
 - The bare store has fetched `<ref>`, and the target workspace has a worktree checked out to the chosen branch (newly created or reused with `--reuse`).

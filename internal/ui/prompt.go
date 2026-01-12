@@ -227,12 +227,6 @@ func (m inputsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m inputsModel) View() string {
 	var b strings.Builder
-	header := formatInputsHeader(m.title, m.template, m.currentWorkspaceID())
-	if m.useColor {
-		header = m.theme.Header.Render(header)
-	}
-	b.WriteString(header)
-	b.WriteString("\n\n")
 	inputsTitle := "Inputs"
 	if m.useColor {
 		inputsTitle = m.theme.SectionTitle.Render(inputsTitle)
@@ -974,16 +968,6 @@ func (m workspaceSelectModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m workspaceSelectModel) View() string {
 	var b strings.Builder
-	header := m.title
-	if strings.TrimSpace(m.workspaceID) != "" {
-		header = fmt.Sprintf("%s (workspace id: %s)", m.title, m.workspaceID)
-	}
-	if m.useColor {
-		header = m.theme.Header.Render(header)
-	}
-	b.WriteString(header)
-	b.WriteString("\n\n")
-
 	title := "Inputs"
 	if m.useColor {
 		title = m.theme.SectionTitle.Render(title)
@@ -1165,13 +1149,6 @@ func (m addInputsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m addInputsModel) View() string {
 	var b strings.Builder
-	header := formatAddInputsHeader(m.title, m.workspaceID, m.currentRepoLabel())
-	if m.useColor {
-		header = m.theme.Header.Render(header)
-	}
-	b.WriteString(header)
-	b.WriteString("\n\n")
-
 	title := "Inputs"
 	if m.useColor {
 		title = m.theme.SectionTitle.Render(title)

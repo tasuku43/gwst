@@ -13,7 +13,7 @@ Status: draft (MVP+)
 - JSON/format switching: MVP では扱わない
 
 ## Layout (common)
-Sectioned layout with no header line. Inputs appear first when present; Info/Suggestion are optional:
+Sectioned layout. Inputs appear first when present; Info/Suggestion are optional:
 
 ```
 Inputs
@@ -36,7 +36,6 @@ Suggestion
 ```
 
 Rules:
-- No header line; commands start directly with Inputs/Steps.
 - Indent: 2 spaces
 - 1 blank line between sections
 - No success banner; success is implied in Result section

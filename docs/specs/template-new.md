@@ -30,7 +30,7 @@ Create a template entry in `templates.yaml` without manual YAML editing, so user
   - The prompt loops, allowing repeated add operations. A minimum of 1 selection is required.
   - Finish keys: `<Ctrl+D>` or typing `done` then `<Enter>`. If no repo has been added yet, finishing triggers an error message and returns to the prompt.
   - Empty input + `<Enter>` does nothing (stays in the loop) to avoid accidental finish.
-- After selection completes, the command writes `templates.yaml` and renders the standard header/section/result blocks consistent with other gws commands (e.g., header = `gws template new (template: <name>)`, section “Result” listing the template name and repos).
+- After selection completes, the command writes `templates.yaml` and renders the standard section blocks consistent with other gws commands (no header line; section “Result” lists the template name and repos).
 
 ## Success Criteria
 - `templates.yaml` contains a new entry `templates.<name>.repos` with the provided repo specs, and existing templates remain unchanged.

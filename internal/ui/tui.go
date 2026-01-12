@@ -44,10 +44,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m Model) View() string {
 	var b strings.Builder
 	r := NewRenderer(&b, m.Theme, true)
-	if m.Header != "" {
-		r.Header(m.Header)
-		r.Blank()
-	}
 	if len(m.Steps) > 0 {
 		r.Section("Steps")
 		for _, step := range m.Steps {

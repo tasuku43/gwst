@@ -217,13 +217,11 @@ func runTemplateNew(ctx context.Context, rootDir string, args []string, noPrompt
 
 	theme := ui.DefaultTheme()
 	useColor := isatty.IsTerminal(os.Stdout.Fd())
-	prompted := false
 
 	if strings.TrimSpace(name) == "" && len(repoSpecs) == 0 {
 		if noPrompt {
 			return fmt.Errorf("template name and repos are required with --no-prompt")
 		}
-		prompted = true
 		choices, err := buildTemplateRepoChoices(rootDir)
 		if err != nil {
 			return err
@@ -241,7 +239,6 @@ func runTemplateNew(ctx context.Context, rootDir string, args []string, noPrompt
 			if noPrompt {
 				return fmt.Errorf("template name is required with --no-prompt")
 			}
-			prompted = true
 			name, err = ui.PromptTemplateName("gws template new", "", theme, useColor)
 			if err != nil {
 				return err
@@ -251,7 +248,6 @@ func runTemplateNew(ctx context.Context, rootDir string, args []string, noPrompt
 			if noPrompt {
 				return fmt.Errorf("repos are required with --no-prompt")
 			}
-			prompted = true
 			choices, err := buildTemplateRepoChoices(rootDir)
 			if err != nil {
 				return err
@@ -300,13 +296,6 @@ func runTemplateNew(ctx context.Context, rootDir string, args []string, noPrompt
 	}
 
 	renderer := ui.NewRenderer(os.Stdout, theme, useColor)
-	header := fmt.Sprintf("gws template new (template: %s)", name)
-	if !prompted {
-		renderer.Header(header)
-		renderer.Blank()
-	} else {
-		renderer.Blank()
-	}
 	renderer.Section("Result")
 	renderer.Bullet(name)
 	var reposDisplay []string
@@ -407,8 +396,7 @@ func runRepoGet(ctx context.Context, rootDir string, args []string) error {
 	output.SetStepLogger(renderer)
 	defer output.SetStepLogger(nil)
 
-	header := fmt.Sprintf("gws repo get (%s)", truncateMiddle(repoSpec, 80))
-	startSteps(renderer, header, true)
+	startSteps(renderer)
 	output.Step(formatStep("repo get", displayRepoSpec(repoSpec), repoDestForSpec(rootDir, repoSpec)))
 
 	store, err := repo.Get(ctx, rootDir, repoSpec)
@@ -470,13 +458,11 @@ func runWorkspaceNew(ctx context.Context, rootDir string, args []string, noPromp
 
 	theme := ui.DefaultTheme()
 	useColor := isatty.IsTerminal(os.Stdout.Fd())
-	prompted := false
 
 	if templateName == "" || workspaceID == "" {
 		if noPrompt {
 			return fmt.Errorf("template name and workspace id are required without prompt")
 		}
-		prompted = true
 		var err error
 		templateName, workspaceID, err = promptTemplateAndID(rootDir, templateName, workspaceID, theme, useColor)
 		if err != nil {
@@ -508,18 +494,7 @@ func runWorkspaceNew(ctx context.Context, rootDir string, args []string, noPromp
 		}
 	}
 
-	header := "gws new"
-	var headerParts []string
-	if templateName != "" {
-		headerParts = append(headerParts, fmt.Sprintf("template: %s", templateName))
-	}
-	if workspaceID != "" {
-		headerParts = append(headerParts, fmt.Sprintf("workspace id: %s", workspaceID))
-	}
-	if len(headerParts) > 0 {
-		header = fmt.Sprintf("%s (%s)", header, strings.Join(headerParts, ", "))
-	}
-	startSteps(renderer, header, !prompted)
+	startSteps(renderer)
 	if err := ensureRepoGet(ctx, rootDir, missing, noPrompt, theme, useColor); err != nil {
 		return err
 	}
@@ -567,9 +542,7 @@ func runWorkspaceAdd(ctx context.Context, rootDir string, args []string) error {
 	output.SetStepLogger(renderer)
 	defer output.SetStepLogger(nil)
 
-	prompted := false
 	if workspaceID == "" || repoSpec == "" {
-		prompted = true
 		workspaces, wsWarn, err := workspace.List(rootDir)
 		if err != nil {
 			return err
@@ -604,18 +577,7 @@ func runWorkspaceAdd(ctx context.Context, rootDir string, args []string) error {
 		}
 	}
 
-	header := "gws add"
-	var headerParts []string
-	if workspaceID != "" {
-		headerParts = append(headerParts, fmt.Sprintf("workspace id: %s", workspaceID))
-	}
-	if strings.TrimSpace(repoSpec) != "" {
-		headerParts = append(headerParts, fmt.Sprintf("repo: %s", truncateMiddle(repoSpec, 80)))
-	}
-	if len(headerParts) > 0 {
-		header = fmt.Sprintf("%s (%s)", header, strings.Join(headerParts, ", "))
-	}
-	startSteps(renderer, header, !prompted)
+	startSteps(renderer)
 	output.Step(formatStep("worktree add", displayRepoName(repoSpec), worktreeDest(rootDir, workspaceID, repoSpec)))
 
 	if _, err := workspace.Add(ctx, rootDir, workspaceID, repoSpec, "", false); err != nil {
@@ -700,7 +662,6 @@ func runIssue(ctx context.Context, rootDir string, args []string, noPrompt bool)
 	output.SetStepLogger(renderer)
 	defer output.SetStepLogger(nil)
 
-	renderer.Blank()
 	renderer.Section("Info")
 	renderer.Bullet(fmt.Sprintf("provider: %s (%s)", strings.ToLower(req.Provider), req.Host))
 	renderer.Bullet(fmt.Sprintf("repo: %s/%s", req.Owner, req.Repo))
@@ -775,9 +736,6 @@ func runReview(ctx context.Context, rootDir string, args []string, noPrompt bool
 	output.SetStepLogger(renderer)
 	defer output.SetStepLogger(nil)
 
-	header := fmt.Sprintf("gws review (pr: %s, workspace id: %s)", truncateMiddle(raw, 80), workspaceID)
-	renderer.Header(header)
-	renderer.Blank()
 	renderer.Section("Info")
 	renderer.Bullet(fmt.Sprintf("provider: %s (%s)", strings.ToLower(req.Provider), req.Host))
 	renderer.Bullet("fork PRs supported (fetches PR ref directly)")
@@ -1261,15 +1219,9 @@ func truncateMiddle(value string, max int) string {
 	return fmt.Sprintf("%s...%s", trimmed[:keep], trimmed[len(trimmed)-keep:])
 }
 
-func startSteps(renderer *ui.Renderer, header string, showHeader bool) {
+func startSteps(renderer *ui.Renderer) {
 	if renderer == nil {
 		return
-	}
-	if showHeader && strings.TrimSpace(header) != "" {
-		renderer.Header(header)
-		renderer.Blank()
-	} else {
-		renderer.Blank()
 	}
 	renderer.Section("Steps")
 }
@@ -1657,7 +1609,6 @@ func runWorkspaceStatus(ctx context.Context, rootDir string, args []string) erro
 	if len(args) == 1 {
 		workspaceID = args[0]
 	}
-	showHeader := true
 	if workspaceID == "" {
 		workspaces, wsWarn, err := workspace.List(rootDir)
 		if err != nil {
@@ -1676,14 +1627,13 @@ func runWorkspaceStatus(ctx context.Context, rootDir string, args []string) erro
 		if err != nil {
 			return err
 		}
-		showHeader = false
 	}
 	result, err := workspace.Status(ctx, rootDir, workspaceID)
 	if err != nil {
 		return err
 	}
 
-	writeWorkspaceStatusText(result, showHeader)
+	writeWorkspaceStatusText(result)
 	return nil
 }
 
@@ -1700,7 +1650,6 @@ func runWorkspaceRemove(ctx context.Context, rootDir string, args []string) erro
 		workspaceID = args[0]
 	}
 
-	showHeader := true
 	if workspaceID == "" {
 		workspaces, wsWarn, err := workspace.List(rootDir)
 		if err != nil {
@@ -1717,8 +1666,6 @@ func runWorkspaceRemove(ctx context.Context, rootDir string, args []string) erro
 		useColor := isatty.IsTerminal(os.Stdout.Fd())
 		if len(removable) == 0 {
 			renderer := ui.NewRenderer(os.Stdout, theme, useColor)
-			renderer.Header("gws rm")
-			renderer.Blank()
 			renderer.Section("Info")
 			renderer.Bullet("no removable workspaces")
 			if len(blocked) > 0 {
@@ -1733,7 +1680,6 @@ func runWorkspaceRemove(ctx context.Context, rootDir string, args []string) erro
 		if err != nil {
 			return err
 		}
-		showHeader = false
 	}
 
 	theme := ui.DefaultTheme()
@@ -1742,16 +1688,6 @@ func runWorkspaceRemove(ctx context.Context, rootDir string, args []string) erro
 	output.SetStepLogger(renderer)
 	defer output.SetStepLogger(nil)
 
-	header := "gws rm"
-	if strings.TrimSpace(workspaceID) != "" {
-		header = fmt.Sprintf("%s (workspace id: %s)", header, workspaceID)
-	}
-	if showHeader {
-		renderer.Header(header)
-		renderer.Blank()
-	} else {
-		renderer.Blank()
-	}
 	removeWarnings := collectRemoveWarnings(ctx, rootDir, workspaceID)
 	if len(removeWarnings) > 0 {
 		renderWarningsSection(renderer, "possible unpushed commits", removeWarnings, false)
@@ -1770,21 +1706,11 @@ func runWorkspaceRemove(ctx context.Context, rootDir string, args []string) erro
 	return nil
 }
 
-func writeWorkspaceStatusText(result workspace.StatusResult, showHeader bool) {
+func writeWorkspaceStatusText(result workspace.StatusResult) {
 	theme := ui.DefaultTheme()
 	useColor := isatty.IsTerminal(os.Stdout.Fd())
 	renderer := ui.NewRenderer(os.Stdout, theme, useColor)
 
-	header := "gws status"
-	if strings.TrimSpace(result.WorkspaceID) != "" {
-		header = fmt.Sprintf("%s (workspace id: %s)", header, result.WorkspaceID)
-	}
-	if showHeader {
-		renderer.Header(header)
-		renderer.Blank()
-	} else {
-		renderer.Blank()
-	}
 	renderer.Section("Result")
 
 	for _, repo := range result.Repos {
@@ -1823,8 +1749,6 @@ func writeWorkspaceListText(ctx context.Context, entries []workspace.Entry, warn
 	useColor := isatty.IsTerminal(os.Stdout.Fd())
 	renderer := ui.NewRenderer(os.Stdout, theme, useColor)
 
-	renderer.Header("gws ls")
-	renderer.Blank()
 	renderer.Section("Result")
 	var repoWarnings []string
 	for _, entry := range entries {
@@ -1844,8 +1768,6 @@ func writeRepoListText(entries []repo.Entry, warnings []error) {
 	useColor := isatty.IsTerminal(os.Stdout.Fd())
 	renderer := ui.NewRenderer(os.Stdout, theme, useColor)
 
-	renderer.Header("gws repo ls")
-	renderer.Blank()
 	renderer.Section("Result")
 	for _, entry := range entries {
 		renderer.Result(fmt.Sprintf("%s\t%s", entry.RepoKey, entry.StorePath))
@@ -1859,8 +1781,6 @@ func writeTemplateListText(file template.File, names []string) {
 	useColor := isatty.IsTerminal(os.Stdout.Fd())
 	renderer := ui.NewRenderer(os.Stdout, theme, useColor)
 
-	renderer.Header("gws template ls")
-	renderer.Blank()
 	renderer.Section("Result")
 	if len(names) == 0 {
 		renderer.Bullet("no templates found")
@@ -1896,8 +1816,6 @@ func writeInitText(result initcmd.Result) {
 	useColor := isatty.IsTerminal(os.Stdout.Fd())
 	renderer := ui.NewRenderer(os.Stdout, theme, useColor)
 
-	renderer.Header("gws init")
-	renderer.Blank()
 	renderer.Section("Steps")
 	if len(result.CreatedDirs) == 0 && len(result.CreatedFiles) == 0 {
 		renderer.Bullet("no changes")
@@ -1937,8 +1855,6 @@ func writeDoctorText(result doctor.Result, fixed []string) {
 	useColor := isatty.IsTerminal(os.Stdout.Fd())
 	renderer := ui.NewRenderer(os.Stdout, theme, useColor)
 
-	renderer.Header("gws doctor")
-	renderer.Blank()
 	renderer.Section("Result")
 
 	if len(result.Issues) == 0 {
