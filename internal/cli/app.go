@@ -585,7 +585,7 @@ func runRepoGet(ctx context.Context, rootDir string, args []string) error {
 	}
 	renderer.Blank()
 	renderer.Section("Result")
-	renderer.Result(fmt.Sprintf("%s\t%s", store.RepoKey, store.StorePath))
+	renderer.Bullet(fmt.Sprintf("%s\t%s", store.RepoKey, store.StorePath))
 	renderSuggestion(renderer, useColor, repoSrcAbs(rootDir, repoSpec))
 	return nil
 }
@@ -1834,9 +1834,8 @@ func runReview(ctx context.Context, rootDir string, args []string, noPrompt bool
 	output.SetStepLogger(renderer)
 	defer output.SetStepLogger(nil)
 
-	renderer.Section("Info")
+	renderer.Section("Inputs")
 	renderer.Bullet(fmt.Sprintf("provider: %s (%s)", strings.ToLower(req.Provider), req.Host))
-	renderer.Bullet("fork PRs supported (fetches PR ref directly)")
 	renderer.Blank()
 	renderer.Section("Steps")
 
@@ -2107,39 +2106,25 @@ func promptTemplateBranches(ctx context.Context, tmpl template.Template, workspa
 }
 
 func renderWorkspaceRepos(r *ui.Renderer, repos []workspace.Repo, extraIndent string) {
+	if r == nil {
+		return
+	}
 	for i, repo := range repos {
 		prefix := "├─ "
 		if i == len(repos)-1 {
 			prefix = "└─ "
 		}
 		name := formatRepoName(repo.Alias, repo.RepoKey)
-		if r != nil {
-			r.TreeLineBranchMuted(extraIndent+prefix, name, repo.Branch)
-			continue
-		}
-		label := formatRepoLabel(name, repo.Branch)
-		line := fmt.Sprintf("%s%s%s%s", output.Indent, extraIndent, prefix, label)
-		fmt.Fprintln(os.Stdout, line)
+		r.TreeLineBranchMuted(extraIndent+prefix, name, repo.Branch)
 	}
 }
 
 func renderWorkspaceBlock(r *ui.Renderer, workspaceID, description string, repos []workspace.Repo) {
-	label := formatWorkspaceLabel(workspaceID, description)
-	if r != nil {
-		r.BulletWithDescription(workspaceID, description, fmt.Sprintf("(repos: %d)", len(repos)))
-		renderWorkspaceRepos(r, repos, output.Indent)
+	if r == nil {
 		return
 	}
-	fmt.Fprintf(os.Stdout, "%s%s %s (repos: %d)\n", output.Indent, output.StepPrefix, label, len(repos))
-	renderWorkspaceRepos(nil, repos, output.Indent)
-}
-
-func formatWorkspaceLabel(workspaceID, description string) string {
-	desc := strings.TrimSpace(description)
-	if desc == "" {
-		return workspaceID
-	}
-	return fmt.Sprintf("%s - %s", workspaceID, desc)
+	r.BulletWithDescription(workspaceID, description, fmt.Sprintf("(repos: %d)", len(repos)))
+	renderWorkspaceRepos(r, repos, output.Indent)
 }
 
 func loadWorkspaceDescription(wsDir string) string {
@@ -2403,13 +2388,6 @@ func repoSpecFromKey(repoKey string) string {
 		return fmt.Sprintf("git@%s:%s/%s.git", host, owner, repo)
 	}
 	return fmt.Sprintf("https://%s/%s/%s.git", host, owner, repo)
-}
-
-func printRepoGetCommands(repos []string) {
-	fmt.Fprintf(os.Stdout, "%scommands:\n", output.Indent)
-	for _, repoSpec := range repos {
-		fmt.Fprintf(os.Stdout, "%sgws repo get %s\n", output.Indent+output.Indent, repoSpec)
-	}
 }
 
 type statusDetail struct {
@@ -2847,6 +2825,21 @@ func writeWorkspaceStatusText(result workspace.StatusResult) {
 	useColor := isatty.IsTerminal(os.Stdout.Fd())
 	renderer := ui.NewRenderer(os.Stdout, theme, useColor)
 
+	warningLines := appendWarningLines(nil, "", result.Warnings)
+	for _, repo := range result.Repos {
+		if repo.Error != nil {
+			label := strings.TrimSpace(repo.Alias)
+			if label == "" {
+				label = filepath.Base(repo.WorktreePath)
+			}
+			warningLines = append(warningLines, fmt.Sprintf("%s: %v", label, repo.Error))
+		}
+	}
+	if len(warningLines) > 0 {
+		renderWarningsSection(renderer, "warnings", warningLines, false)
+		renderer.Blank()
+	}
+
 	renderer.Section("Result")
 
 	for _, repo := range result.Repos {
@@ -2872,12 +2865,7 @@ func writeWorkspaceStatusText(result workspace.StatusResult) {
 				renderer.TreeLineBranchMuted(prefix, detail.text, "")
 			}
 		}
-		if repo.Error != nil {
-			renderer.Warn(fmt.Sprintf("warning: %s: %v", repo.Alias, repo.Error))
-		}
 	}
-	warningLines := appendWarningLines(nil, "", result.Warnings)
-	renderWarningsSection(renderer, "warnings", warningLines, true)
 }
 
 func writeWorkspaceListText(ctx context.Context, entries []workspace.Entry, warnings []error) {
@@ -2885,7 +2873,11 @@ func writeWorkspaceListText(ctx context.Context, entries []workspace.Entry, warn
 	useColor := isatty.IsTerminal(os.Stdout.Fd())
 	renderer := ui.NewRenderer(os.Stdout, theme, useColor)
 
-	renderer.Section("Result")
+	type workspaceListEntry struct {
+		entry workspace.Entry
+		repos []workspace.Repo
+	}
+	var items []workspaceListEntry
 	var repoWarnings []string
 	for _, entry := range entries {
 		repos, warnings, err := workspace.ScanRepos(ctx, entry.WorkspacePath)
@@ -2893,10 +2885,18 @@ func writeWorkspaceListText(ctx context.Context, entries []workspace.Entry, warn
 			repoWarnings = append(repoWarnings, fmt.Sprintf("%s: %s", entry.WorkspaceID, compactError(err)))
 		}
 		repoWarnings = appendWarningLines(repoWarnings, entry.WorkspaceID, warnings)
-		renderWorkspaceBlock(renderer, entry.WorkspaceID, entry.Description, repos)
+		items = append(items, workspaceListEntry{entry: entry, repos: repos})
 	}
 	repoWarnings = appendWarningLines(repoWarnings, "", warnings)
-	renderWarningsSection(renderer, "warnings", repoWarnings, true)
+	if len(repoWarnings) > 0 {
+		renderWarningsSection(renderer, "warnings", repoWarnings, false)
+		renderer.Blank()
+	}
+
+	renderer.Section("Result")
+	for _, item := range items {
+		renderWorkspaceBlock(renderer, item.entry.WorkspaceID, item.entry.Description, item.repos)
+	}
 }
 
 func writeRepoListText(entries []repo.Entry, warnings []error) {
@@ -2904,12 +2904,16 @@ func writeRepoListText(entries []repo.Entry, warnings []error) {
 	useColor := isatty.IsTerminal(os.Stdout.Fd())
 	renderer := ui.NewRenderer(os.Stdout, theme, useColor)
 
+	warningLines := appendWarningLines(nil, "", warnings)
+	if len(warningLines) > 0 {
+		renderWarningsSection(renderer, "warnings", warningLines, false)
+		renderer.Blank()
+	}
+
 	renderer.Section("Result")
 	for _, entry := range entries {
-		renderer.Result(fmt.Sprintf("%s\t%s", entry.RepoKey, entry.StorePath))
+		renderer.Bullet(fmt.Sprintf("%s\t%s", entry.RepoKey, entry.StorePath))
 	}
-	warningLines := appendWarningLines(nil, "", warnings)
-	renderWarningsSection(renderer, "warnings", warningLines, true)
 }
 
 func writeTemplateListText(file template.File, names []string) {
@@ -2941,9 +2945,14 @@ func writeTemplateListText(file template.File, names []string) {
 }
 
 func writeTemplateShowText(name string, tmpl template.Template) {
-	fmt.Fprintf(os.Stdout, "%s\n", name)
-	for _, repo := range tmpl.Repos {
-		fmt.Fprintf(os.Stdout, " - %s\n", repo)
+	theme := ui.DefaultTheme()
+	useColor := isatty.IsTerminal(os.Stdout.Fd())
+	renderer := ui.NewRenderer(os.Stdout, theme, useColor)
+
+	renderer.Section("Result")
+	renderer.Bullet(name)
+	if len(tmpl.Repos) > 0 {
+		renderTreeLines(renderer, tmpl.Repos, treeLineNormal)
 	}
 }
 
@@ -2951,6 +2960,20 @@ func writeInitText(result initcmd.Result) {
 	theme := ui.DefaultTheme()
 	useColor := isatty.IsTerminal(os.Stdout.Fd())
 	renderer := ui.NewRenderer(os.Stdout, theme, useColor)
+
+	var skipped []string
+	for _, dir := range result.SkippedDirs {
+		skipped = append(skipped, fmt.Sprintf("dir: %s", dir))
+	}
+	for _, file := range result.SkippedFiles {
+		skipped = append(skipped, fmt.Sprintf("file: %s", file))
+	}
+	if len(skipped) > 0 {
+		renderer.Section("Info")
+		renderer.Bullet("already exists")
+		renderTreeLines(renderer, skipped, treeLineNormal)
+		renderer.Blank()
+	}
 
 	renderer.Section("Steps")
 	if len(result.CreatedDirs) == 0 && len(result.CreatedFiles) == 0 {
@@ -2966,21 +2989,7 @@ func writeInitText(result initcmd.Result) {
 
 	renderer.Blank()
 	renderer.Section("Result")
-	renderer.Result(fmt.Sprintf("root: %s", result.RootDir))
-
-	var skipped []string
-	for _, dir := range result.SkippedDirs {
-		skipped = append(skipped, fmt.Sprintf("dir: %s", dir))
-	}
-	for _, file := range result.SkippedFiles {
-		skipped = append(skipped, fmt.Sprintf("file: %s", file))
-	}
-	if len(skipped) > 0 {
-		renderer.Blank()
-		renderer.Section("Info")
-		renderer.Bullet("already exists")
-		renderTreeLines(renderer, skipped, treeLineNormal)
-	}
+	renderer.Bullet(fmt.Sprintf("root: %s", result.RootDir))
 
 	renderSuggestions(renderer, useColor, []string{
 		fmt.Sprintf("Edit templates.yaml: %s", filepath.Join(result.RootDir, "templates.yaml")),
@@ -2990,6 +2999,15 @@ func writeDoctorText(result doctor.Result, fixed []string) {
 	theme := ui.DefaultTheme()
 	useColor := isatty.IsTerminal(os.Stdout.Fd())
 	renderer := ui.NewRenderer(os.Stdout, theme, useColor)
+
+	if len(result.Warnings) > 0 {
+		var lines []string
+		for _, warning := range result.Warnings {
+			lines = append(lines, warning.Error())
+		}
+		renderWarningsSection(renderer, "warnings", lines, false)
+		renderer.Blank()
+	}
 
 	renderer.Section("Result")
 
@@ -3012,14 +3030,4 @@ func writeDoctorText(result doctor.Result, fixed []string) {
 		renderTreeLines(renderer, lines, treeLineNormal)
 	}
 
-	if len(result.Warnings) > 0 {
-		renderer.Blank()
-		renderer.Section("Info")
-		renderer.Bullet("warnings")
-		var lines []string
-		for _, warning := range result.Warnings {
-			lines = append(lines, warning.Error())
-		}
-		renderTreeLines(renderer, lines, treeLineWarn)
-	}
 }

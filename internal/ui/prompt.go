@@ -443,7 +443,7 @@ func newInputInlineModel(label, defaultValue string, validate func(string) error
 		ti.PlaceholderStyle = theme.Muted
 	}
 	return inputInlineModel{
-		title:        "Input",
+		title:        "Inputs",
 		label:        label,
 		defaultValue: defaultValue,
 		validate:     validate,
@@ -491,7 +491,7 @@ func (m inputInlineModel) View() string {
 	var b strings.Builder
 	title := strings.TrimSpace(m.title)
 	if title == "" {
-		title = "Input"
+		title = "Inputs"
 	}
 	if m.useColor {
 		title = m.theme.SectionTitle.Render(title)
@@ -738,7 +738,7 @@ func (m templateRepoSelectModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m templateRepoSelectModel) View() string {
 	var b strings.Builder
-	section := "Input"
+	section := "Inputs"
 	if m.useColor {
 		section = m.theme.SectionTitle.Render(section)
 	}
@@ -905,7 +905,7 @@ func (m choiceSelectModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m choiceSelectModel) View() string {
 	var b strings.Builder
-	section := "Input"
+	section := "Inputs"
 	if m.useColor {
 		section = m.theme.SectionTitle.Render(section)
 	}
@@ -1046,7 +1046,7 @@ func (m multiSelectModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m multiSelectModel) View() string {
 	var b strings.Builder
-	section := "Input"
+	section := "Inputs"
 	if m.useColor {
 		section = m.theme.SectionTitle.Render(section)
 	}
@@ -1165,7 +1165,7 @@ func (m templateNameModel) View() string {
 	b.WriteString(header)
 	b.WriteString("\n\n")
 
-	section := "Input"
+	section := "Inputs"
 	if m.useColor {
 		section = m.theme.SectionTitle.Render(section)
 	}
@@ -1442,7 +1442,7 @@ func (m workspaceMultiSelectModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m workspaceMultiSelectModel) View() string {
 	var b strings.Builder
-	section := "Input"
+	section := "Inputs"
 	if m.useColor {
 		section = m.theme.SectionTitle.Render(section)
 	}

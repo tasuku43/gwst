@@ -54,7 +54,7 @@ func (m Model) View() string {
 	if len(m.Results) > 0 {
 		r.Section("Result")
 		for _, line := range m.Results {
-			r.Result(line)
+			r.Bullet(line)
 		}
 	}
 	return b.String()

@@ -48,7 +48,7 @@ func (r *Renderer) StepLogOutput(text string) {
 }
 
 func (r *Renderer) Result(text string) {
-	r.writeLine(output.Indent + text)
+	r.bullet(text)
 }
 
 func (r *Renderer) Bullet(text string) {
