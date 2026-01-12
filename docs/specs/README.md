@@ -26,14 +26,12 @@ Current command specs live in this folder:
 - `docs/specs/template-ls.md`
 - `docs/specs/template-new.md`
 - `docs/specs/template-rm.md`
-- `docs/specs/issue.md`
 - `docs/specs/resume.md`
-- `docs/specs/new.md`
+- `docs/specs/create.md`
 - `docs/specs/add.md`
 - `docs/specs/ls.md`
 - `docs/specs/status.md`
 - `docs/specs/rm.md`
-- `docs/specs/review.md`
 - `docs/specs/open.md`
 
 Add new files in the same format when introducing new commands or options.
