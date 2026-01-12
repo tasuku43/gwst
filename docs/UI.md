@@ -1,16 +1,13 @@
 # UI Specification (Bubble Tea + Bubbles + Lip Gloss)
 
-Status: draft (MVP+)
-
 ## Goals
-- Codex CLI のように静かで一貫した出力体験を提供する
-- 対話は Bubble Tea に統一し、非対話はプレーン出力で整える
-- 出力の情報設計は全コマンドで統一する
+- Provide a quiet, consistent output experience (similar to Codex CLI)
+- Use Bubble Tea for interactive flows; use plain text for non-interactive flows
+- Keep the information architecture consistent across all commands
 
 ## Scope
 - Interactive (TTY): Bubble Tea + Bubbles + Lip Gloss
 - Non-interactive (non-TTY): plain text (no TUI), same layout rules
-- JSON/format switching: MVP では扱わない
 
 ## Layout (common)
 Sectioned layout. Inputs appear first when present; Info/Suggestion are optional:
@@ -20,6 +17,9 @@ Inputs
   <input line>
   <input line>
 
+Info
+  <warnings / skipped / blocked>
+
 Steps
   <step line>
   <step line>
@@ -28,9 +28,6 @@ Result
   <result line>
   <tree>
 
-Info
-  <warnings / skipped / blocked>
-
 Suggestion
   <next command>
 ```
@@ -38,12 +35,14 @@ Suggestion
 Rules:
 - Indent: 2 spaces
 - 1 blank line between sections
+- Section order is fixed: Inputs → Info → Steps → Result → Suggestion
+- Result lines are bullets (use the same prefix as Steps)
 - No success banner; success is implied in Result section
 
 ## Prefix & Indentation
 - Default prefix token: `•` (can be changed later)
 - Steps/list lines are prefixed with `2 spaces + prefix + space`
-- Result lines are prefixed with `2 spaces`
+- Result lines are prefixed with `2 spaces + prefix + space`
 
 Prefix coloring:
 - Info/list (Steps, Results): prefix is muted gray
@@ -92,22 +91,25 @@ Inputs
     └─ helmfiles
   • workspace id: SREP-123
 
+Info
+  • (optional warnings / skipped / blocked)
+
 Steps
   • worktree add helmfiles
 
 Result
-  /Users/me/gws/workspaces/SREP-123
+  • /Users/me/gws/workspaces/SREP-123
     └─ helmfiles (branch: SREP-123)
 ```
 
 ### gws create --template (non-interactive)
 ```
 Steps
-  › repo get git@github.com:org/repo.git
-  › worktree add repo
+  • repo get git@github.com:org/repo.git
+  • worktree add repo
 
 Result
-  /Users/me/gws/workspaces/SREP-123
+  • /Users/me/gws/workspaces/SREP-123
     ├─ repo
     └─ api
 ```
@@ -133,6 +135,10 @@ Result
 ## Notes
 - Prefix token is a theme value and can be changed later.
 - All prompts and labels are English.
-- Info section is optional and contains warnings / skipped / blocked items.
+- Info section is optional and may include warnings/skipped/blocked items, selection state, and inline help/auxiliary meta.
 - Errors should be emphasized with a red prefix and red text.
-- Suggestion section is optional and shown on TTY only (e.g. `cd <path>`).
+- Suggestion section is optional and shown only on TTY with colors enabled (e.g. `cd <path>`).
+
+## Implementation contract
+- CLI output must use `ui.Renderer` (or `internal/core/output` helpers) and must not write directly to stdout via `fmt.Fprintf/Printf/Println` in UI paths.
+- Result lines must be rendered using `Bullet()` to enforce consistent prefixing.

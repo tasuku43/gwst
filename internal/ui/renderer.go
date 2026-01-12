@@ -48,11 +48,19 @@ func (r *Renderer) StepLogOutput(text string) {
 }
 
 func (r *Renderer) Result(text string) {
-	r.writeLine(output.Indent + text)
+	r.bullet(text)
 }
 
 func (r *Renderer) Bullet(text string) {
 	r.bullet(text)
+}
+
+func (r *Renderer) Prompt(text string) {
+	prefix := output.StepPrefix + " "
+	if r.useColor {
+		prefix = r.theme.Accent.Render(output.StepPrefix) + " "
+	}
+	r.writeLine(output.Indent + prefix + text)
 }
 
 func (r *Renderer) BulletWithDescription(id, description, suffix string) {
@@ -152,6 +160,10 @@ func (r *Renderer) bullet(text string) {
 
 func (r *Renderer) writeLine(text string) {
 	fmt.Fprintln(r.out, strings.TrimRight(text, "\n"))
+}
+
+func (r *Renderer) LineRaw(text string) {
+	r.writeLine(text)
 }
 
 func (r *Renderer) Log(text string) {

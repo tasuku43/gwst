@@ -413,17 +413,80 @@ func runCreate(ctx context.Context, rootDir string, args []string, noPrompt bool
 		}
 		theme := ui.DefaultTheme()
 		useColor := isatty.IsTerminal(os.Stdout.Fd())
-		mode, err := promptCreateMode(theme, useColor)
+		templateNames, tmplErr := loadTemplateNames(rootDir)
+		reviewChoices, reviewErr := buildReviewRepoChoices(rootDir)
+		issueChoices, issueErr := buildIssueRepoChoices(rootDir)
+		reviewPrompt, reviewByValue := toPromptChoices(reviewChoices)
+		issuePrompt, issueByValue := toIssuePromptChoices(issueChoices)
+		loadReview := func(value string) ([]ui.PromptChoice, error) {
+			if reviewErr != nil {
+				return nil, reviewErr
+			}
+			selected, ok := reviewByValue[value]
+			if !ok {
+				return nil, fmt.Errorf("selected repo not found")
+			}
+			prs, err := fetchGitHubPRs(ctx, selected.Host, selected.Owner, selected.Repo)
+			if err != nil {
+				return nil, err
+			}
+			return buildPRChoices(prs), nil
+		}
+		loadIssue := func(value string) ([]ui.PromptChoice, error) {
+			if issueErr != nil {
+				return nil, issueErr
+			}
+			selected, ok := issueByValue[value]
+			if !ok {
+				return nil, fmt.Errorf("selected repo not found")
+			}
+			if strings.ToLower(selected.Provider) != "github" {
+				return nil, fmt.Errorf("issue picker supports GitHub only for now: %s", selected.Host)
+			}
+			issues, err := fetchGitHubIssues(ctx, selected.Host, selected.Owner, selected.Repo)
+			if err != nil {
+				return nil, err
+			}
+			return buildIssueChoices(issues), nil
+		}
+		loadTemplateRepos := func(name string) ([]string, error) {
+			file, err := template.Load(rootDir)
+			if err != nil {
+				return nil, err
+			}
+			tmpl, ok := file.Templates[name]
+			if !ok {
+				return nil, fmt.Errorf("template not found: %s", name)
+			}
+			return append([]string(nil), tmpl.Repos...), nil
+		}
+		validateBranch := func(v string) error {
+			return workspace.ValidateBranchName(ctx, v)
+		}
+		mode, tmplName, tmplWorkspaceID, tmplDesc, tmplBranches, reviewRepo, reviewPRs, issueRepo, issueIssues, err := ui.PromptCreateFlow("gws create", templateNames, tmplErr, reviewPrompt, issuePrompt, loadReview, loadIssue, loadTemplateRepos, validateBranch, theme, useColor)
 		if err != nil {
 			return err
 		}
 		switch mode {
 		case "template":
-			templateMode = true
+			inputs := createTemplateInputs{
+				templateName: tmplName,
+				workspaceID:  tmplWorkspaceID,
+				description:  tmplDesc,
+				branches:     tmplBranches,
+				fromFlow:     true,
+			}
+			return runCreateTemplateWithInputs(ctx, rootDir, inputs, noPrompt)
 		case "review":
-			reviewMode = true
+			if err := runCreateReviewSelected(ctx, rootDir, noPrompt, reviewRepo, reviewPRs); err != nil {
+				return err
+			}
+			return nil
 		case "issue":
-			issueMode = true
+			if err := runCreateIssueSelected(ctx, rootDir, noPrompt, issueRepo, issueIssues); err != nil {
+				return err
+			}
+			return nil
 		default:
 			return fmt.Errorf("unknown mode: %s", mode)
 		}
@@ -585,7 +648,7 @@ func runRepoGet(ctx context.Context, rootDir string, args []string) error {
 	}
 	renderer.Blank()
 	renderer.Section("Result")
-	renderer.Result(fmt.Sprintf("%s\t%s", store.RepoKey, store.StorePath))
+	renderer.Bullet(fmt.Sprintf("%s %s", store.RepoKey, store.StorePath))
 	renderSuggestion(renderer, useColor, repoSrcAbs(rootDir, repoSpec))
 	return nil
 }
@@ -639,13 +702,29 @@ func runWorkspaceNew(ctx context.Context, rootDir string, args []string, noPromp
 	return runCreateTemplate(ctx, rootDir, templateName, workspaceID, noPrompt)
 }
 
+type createTemplateInputs struct {
+	templateName string
+	workspaceID  string
+	description  string
+	branches     []string
+	fromFlow     bool
+}
+
 func runCreateTemplate(ctx context.Context, rootDir, templateName, workspaceID string, noPrompt bool) error {
-	templateName = strings.TrimSpace(templateName)
-	workspaceID = strings.TrimSpace(workspaceID)
+	inputs := createTemplateInputs{
+		templateName: templateName,
+		workspaceID:  workspaceID,
+	}
+	return runCreateTemplateWithInputs(ctx, rootDir, inputs, noPrompt)
+}
+
+func runCreateTemplateWithInputs(ctx context.Context, rootDir string, inputs createTemplateInputs, noPrompt bool) error {
+	templateName := strings.TrimSpace(inputs.templateName)
+	workspaceID := strings.TrimSpace(inputs.workspaceID)
 
 	theme := ui.DefaultTheme()
 	useColor := isatty.IsTerminal(os.Stdout.Fd())
-	description := ""
+	description := strings.TrimSpace(inputs.description)
 
 	if templateName == "" || workspaceID == "" {
 		if noPrompt {
@@ -657,7 +736,7 @@ func runCreateTemplate(ctx context.Context, rootDir, templateName, workspaceID s
 			return err
 		}
 	}
-	if !noPrompt {
+	if !noPrompt && !inputs.fromFlow {
 		value, err := ui.PromptInputInline("description", "", nil, theme, useColor)
 		if err != nil {
 			return err
@@ -681,8 +760,8 @@ func runCreateTemplate(ctx context.Context, rootDir, templateName, workspaceID s
 	output.SetStepLogger(renderer)
 	defer output.SetStepLogger(nil)
 
-	var branches []string
-	if !noPrompt {
+	branches := inputs.branches
+	if !noPrompt && !inputs.fromFlow {
 		branches, err = promptTemplateBranches(ctx, tmpl, workspaceID, theme, useColor)
 		if err != nil {
 			return err
@@ -1119,11 +1198,129 @@ func runIssuePicker(ctx context.Context, rootDir string, noPrompt bool, title st
 	output.SetStepLogger(renderer)
 	defer output.SetStepLogger(nil)
 
-	renderer.Section("Inputs")
-	renderer.Bullet(fmt.Sprintf("provider: %s (%s)", strings.ToLower(selectedRepo.Provider), selectedRepo.Host))
-	renderer.Bullet(fmt.Sprintf("repo: %s/%s", selectedRepo.Owner, selectedRepo.Repo))
-	renderer.Bullet(fmt.Sprintf("issues: %s", formatIssueList(selectedIssues)))
-	renderer.Blank()
+	renderer.Section("Steps")
+
+	_, exists, err := repo.Exists(rootDir, repoSpec)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		if err := ensureRepoGet(ctx, rootDir, []string{repoSpec}, noPrompt, theme, useColor); err != nil {
+			return err
+		}
+	}
+
+	repoURL := buildRepoURLFromParts(selectedRepo.Host, selectedRepo.Owner, selectedRepo.Repo)
+	type issueWorkspaceResult struct {
+		workspaceID string
+		description string
+		repos       []workspace.Repo
+	}
+	var results []issueWorkspaceResult
+	var failure error
+	var failureID string
+
+	for _, value := range selectedIssues {
+		num, err := strconv.Atoi(strings.TrimSpace(value))
+		if err != nil {
+			failure = fmt.Errorf("invalid issue number: %s", value)
+			failureID = value
+			break
+		}
+		description := ""
+		if issue, ok := issueByNumber[num]; ok {
+			description = issue.Title
+		}
+		workspaceID := fmt.Sprintf("ISSUE-%d-%s-%s", num, selectedRepo.Owner, selectedRepo.Repo)
+		branch := fmt.Sprintf("issue/%d", num)
+		output.Step(formatStep("create workspace", workspaceID, relPath(rootDir, filepath.Join(rootDir, "workspaces", workspaceID))))
+		wsDir, err := workspace.New(ctx, rootDir, workspaceID)
+		if err != nil {
+			failure = err
+			failureID = workspaceID
+			break
+		}
+		if err := workspace.SaveMetadata(wsDir, workspace.Metadata{Description: description}); err != nil {
+			if rollbackErr := workspace.Remove(ctx, rootDir, workspaceID); rollbackErr != nil {
+				failure = fmt.Errorf("save workspace metadata failed: %w (rollback failed: %v)", err, rollbackErr)
+			} else {
+				failure = err
+			}
+			failureID = workspaceID
+			break
+		}
+
+		output.Step(formatStep("worktree add", displayRepoName(repoURL), worktreeDest(rootDir, workspaceID, repoURL)))
+		if _, err := workspace.AddWithBranch(ctx, rootDir, workspaceID, repoURL, "", branch, "", true); err != nil {
+			if rollbackErr := workspace.Remove(ctx, rootDir, workspaceID); rollbackErr != nil {
+				failure = fmt.Errorf("issue setup failed: %w (rollback failed: %v)", err, rollbackErr)
+			} else {
+				failure = err
+			}
+			failureID = workspaceID
+			break
+		}
+
+		repos, _, _ := loadWorkspaceRepos(ctx, wsDir)
+		results = append(results, issueWorkspaceResult{
+			workspaceID: workspaceID,
+			description: description,
+			repos:       repos,
+		})
+	}
+
+	if len(results) > 0 {
+		renderer.Blank()
+		renderer.Section("Result")
+		for _, result := range results {
+			renderWorkspaceBlock(renderer, result.workspaceID, result.description, result.repos)
+		}
+	}
+	if failure != nil {
+		return fmt.Errorf("%s: %w", failureID, failure)
+	}
+	return nil
+}
+
+func runCreateIssueSelected(ctx context.Context, rootDir string, noPrompt bool, repoSpec string, selectedIssues []string) error {
+	if strings.TrimSpace(repoSpec) == "" {
+		return fmt.Errorf("repo is required")
+	}
+	if len(selectedIssues) == 0 {
+		return fmt.Errorf("at least one issue is required")
+	}
+	repoChoices, err := buildIssueRepoChoices(rootDir)
+	if err != nil {
+		return err
+	}
+	_, repoByValue := toIssuePromptChoices(repoChoices)
+	selectedRepo, ok := repoByValue[repoSpec]
+	if !ok {
+		return fmt.Errorf("selected repo not found")
+	}
+	if strings.ToLower(selectedRepo.Provider) != "github" {
+		return fmt.Errorf("issue picker supports GitHub only for now: %s", selectedRepo.Host)
+	}
+
+	issues, err := fetchGitHubIssues(ctx, selectedRepo.Host, selectedRepo.Owner, selectedRepo.Repo)
+	if err != nil {
+		return err
+	}
+	if len(issues) == 0 {
+		return fmt.Errorf("no issues found")
+	}
+
+	issueByNumber := make(map[int]issueSummary, len(issues))
+	for _, issue := range issues {
+		issueByNumber[issue.Number] = issue
+	}
+
+	theme := ui.DefaultTheme()
+	useColor := isatty.IsTerminal(os.Stdout.Fd())
+	renderer := ui.NewRenderer(os.Stdout, theme, useColor)
+	output.SetStepLogger(renderer)
+	defer output.SetStepLogger(nil)
+
 	renderer.Section("Steps")
 
 	_, exists, err := repo.Exists(rootDir, repoSpec)
@@ -1238,6 +1435,16 @@ func buildIssueRepoChoices(rootDir string) ([]issueRepoChoice, error) {
 	return choices, nil
 }
 
+func toIssuePromptChoices(choices []issueRepoChoice) ([]ui.PromptChoice, map[string]issueRepoChoice) {
+	prompt := make([]ui.PromptChoice, 0, len(choices))
+	byValue := make(map[string]issueRepoChoice, len(choices))
+	for _, choice := range choices {
+		prompt = append(prompt, ui.PromptChoice{Label: choice.Label, Value: choice.Value})
+		byValue[choice.Value] = choice
+	}
+	return prompt, byValue
+}
+
 func issueProviderForHost(host string) string {
 	lower := strings.ToLower(strings.TrimSpace(host))
 	if strings.Contains(lower, "gitlab") {
@@ -1347,6 +1554,36 @@ func formatIssueList(values []string) string {
 		out = append(out, fmt.Sprintf("#%s", val))
 	}
 	return strings.Join(out, ", ")
+}
+
+func buildIssueChoices(issues []issueSummary) []ui.PromptChoice {
+	var choices []ui.PromptChoice
+	for _, issue := range issues {
+		label := fmt.Sprintf("#%d", issue.Number)
+		if strings.TrimSpace(issue.Title) != "" {
+			label = fmt.Sprintf("#%d %s", issue.Number, strings.TrimSpace(issue.Title))
+		}
+		choices = append(choices, ui.PromptChoice{
+			Label: label,
+			Value: strconv.Itoa(issue.Number),
+		})
+	}
+	return choices
+}
+
+func buildPRChoices(prs []prSummary) []ui.PromptChoice {
+	var choices []ui.PromptChoice
+	for _, pr := range prs {
+		label := fmt.Sprintf("#%d", pr.Number)
+		if strings.TrimSpace(pr.Title) != "" {
+			label = fmt.Sprintf("#%d %s", pr.Number, strings.TrimSpace(pr.Title))
+		}
+		choices = append(choices, ui.PromptChoice{
+			Label: label,
+			Value: strconv.Itoa(pr.Number),
+		})
+	}
+	return choices
 }
 
 type reviewRepoChoice struct {
@@ -1517,11 +1754,144 @@ func runCreateReviewPicker(ctx context.Context, rootDir string, noPrompt bool) e
 	output.SetStepLogger(renderer)
 	defer output.SetStepLogger(nil)
 
-	renderer.Section("Inputs")
-	renderer.Bullet(fmt.Sprintf("provider: github (%s)", selectedRepo.Host))
-	renderer.Bullet(fmt.Sprintf("repo: %s/%s", selectedRepo.Owner, selectedRepo.Repo))
-	renderer.Bullet(fmt.Sprintf("pull requests: %s", formatPRList(selectedPRs)))
-	renderer.Blank()
+	renderer.Section("Steps")
+
+	_, exists, err := repo.Exists(rootDir, selectedRepo.RepoURL)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		if err := ensureRepoGet(ctx, rootDir, []string{selectedRepo.RepoURL}, noPrompt, theme, useColor); err != nil {
+			return err
+		}
+	}
+
+	prByNumber := make(map[int]prSummary, len(prs))
+	for _, pr := range prs {
+		prByNumber[pr.Number] = pr
+	}
+
+	type reviewWorkspaceResult struct {
+		workspaceID string
+		description string
+		repos       []workspace.Repo
+	}
+	var results []reviewWorkspaceResult
+	var failure error
+	var failureID string
+
+	for _, value := range selectedPRs {
+		num, err := strconv.Atoi(strings.TrimSpace(value))
+		if err != nil {
+			failure = fmt.Errorf("invalid PR number: %s", value)
+			failureID = value
+			break
+		}
+		pr, ok := prByNumber[num]
+		if !ok {
+			failure = fmt.Errorf("PR not found: %d", num)
+			failureID = fmt.Sprintf("PR-%d", num)
+			break
+		}
+		if !strings.EqualFold(strings.TrimSpace(pr.HeadRepo), strings.TrimSpace(pr.BaseRepo)) {
+			failure = fmt.Errorf("fork PRs are not supported: %s", pr.HeadRepo)
+			failureID = fmt.Sprintf("PR-%d", num)
+			break
+		}
+		description := pr.Title
+		workspaceID := fmt.Sprintf("REVIEW-PR-%d-%s-%s", num, selectedRepo.Owner, selectedRepo.Repo)
+		output.Step(formatStep("create workspace", workspaceID, relPath(rootDir, filepath.Join(rootDir, "workspaces", workspaceID))))
+		wsDir, err := workspace.New(ctx, rootDir, workspaceID)
+		if err != nil {
+			failure = err
+			failureID = workspaceID
+			break
+		}
+		if err := workspace.SaveMetadata(wsDir, workspace.Metadata{Description: description}); err != nil {
+			if rollbackErr := workspace.Remove(ctx, rootDir, workspaceID); rollbackErr != nil {
+				failure = fmt.Errorf("save workspace metadata failed: %w (rollback failed: %v)", err, rollbackErr)
+			} else {
+				failure = err
+			}
+			failureID = workspaceID
+			break
+		}
+
+		store, err := repo.Open(ctx, rootDir, selectedRepo.RepoURL, false)
+		if err != nil {
+			failure = err
+			failureID = workspaceID
+			break
+		}
+		if err := fetchPRHead(ctx, store.StorePath, pr.HeadRef); err != nil {
+			failure = err
+			failureID = workspaceID
+			break
+		}
+
+		headRef := fmt.Sprintf("refs/remotes/origin/%s", pr.HeadRef)
+		output.Step(formatStep("worktree add", displayRepoName(selectedRepo.RepoURL), worktreeDest(rootDir, workspaceID, selectedRepo.RepoURL)))
+		if _, err := workspace.AddWithTrackingBranch(ctx, rootDir, workspaceID, selectedRepo.RepoURL, "", pr.HeadRef, headRef, false); err != nil {
+			if rollbackErr := workspace.Remove(ctx, rootDir, workspaceID); rollbackErr != nil {
+				failure = fmt.Errorf("review failed: %w (rollback failed: %v)", err, rollbackErr)
+			} else {
+				failure = err
+			}
+			failureID = workspaceID
+			break
+		}
+
+		repos, _, _ := loadWorkspaceRepos(ctx, wsDir)
+		results = append(results, reviewWorkspaceResult{
+			workspaceID: workspaceID,
+			description: description,
+			repos:       repos,
+		})
+	}
+
+	if len(results) > 0 {
+		renderer.Blank()
+		renderer.Section("Result")
+		for _, result := range results {
+			renderWorkspaceBlock(renderer, result.workspaceID, result.description, result.repos)
+		}
+	}
+	if failure != nil {
+		return fmt.Errorf("%s: %w", failureID, failure)
+	}
+	return nil
+}
+
+func runCreateReviewSelected(ctx context.Context, rootDir string, noPrompt bool, repoSpec string, selectedPRs []string) error {
+	if strings.TrimSpace(repoSpec) == "" {
+		return fmt.Errorf("repo is required")
+	}
+	if len(selectedPRs) == 0 {
+		return fmt.Errorf("at least one pull request is required")
+	}
+	repoChoices, err := buildReviewRepoChoices(rootDir)
+	if err != nil {
+		return err
+	}
+	_, repoByValue := toPromptChoices(repoChoices)
+	selectedRepo, ok := repoByValue[repoSpec]
+	if !ok {
+		return fmt.Errorf("selected repo not found")
+	}
+	prs, err := fetchGitHubPRs(ctx, selectedRepo.Host, selectedRepo.Owner, selectedRepo.Repo)
+	if err != nil {
+		return err
+	}
+	if len(prs) == 0 {
+		return fmt.Errorf("no pull requests found")
+	}
+
+	theme := ui.DefaultTheme()
+	useColor := isatty.IsTerminal(os.Stdout.Fd())
+	renderer := ui.NewRenderer(os.Stdout, theme, useColor)
+	output.SetStepLogger(renderer)
+	defer output.SetStepLogger(nil)
+
 	renderer.Section("Steps")
 
 	_, exists, err := repo.Exists(rootDir, selectedRepo.RepoURL)
@@ -1661,6 +2031,16 @@ func buildReviewRepoChoices(rootDir string) ([]reviewRepoChoice, error) {
 		})
 	}
 	return choices, nil
+}
+
+func toPromptChoices(choices []reviewRepoChoice) ([]ui.PromptChoice, map[string]reviewRepoChoice) {
+	prompt := make([]ui.PromptChoice, 0, len(choices))
+	byValue := make(map[string]reviewRepoChoice, len(choices))
+	for _, choice := range choices {
+		prompt = append(prompt, ui.PromptChoice{Label: choice.Label, Value: choice.Value})
+		byValue[choice.Value] = choice
+	}
+	return prompt, byValue
 }
 
 func isGitHubHost(host string) bool {
@@ -1834,9 +2214,8 @@ func runReview(ctx context.Context, rootDir string, args []string, noPrompt bool
 	output.SetStepLogger(renderer)
 	defer output.SetStepLogger(nil)
 
-	renderer.Section("Info")
+	renderer.Section("Inputs")
 	renderer.Bullet(fmt.Sprintf("provider: %s (%s)", strings.ToLower(req.Provider), req.Host))
-	renderer.Bullet("fork PRs supported (fetches PR ref directly)")
 	renderer.Blank()
 	renderer.Section("Steps")
 
@@ -2061,6 +2440,18 @@ func promptCreateMode(theme ui.Theme, useColor bool) (string, error) {
 	return ui.PromptChoiceSelect("gws create", "mode", choices, theme, useColor)
 }
 
+func loadTemplateNames(rootDir string) ([]string, error) {
+	file, err := template.Load(rootDir)
+	if err != nil {
+		return nil, err
+	}
+	names := template.Names(file)
+	if len(names) == 0 {
+		return nil, fmt.Errorf("no templates found in %s", filepath.Join(rootDir, template.FileName))
+	}
+	return names, nil
+}
+
 func promptTemplateBranches(ctx context.Context, tmpl template.Template, workspaceID string, theme ui.Theme, useColor bool) ([]string, error) {
 	if len(tmpl.Repos) == 0 {
 		return nil, nil
@@ -2107,39 +2498,25 @@ func promptTemplateBranches(ctx context.Context, tmpl template.Template, workspa
 }
 
 func renderWorkspaceRepos(r *ui.Renderer, repos []workspace.Repo, extraIndent string) {
+	if r == nil {
+		return
+	}
 	for i, repo := range repos {
 		prefix := "├─ "
 		if i == len(repos)-1 {
 			prefix = "└─ "
 		}
 		name := formatRepoName(repo.Alias, repo.RepoKey)
-		if r != nil {
-			r.TreeLineBranchMuted(extraIndent+prefix, name, repo.Branch)
-			continue
-		}
-		label := formatRepoLabel(name, repo.Branch)
-		line := fmt.Sprintf("%s%s%s%s", output.Indent, extraIndent, prefix, label)
-		fmt.Fprintln(os.Stdout, line)
+		r.TreeLineBranchMuted(extraIndent+prefix, name, repo.Branch)
 	}
 }
 
 func renderWorkspaceBlock(r *ui.Renderer, workspaceID, description string, repos []workspace.Repo) {
-	label := formatWorkspaceLabel(workspaceID, description)
-	if r != nil {
-		r.BulletWithDescription(workspaceID, description, fmt.Sprintf("(repos: %d)", len(repos)))
-		renderWorkspaceRepos(r, repos, output.Indent)
+	if r == nil {
 		return
 	}
-	fmt.Fprintf(os.Stdout, "%s%s %s (repos: %d)\n", output.Indent, output.StepPrefix, label, len(repos))
-	renderWorkspaceRepos(nil, repos, output.Indent)
-}
-
-func formatWorkspaceLabel(workspaceID, description string) string {
-	desc := strings.TrimSpace(description)
-	if desc == "" {
-		return workspaceID
-	}
-	return fmt.Sprintf("%s - %s", workspaceID, desc)
+	r.BulletWithDescription(workspaceID, description, fmt.Sprintf("(repos: %d)", len(repos)))
+	renderWorkspaceRepos(r, repos, output.Indent)
 }
 
 func loadWorkspaceDescription(wsDir string) string {
@@ -2403,13 +2780,6 @@ func repoSpecFromKey(repoKey string) string {
 		return fmt.Sprintf("git@%s:%s/%s.git", host, owner, repo)
 	}
 	return fmt.Sprintf("https://%s/%s/%s.git", host, owner, repo)
-}
-
-func printRepoGetCommands(repos []string) {
-	fmt.Fprintf(os.Stdout, "%scommands:\n", output.Indent)
-	for _, repoSpec := range repos {
-		fmt.Fprintf(os.Stdout, "%sgws repo get %s\n", output.Indent+output.Indent, repoSpec)
-	}
 }
 
 type statusDetail struct {
@@ -2847,6 +3217,21 @@ func writeWorkspaceStatusText(result workspace.StatusResult) {
 	useColor := isatty.IsTerminal(os.Stdout.Fd())
 	renderer := ui.NewRenderer(os.Stdout, theme, useColor)
 
+	warningLines := appendWarningLines(nil, "", result.Warnings)
+	for _, repo := range result.Repos {
+		if repo.Error != nil {
+			label := strings.TrimSpace(repo.Alias)
+			if label == "" {
+				label = filepath.Base(repo.WorktreePath)
+			}
+			warningLines = append(warningLines, fmt.Sprintf("%s: %v", label, repo.Error))
+		}
+	}
+	if len(warningLines) > 0 {
+		renderWarningsSection(renderer, "warnings", warningLines, false)
+		renderer.Blank()
+	}
+
 	renderer.Section("Result")
 
 	for _, repo := range result.Repos {
@@ -2872,12 +3257,7 @@ func writeWorkspaceStatusText(result workspace.StatusResult) {
 				renderer.TreeLineBranchMuted(prefix, detail.text, "")
 			}
 		}
-		if repo.Error != nil {
-			renderer.Warn(fmt.Sprintf("warning: %s: %v", repo.Alias, repo.Error))
-		}
 	}
-	warningLines := appendWarningLines(nil, "", result.Warnings)
-	renderWarningsSection(renderer, "warnings", warningLines, true)
 }
 
 func writeWorkspaceListText(ctx context.Context, entries []workspace.Entry, warnings []error) {
@@ -2885,7 +3265,11 @@ func writeWorkspaceListText(ctx context.Context, entries []workspace.Entry, warn
 	useColor := isatty.IsTerminal(os.Stdout.Fd())
 	renderer := ui.NewRenderer(os.Stdout, theme, useColor)
 
-	renderer.Section("Result")
+	type workspaceListEntry struct {
+		entry workspace.Entry
+		repos []workspace.Repo
+	}
+	var items []workspaceListEntry
 	var repoWarnings []string
 	for _, entry := range entries {
 		repos, warnings, err := workspace.ScanRepos(ctx, entry.WorkspacePath)
@@ -2893,10 +3277,18 @@ func writeWorkspaceListText(ctx context.Context, entries []workspace.Entry, warn
 			repoWarnings = append(repoWarnings, fmt.Sprintf("%s: %s", entry.WorkspaceID, compactError(err)))
 		}
 		repoWarnings = appendWarningLines(repoWarnings, entry.WorkspaceID, warnings)
-		renderWorkspaceBlock(renderer, entry.WorkspaceID, entry.Description, repos)
+		items = append(items, workspaceListEntry{entry: entry, repos: repos})
 	}
 	repoWarnings = appendWarningLines(repoWarnings, "", warnings)
-	renderWarningsSection(renderer, "warnings", repoWarnings, true)
+	if len(repoWarnings) > 0 {
+		renderWarningsSection(renderer, "warnings", repoWarnings, false)
+		renderer.Blank()
+	}
+
+	renderer.Section("Result")
+	for _, item := range items {
+		renderWorkspaceBlock(renderer, item.entry.WorkspaceID, item.entry.Description, item.repos)
+	}
 }
 
 func writeRepoListText(entries []repo.Entry, warnings []error) {
@@ -2904,12 +3296,16 @@ func writeRepoListText(entries []repo.Entry, warnings []error) {
 	useColor := isatty.IsTerminal(os.Stdout.Fd())
 	renderer := ui.NewRenderer(os.Stdout, theme, useColor)
 
+	warningLines := appendWarningLines(nil, "", warnings)
+	if len(warningLines) > 0 {
+		renderWarningsSection(renderer, "warnings", warningLines, false)
+		renderer.Blank()
+	}
+
 	renderer.Section("Result")
 	for _, entry := range entries {
-		renderer.Result(fmt.Sprintf("%s\t%s", entry.RepoKey, entry.StorePath))
+		renderer.Bullet(fmt.Sprintf("%s %s", entry.RepoKey, entry.StorePath))
 	}
-	warningLines := appendWarningLines(nil, "", warnings)
-	renderWarningsSection(renderer, "warnings", warningLines, true)
 }
 
 func writeTemplateListText(file template.File, names []string) {
@@ -2941,9 +3337,14 @@ func writeTemplateListText(file template.File, names []string) {
 }
 
 func writeTemplateShowText(name string, tmpl template.Template) {
-	fmt.Fprintf(os.Stdout, "%s\n", name)
-	for _, repo := range tmpl.Repos {
-		fmt.Fprintf(os.Stdout, " - %s\n", repo)
+	theme := ui.DefaultTheme()
+	useColor := isatty.IsTerminal(os.Stdout.Fd())
+	renderer := ui.NewRenderer(os.Stdout, theme, useColor)
+
+	renderer.Section("Result")
+	renderer.Bullet(name)
+	if len(tmpl.Repos) > 0 {
+		renderTreeLines(renderer, tmpl.Repos, treeLineNormal)
 	}
 }
 
@@ -2951,6 +3352,20 @@ func writeInitText(result initcmd.Result) {
 	theme := ui.DefaultTheme()
 	useColor := isatty.IsTerminal(os.Stdout.Fd())
 	renderer := ui.NewRenderer(os.Stdout, theme, useColor)
+
+	var skipped []string
+	for _, dir := range result.SkippedDirs {
+		skipped = append(skipped, fmt.Sprintf("dir: %s", dir))
+	}
+	for _, file := range result.SkippedFiles {
+		skipped = append(skipped, fmt.Sprintf("file: %s", file))
+	}
+	if len(skipped) > 0 {
+		renderer.Section("Info")
+		renderer.Bullet("already exists")
+		renderTreeLines(renderer, skipped, treeLineNormal)
+		renderer.Blank()
+	}
 
 	renderer.Section("Steps")
 	if len(result.CreatedDirs) == 0 && len(result.CreatedFiles) == 0 {
@@ -2966,21 +3381,7 @@ func writeInitText(result initcmd.Result) {
 
 	renderer.Blank()
 	renderer.Section("Result")
-	renderer.Result(fmt.Sprintf("root: %s", result.RootDir))
-
-	var skipped []string
-	for _, dir := range result.SkippedDirs {
-		skipped = append(skipped, fmt.Sprintf("dir: %s", dir))
-	}
-	for _, file := range result.SkippedFiles {
-		skipped = append(skipped, fmt.Sprintf("file: %s", file))
-	}
-	if len(skipped) > 0 {
-		renderer.Blank()
-		renderer.Section("Info")
-		renderer.Bullet("already exists")
-		renderTreeLines(renderer, skipped, treeLineNormal)
-	}
+	renderer.Bullet(fmt.Sprintf("root: %s", result.RootDir))
 
 	renderSuggestions(renderer, useColor, []string{
 		fmt.Sprintf("Edit templates.yaml: %s", filepath.Join(result.RootDir, "templates.yaml")),
@@ -2990,6 +3391,15 @@ func writeDoctorText(result doctor.Result, fixed []string) {
 	theme := ui.DefaultTheme()
 	useColor := isatty.IsTerminal(os.Stdout.Fd())
 	renderer := ui.NewRenderer(os.Stdout, theme, useColor)
+
+	if len(result.Warnings) > 0 {
+		var lines []string
+		for _, warning := range result.Warnings {
+			lines = append(lines, warning.Error())
+		}
+		renderWarningsSection(renderer, "warnings", lines, false)
+		renderer.Blank()
+	}
 
 	renderer.Section("Result")
 
@@ -3012,14 +3422,4 @@ func writeDoctorText(result doctor.Result, fixed []string) {
 		renderTreeLines(renderer, lines, treeLineNormal)
 	}
 
-	if len(result.Warnings) > 0 {
-		renderer.Blank()
-		renderer.Section("Info")
-		renderer.Bullet("warnings")
-		var lines []string
-		for _, warning := range result.Warnings {
-			lines = append(lines, warning.Error())
-		}
-		renderTreeLines(renderer, lines, treeLineWarn)
-	}
 }
