@@ -26,7 +26,7 @@ func printGlobalHelp(w io.Writer) {
 	fmt.Fprintln(w, "  rm [<ID>]                          remove workspace (clean only)")
 	fmt.Fprintln(w, "  open [<ID>]                        open workspace in subshell")
 	fmt.Fprintln(w, "  review <PR URL>                    create review workspace from PR")
-	fmt.Fprintln(w, "  issue <ISSUE URL>                  create issue workspace from issue")
+	fmt.Fprintln(w, "  issue [<ISSUE URL>]                create issue workspace from issue")
 	fmt.Fprintln(w, "  repo <subcommand>                  repo commands (get/ls)")
 	fmt.Fprintln(w, "  template <subcommand>              template commands (ls)")
 	fmt.Fprintln(w, "  doctor [--fix]                     check workspace/repo health")
@@ -107,9 +107,10 @@ func printReviewHelp(w io.Writer) {
 }
 
 func printIssueHelp(w io.Writer) {
-	fmt.Fprintln(w, "Usage: gws issue <ISSUE_URL> [--workspace-id <id>] [--branch <name>] [--base <ref>]")
-	fmt.Fprintln(w, "  Create a workspace for a single issue (GitHub, GitLab, Bitbucket)")
+	fmt.Fprintln(w, "Usage: gws issue [<ISSUE_URL>] [--workspace-id <id>] [--branch <name>] [--base <ref>]")
+	fmt.Fprintln(w, "  Create workspace(s) for issue(s) (GitHub, GitLab, Bitbucket)")
 	fmt.Fprintln(w, "  default workspace id: ISSUE-<number>, branch: issue/<number>")
+	fmt.Fprintln(w, "  without ISSUE_URL: pick repo + issues interactively")
 }
 
 func printRepoHelp(w io.Writer) {

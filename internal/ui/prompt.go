@@ -534,6 +534,36 @@ func PromptTemplateName(title string, defaultValue string, theme Theme, useColor
 	return strings.TrimSpace(final.value), nil
 }
 
+// PromptChoiceSelect lets users pick a single choice from a list with filtering.
+func PromptChoiceSelect(title, label string, choices []PromptChoice, theme Theme, useColor bool) (string, error) {
+	model := newChoiceSelectModel(title, label, choices, theme, useColor)
+	prog := tea.NewProgram(model)
+	out, err := prog.Run()
+	if err != nil {
+		return "", err
+	}
+	final := out.(choiceSelectModel)
+	if final.err != nil {
+		return "", final.err
+	}
+	return strings.TrimSpace(final.value), nil
+}
+
+// PromptMultiSelect lets users pick one or more choices from a list with filtering.
+func PromptMultiSelect(title, label string, choices []PromptChoice, theme Theme, useColor bool) ([]string, error) {
+	model := newMultiSelectModel(title, label, choices, theme, useColor)
+	prog := tea.NewProgram(model)
+	out, err := prog.Run()
+	if err != nil {
+		return nil, err
+	}
+	final := out.(multiSelectModel)
+	if final.err != nil {
+		return nil, final.err
+	}
+	return append([]string(nil), final.selectedValues...), nil
+}
+
 type templateRepoSelectModel struct {
 	title        string
 	templateName string
@@ -764,6 +794,279 @@ func removeChoice(items []PromptChoice, value string) []PromptChoice {
 			continue
 		}
 		out = append(out, item)
+	}
+	return out
+}
+
+type choiceSelectModel struct {
+	title     string
+	label     string
+	choices   []PromptChoice
+	filtered  []PromptChoice
+	cursor    int
+	value     string
+	err       error
+	errorLine string
+
+	theme    Theme
+	useColor bool
+	input    textinput.Model
+}
+
+func newChoiceSelectModel(title, label string, choices []PromptChoice, theme Theme, useColor bool) choiceSelectModel {
+	input := textinput.New()
+	input.Prompt = ""
+	input.Placeholder = "search"
+	input.Focus()
+	if useColor {
+		input.PlaceholderStyle = theme.Muted
+	}
+	m := choiceSelectModel{
+		title:    title,
+		label:    label,
+		choices:  choices,
+		theme:    theme,
+		useColor: useColor,
+		input:    input,
+	}
+	m.filtered = m.filterChoices()
+	return m
+}
+
+func (m choiceSelectModel) Init() tea.Cmd {
+	return textinput.Blink
+}
+
+func (m choiceSelectModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.Type {
+		case tea.KeyCtrlC, tea.KeyEsc:
+			m.err = ErrPromptCanceled
+			return m, tea.Quit
+		case tea.KeyUp:
+			if m.cursor > 0 {
+				m.cursor--
+			}
+			return m, nil
+		case tea.KeyDown:
+			if m.cursor < len(m.filtered)-1 {
+				m.cursor++
+			}
+			return m, nil
+		case tea.KeyEnter:
+			if len(m.filtered) == 0 {
+				m.errorLine = "select a value"
+				return m, nil
+			}
+			choice := m.filtered[m.cursor]
+			m.value = choice.Value
+			return m, tea.Quit
+		}
+	}
+
+	var cmd tea.Cmd
+	m.input, cmd = m.input.Update(msg)
+	m.filtered = m.filterChoices()
+	if m.cursor >= len(m.filtered) {
+		m.cursor = max(0, len(m.filtered)-1)
+	}
+	if strings.TrimSpace(m.input.Value()) != "" {
+		m.errorLine = ""
+	}
+	return m, cmd
+}
+
+func (m choiceSelectModel) View() string {
+	var b strings.Builder
+	section := "Input"
+	if m.useColor {
+		section = m.theme.SectionTitle.Render(section)
+	}
+	b.WriteString(section)
+	b.WriteString("\n")
+
+	prefix := promptPrefix(m.theme, m.useColor)
+	label := promptLabel(m.theme, m.useColor, m.label)
+	line := fmt.Sprintf("%s%s %s: %s", output.Indent, prefix, label, m.input.View())
+	b.WriteString(line)
+	b.WriteString("\n")
+	renderRepoChoiceList(&b, m.filtered, m.cursor, m.useColor, m.theme)
+
+	if m.errorLine != "" {
+		msg := m.errorLine
+		if m.useColor {
+			msg = m.theme.Error.Render(msg)
+		}
+		b.WriteString(fmt.Sprintf("%s%s %s\n", output.Indent, mutedToken(m.theme, m.useColor, output.LogConnector), msg))
+	}
+
+	infoPrefix := mutedToken(m.theme, m.useColor, output.StepPrefix)
+	b.WriteString(fmt.Sprintf("\n%s%s enter: select highlighted %s\n", output.Indent, infoPrefix, m.label))
+	return b.String()
+}
+
+func (m choiceSelectModel) filterChoices() []PromptChoice {
+	q := strings.ToLower(strings.TrimSpace(m.input.Value()))
+	if q == "" {
+		return append([]PromptChoice(nil), m.choices...)
+	}
+	var out []PromptChoice
+	for _, item := range m.choices {
+		if strings.Contains(strings.ToLower(item.Label), q) || strings.Contains(strings.ToLower(item.Value), q) {
+			out = append(out, item)
+		}
+	}
+	return out
+}
+
+type multiSelectModel struct {
+	title          string
+	label          string
+	choices        []PromptChoice
+	filtered       []PromptChoice
+	selected       []PromptChoice
+	selectedValues []string
+	cursor         int
+	err            error
+	errorLine      string
+
+	theme    Theme
+	useColor bool
+	input    textinput.Model
+}
+
+func newMultiSelectModel(title, label string, choices []PromptChoice, theme Theme, useColor bool) multiSelectModel {
+	input := textinput.New()
+	input.Prompt = ""
+	input.Placeholder = "search"
+	input.Focus()
+	if useColor {
+		input.PlaceholderStyle = theme.Muted
+	}
+	m := multiSelectModel{
+		title:    title,
+		label:    label,
+		choices:  choices,
+		theme:    theme,
+		useColor: useColor,
+		input:    input,
+	}
+	m.filtered = m.filterChoices()
+	return m
+}
+
+func (m multiSelectModel) Init() tea.Cmd {
+	return textinput.Blink
+}
+
+func (m multiSelectModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.Type {
+		case tea.KeyCtrlC, tea.KeyEsc:
+			m.err = ErrPromptCanceled
+			return m, tea.Quit
+		case tea.KeyCtrlD:
+			if len(m.selected) == 0 {
+				m.errorLine = fmt.Sprintf("select at least one %s", m.label)
+				return m, nil
+			}
+			return m, tea.Quit
+		case tea.KeyUp:
+			if m.cursor > 0 {
+				m.cursor--
+			}
+			return m, nil
+		case tea.KeyDown:
+			if m.cursor < len(m.filtered)-1 {
+				m.cursor++
+			}
+			return m, nil
+		case tea.KeyEnter:
+			value := strings.TrimSpace(m.input.Value())
+			if value == "done" {
+				if len(m.selected) == 0 {
+					m.errorLine = fmt.Sprintf("select at least one %s", m.label)
+					return m, nil
+				}
+				return m, tea.Quit
+			}
+			if len(m.filtered) == 0 {
+				return m, nil
+			}
+			choice := m.filtered[m.cursor]
+			m.selected = append(m.selected, choice)
+			m.selectedValues = append(m.selectedValues, choice.Value)
+			m.choices = removeChoice(m.choices, choice.Value)
+			m.input.SetValue("")
+			m.filtered = m.filterChoices()
+			if m.cursor >= len(m.filtered) {
+				m.cursor = max(0, len(m.filtered)-1)
+			}
+			m.errorLine = ""
+			return m, nil
+		}
+	}
+
+	var cmd tea.Cmd
+	m.input, cmd = m.input.Update(msg)
+	m.filtered = m.filterChoices()
+	if m.cursor >= len(m.filtered) {
+		m.cursor = max(0, len(m.filtered)-1)
+	}
+	return m, cmd
+}
+
+func (m multiSelectModel) View() string {
+	var b strings.Builder
+	section := "Input"
+	if m.useColor {
+		section = m.theme.SectionTitle.Render(section)
+	}
+	b.WriteString(section)
+	b.WriteString("\n")
+
+	prefix := promptPrefix(m.theme, m.useColor)
+	label := promptLabel(m.theme, m.useColor, m.label)
+	line := fmt.Sprintf("%s%s %s: %s", output.Indent, prefix, label, m.input.View())
+	b.WriteString(line)
+	b.WriteString("\n")
+	renderRepoChoiceList(&b, m.filtered, m.cursor, m.useColor, m.theme)
+
+	b.WriteString("\n")
+	selTitle := "Selected"
+	if m.useColor {
+		selTitle = m.theme.SectionTitle.Render(selTitle)
+	}
+	b.WriteString(selTitle)
+	b.WriteString("\n")
+	renderSelectedChoiceList(&b, m.selected, m.useColor, m.theme)
+
+	if m.errorLine != "" {
+		msg := m.errorLine
+		if m.useColor {
+			msg = m.theme.Error.Render(msg)
+		}
+		b.WriteString(fmt.Sprintf("%s%s %s\n", output.Indent, mutedToken(m.theme, m.useColor, output.LogConnector), msg))
+	}
+
+	infoPrefix := mutedToken(m.theme, m.useColor, output.StepPrefix)
+	b.WriteString(fmt.Sprintf("\n%s%s finish: Ctrl+D or type \"done\"\n", output.Indent, infoPrefix))
+	b.WriteString(fmt.Sprintf("%s%s enter: add highlighted %s\n", output.Indent, infoPrefix, m.label))
+	return b.String()
+}
+
+func (m multiSelectModel) filterChoices() []PromptChoice {
+	q := strings.ToLower(strings.TrimSpace(m.input.Value()))
+	if q == "" {
+		return append([]PromptChoice(nil), m.choices...)
+	}
+	var out []PromptChoice
+	for _, item := range m.choices {
+		if strings.Contains(strings.ToLower(item.Label), q) || strings.Contains(strings.ToLower(item.Value), q) {
+			out = append(out, item)
+		}
 	}
 	return out
 }
@@ -1306,6 +1609,26 @@ func renderSelectedRepoList(b *strings.Builder, items []string, useColor bool, t
 			prefix = theme.Accent.Render(prefix)
 		}
 		line := fmt.Sprintf("%s%s %s", output.Indent, prefix, item)
+		b.WriteString(line)
+		b.WriteString("\n")
+	}
+}
+
+func renderSelectedChoiceList(b *strings.Builder, items []PromptChoice, useColor bool, theme Theme) {
+	if len(items) == 0 {
+		msg := "none"
+		if useColor {
+			msg = theme.Muted.Render(msg)
+		}
+		b.WriteString(fmt.Sprintf("%s%s %s\n", output.Indent, mutedToken(theme, useColor, output.StepPrefix), msg))
+		return
+	}
+	for _, item := range items {
+		prefix := output.StepPrefix
+		if useColor {
+			prefix = theme.Accent.Render(prefix)
+		}
+		line := fmt.Sprintf("%s%s %s", output.Indent, prefix, item.Label)
 		b.WriteString(line)
 		b.WriteString("\n")
 	}

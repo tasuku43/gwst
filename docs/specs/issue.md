@@ -1,8 +1,6 @@
 title: "gws issue"
 status: implemented
-pending:
-  - interactive-issue-picker
-  - multi-issue-workspaces
+pending: []
 ---
 
 ## Synopsis
