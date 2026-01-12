@@ -137,7 +137,7 @@ Result
 - All prompts and labels are English.
 - Info section is optional and may include warnings/skipped/blocked items, selection state, and inline help/auxiliary meta.
 - Errors should be emphasized with a red prefix and red text.
-- Suggestion section is optional and shown on TTY only (e.g. `cd <path>`).
+- Suggestion section is optional and shown only on TTY with colors enabled (e.g. `cd <path>`).
 
 ## Implementation contract
 - CLI output must use `ui.Renderer` (or `internal/core/output` helpers) and must not write directly to stdout via `fmt.Fprintf/Printf/Println` in UI paths.
