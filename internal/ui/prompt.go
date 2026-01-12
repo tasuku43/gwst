@@ -33,9 +33,11 @@ const (
 )
 
 type WorkspaceChoice struct {
-	ID          string
-	Description string
-	Repos       []PromptChoice
+	ID            string
+	Description   string
+	Repos         []PromptChoice
+	Warning       string
+	WarningStrong bool
 }
 
 type BlockedChoice struct {
@@ -2313,10 +2315,34 @@ func renderWorkspaceChoiceList(b *strings.Builder, items []WorkspaceChoice, curs
 	}
 	for i, item := range items {
 		displayID := item.ID
-		if i == cursor && useColor {
-			displayID = lipgloss.NewStyle().Bold(true).Render(displayID)
+		hasWarn := strings.TrimSpace(item.Warning) != ""
+		warnStyle := theme.SoftWarn
+		if item.WarningStrong {
+			warnStyle = theme.Warn
+		}
+		warnTag := ""
+		if hasWarn {
+			warnTag = "[" + shortWarningTag(item.Warning) + "]"
+		}
+		if useColor {
+			if hasWarn {
+				if i == cursor {
+					displayID = theme.Warn.Copy().Bold(true).Render(displayID)
+				} else {
+					displayID = warnStyle.Render(displayID)
+				}
+			} else if i == cursor {
+				displayID = lipgloss.NewStyle().Bold(true).Render(displayID)
+			}
 		}
 		display := displayID
+		if warnTag != "" {
+			tag := warnTag
+			if useColor {
+				tag = warnStyle.Render(warnTag)
+			}
+			display += tag
+		}
 		desc := strings.TrimSpace(item.Description)
 		if desc != "" {
 			if useColor {
@@ -2341,6 +2367,21 @@ func renderWorkspaceChoiceList(b *strings.Builder, items []WorkspaceChoice, curs
 			b.WriteString(line)
 			b.WriteString("\n")
 		}
+	}
+}
+
+func shortWarningTag(value string) string {
+	switch strings.TrimSpace(strings.ToLower(value)) {
+	case "dirty changes":
+		return "dirty changes"
+	case "unpushed commits":
+		return "unpushed commits"
+	case "diverged or upstream missing":
+		return "diverged or upstream missing"
+	case "status unknown":
+		return "status unknown"
+	default:
+		return strings.TrimSpace(value)
 	}
 }
 

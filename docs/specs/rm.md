@@ -7,25 +7,30 @@ status: implemented
 `gws rm [<WORKSPACE_ID>]`
 
 ## Intent
-Safely remove a workspace and all of its worktrees, refusing when repositories are dirty or status cannot be read.
+Safely remove a workspace and all of its worktrees, warning/confirming for risky states.
+
+## Workspace State Model
+- **Clean**: no uncommitted changes; upstream set; no ahead/behind.
+- **Dirty**: uncommitted changes exist (confirmation required).
+- **Unpushed**: local branch is ahead of upstream (confirmation required).
+- **Diverged**: local branch is behind or both ahead/behind of upstream, or upstream is missing (confirmation required).
+- **Unknown**: status cannot be determined (confirmation required).
 
 ## Behavior
 - With `WORKSPACE_ID` provided: targets that workspace.
-- Without it: scans workspaces, classifies each as removable or blocked (dirty or status errors), and prompts the user to choose removable entries using the same add/remove loop as `gws create` issue Step 3. Fails if none are removable.
+- Without it: scans workspaces and prompts the user to choose entries using the same add/remove loop as `gws create` issue Step 3. Fails if none exist.
 - Multi-select UX:
-  - Shows only removable entries for selection (including any saved workspace descriptions).
-  - Blocked entries are listed in an Info section (same as current behavior) but are not selectable.
+  - Shows entries for selection (including any saved workspace descriptions), with warning indicators for risky states.
   - `<Enter>` adds the highlighted workspace to the selection list and removes it from candidates.
   - Finish keys: `<Ctrl+D>` or typing `done` then `<Enter>`; minimum 1 selection required.
   - Empty input + `<Enter>` does nothing (stays in loop).
   - Filterable list by substring (case-insensitive); lightweight fuzzy match is acceptable.
-- Before removal, gathers warnings (e.g., ahead-of-upstream, missing upstream, status errors) and displays them.
-- Before removal, if multiple workspaces are selected, ask for confirmation:
-  - Prompt: `Remove N workspaces? (y/N)`
-  - Default is No.
-- Calls `workspace.Remove`, which:
+- Before removal, gathers warnings (e.g., dirty changes, unpushed commits, upstream missing, status unknown) and displays them.
+- Before removal, require explicit confirmation for risky states (Dirty/Unpushed/Diverged/Unknown). For multiple selections, the confirmation prompt must mention warnings when present, with stronger wording for Dirty/Unknown.
+- Before removal, if multiple workspaces are selected, ask for confirmation (default No).
+- Calls `workspace.RemoveWithOptions`, which:
   - Validates the workspace exists.
-  - Fails if any repo has uncommitted/untracked/unstaged/unmerged changes.
+  - With confirmation, allows dirty repos to be removed; otherwise fails if any repo has uncommitted/untracked/unstaged/unmerged changes.
   - Runs `git worktree remove <worktree>` for each repo’s worktree.
   - Deletes the workspace directory.
 
@@ -34,6 +39,5 @@ Safely remove a workspace and all of its worktrees, refusing when repositories a
 
 ## Failure Modes
 - Workspace not found.
-- Dirty worktrees or status errors block removal.
 - Git errors while removing worktrees.
 - Filesystem errors while deleting the workspace directory.

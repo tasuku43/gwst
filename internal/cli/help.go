@@ -23,7 +23,7 @@ func printGlobalHelp(w io.Writer) {
 	fmt.Fprintln(w, "  add [<ID>] [<repo>]                add repo worktree to workspace")
 	fmt.Fprintln(w, "  ls                                list workspaces (with repos)")
 	fmt.Fprintln(w, "  status [<ID>]                      check dirty/untracked status")
-	fmt.Fprintln(w, "  rm [<ID>]                          remove workspace (clean only)")
+	fmt.Fprintln(w, "  rm [<ID>]                          remove workspace (confirms on warnings)")
 	fmt.Fprintln(w, "  open [<ID>]                        open workspace in subshell")
 	fmt.Fprintln(w, "  repo <subcommand>                  repo commands (get/ls)")
 	fmt.Fprintln(w, "  template <subcommand>              template commands (ls)")
@@ -87,7 +87,7 @@ func printStatusHelp(w io.Writer) {
 }
 
 func printRmHelp(w io.Writer) {
-	fmt.Fprintln(w, "Usage: gws rm <WORKSPACE_ID>")
+	fmt.Fprintln(w, "Usage: gws rm [<WORKSPACE_ID>]")
 }
 
 func printOpenHelp(w io.Writer) {

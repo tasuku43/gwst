@@ -9,7 +9,16 @@ import (
 	"github.com/tasuku43/gws/internal/core/paths"
 )
 
+type RemoveOptions struct {
+	AllowStatusError bool
+	AllowDirty       bool
+}
+
 func Remove(ctx context.Context, rootDir, workspaceID string) error {
+	return RemoveWithOptions(ctx, rootDir, workspaceID, RemoveOptions{})
+}
+
+func RemoveWithOptions(ctx context.Context, rootDir, workspaceID string, opts RemoveOptions) error {
 	if workspaceID == "" {
 		return fmt.Errorf("workspace id is required")
 	}
@@ -36,11 +45,16 @@ func Remove(ctx context.Context, rootDir, workspaceID string) error {
 		}
 		statusOut, statusErr := gitStatusPorcelain(ctx, repo.WorktreePath)
 		if statusErr != nil {
-			return fmt.Errorf("check status for %q: %w", repo.Alias, statusErr)
+			if !opts.AllowStatusError {
+				return fmt.Errorf("check status for %q: %w", repo.Alias, statusErr)
+			}
+			continue
 		}
 		_, _, _, dirty, _, _, _, _, _, _ := parseStatusPorcelainV2(statusOut, "")
 		if dirty {
-			return fmt.Errorf("workspace has dirty changes: %s", repo.Alias)
+			if !opts.AllowDirty {
+				return fmt.Errorf("workspace has dirty changes: %s", repo.Alias)
+			}
 		}
 	}
 
