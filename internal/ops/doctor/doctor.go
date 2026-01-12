@@ -147,14 +147,6 @@ func Fix(ctx context.Context, rootDir string, now time.Time) (FixResult, error) 
 	return FixResult{Result: result, Fixed: fixed}, nil
 }
 
-func dirExists(path string) bool {
-	info, err := os.Stat(path)
-	if err != nil {
-		return false
-	}
-	return info.IsDir()
-}
-
 func hasOriginRemote(storePath string) (bool, error) {
 	configPath := filepath.Join(storePath, "config")
 	data, err := os.ReadFile(configPath)

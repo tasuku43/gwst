@@ -11,9 +11,11 @@
 - Prefer minimal changes per task. Keep diffs focused.
 
 ## Development workflow
-- Always run formatting and tests before finishing a task:
+- Always run formatting, tests, vet, and build before finishing a task:
     - `gofmt -w .` (or `go fmt ./...` if you prefer)
     - `go test ./...`
+    - `go vet ./...`
+    - `go build ./...`
 - If you change CLI behavior, update docs in `docs/` and task notes if needed.
 - For UI implementations, always refer to `docs/UI.md` as the authoritative spec.
 - When you know the related issue for a PR, include the issue link/number in the PR body.

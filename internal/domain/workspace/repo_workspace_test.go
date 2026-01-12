@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/tasuku43/gws/internal/core/paths"
 	"github.com/tasuku43/gws/internal/domain/repo"
 	"github.com/tasuku43/gws/internal/domain/workspace"
 )
@@ -62,7 +63,7 @@ func TestRepoGetWorkspaceAddRemove(t *testing.T) {
 	if _, err := os.Stat(store.StorePath); err != nil {
 		t.Fatalf("store path missing: %v", err)
 	}
-	srcPath := filepath.Join(rootDir, "src", "example.com", "org", "repo")
+	srcPath := filepath.Join(paths.SrcRoot(rootDir), "example.com", "org", "repo")
 	if _, err := os.Stat(srcPath); err != nil {
 		t.Fatalf("src path missing: %v", err)
 	}
@@ -73,7 +74,7 @@ func TestRepoGetWorkspaceAddRemove(t *testing.T) {
 	if _, err := workspace.Add(ctx, rootDir, "WS-1", repoSpec, "", true); err != nil {
 		t.Fatalf("workspace add: %v", err)
 	}
-	worktreePath := filepath.Join(rootDir, "workspaces", "WS-1", "repo")
+	worktreePath := filepath.Join(workspace.WorkspaceDir(rootDir, "WS-1"), "repo")
 	if _, err := os.Stat(worktreePath); err != nil {
 		t.Fatalf("worktree missing: %v", err)
 	}
@@ -81,7 +82,7 @@ func TestRepoGetWorkspaceAddRemove(t *testing.T) {
 	if err := workspace.Remove(ctx, rootDir, "WS-1"); err != nil {
 		t.Fatalf("workspace remove: %v", err)
 	}
-	if _, err := os.Stat(filepath.Join(rootDir, "workspaces", "WS-1")); !os.IsNotExist(err) {
+	if _, err := os.Stat(workspace.WorkspaceDir(rootDir, "WS-1")); !os.IsNotExist(err) {
 		t.Fatalf("workspace still exists: %v", err)
 	}
 }
@@ -212,7 +213,7 @@ func TestWorkspaceAddRespectsFetchGrace(t *testing.T) {
 		t.Fatalf("workspace add: %v", err)
 	}
 
-	worktreePath := filepath.Join(rootDir, "workspaces", "WS-1", "repo")
+	worktreePath := filepath.Join(workspace.WorkspaceDir(rootDir, "WS-1"), "repo")
 	head := revParse(t, worktreePath, "HEAD")
 	if head != initialHash {
 		t.Fatalf("expected worktree HEAD to remain at initial hash due to fetch grace; got %s, want %s", head, initialHash)

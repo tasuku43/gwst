@@ -8,7 +8,7 @@ import (
 
 func TestListIncludesDescription(t *testing.T) {
 	rootDir := t.TempDir()
-	wsRoot := filepath.Join(rootDir, "workspaces")
+	wsRoot := WorkspacesRoot(rootDir)
 	if err := os.MkdirAll(wsRoot, 0o755); err != nil {
 		t.Fatalf("create workspaces dir: %v", err)
 	}

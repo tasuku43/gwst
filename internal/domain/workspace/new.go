@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/tasuku43/gws/internal/core/gitcmd"
+	"github.com/tasuku43/gws/internal/core/paths"
 )
 
 func New(ctx context.Context, rootDir string, workspaceID string) (string, error) {
@@ -17,8 +17,8 @@ func New(ctx context.Context, rootDir string, workspaceID string) (string, error
 		return "", fmt.Errorf("root directory is required")
 	}
 
-	wsDir := filepath.Join(rootDir, "workspaces", workspaceID)
-	if exists, err := pathExists(wsDir); err != nil {
+	wsDir := WorkspaceDir(rootDir, workspaceID)
+	if exists, err := paths.DirExists(wsDir); err != nil {
 		return "", err
 	} else if exists {
 		return "", fmt.Errorf("workspace already exists: %s", wsDir)
@@ -40,18 +40,4 @@ func validateWorkspaceID(ctx context.Context, workspaceID string) error {
 		return fmt.Errorf("invalid workspace id: %w", err)
 	}
 	return nil
-}
-
-func pathExists(path string) (bool, error) {
-	info, err := os.Stat(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return false, nil
-		}
-		return false, err
-	}
-	if !info.IsDir() {
-		return false, fmt.Errorf("path is not a directory: %s", path)
-	}
-	return true, nil
 }

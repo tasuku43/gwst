@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/tasuku43/gws/internal/core/gitcmd"
+	"github.com/tasuku43/gws/internal/core/paths"
 )
 
 func Remove(ctx context.Context, rootDir, workspaceID string) error {
@@ -17,8 +17,8 @@ func Remove(ctx context.Context, rootDir, workspaceID string) error {
 		return fmt.Errorf("root directory is required")
 	}
 
-	wsDir := filepath.Join(rootDir, "workspaces", workspaceID)
-	if exists, err := pathExists(wsDir); err != nil {
+	wsDir := WorkspaceDir(rootDir, workspaceID)
+	if exists, err := paths.DirExists(wsDir); err != nil {
 		return err
 	} else if !exists {
 		return fmt.Errorf("workspace does not exist: %s", wsDir)
@@ -52,7 +52,7 @@ func Remove(ctx context.Context, rootDir, workspaceID string) error {
 			return fmt.Errorf("missing worktree path for alias %q", repo.Alias)
 		}
 		gitcmd.Logf("git worktree remove %s", repo.WorktreePath)
-		if _, err := gitcmd.Run(ctx, []string{"worktree", "remove", repo.WorktreePath}, gitcmd.Options{Dir: repo.StorePath}); err != nil {
+		if err := gitcmd.WorktreeRemove(ctx, repo.StorePath, repo.WorktreePath); err != nil {
 			return fmt.Errorf("remove worktree %q: %w", repo.Alias, err)
 		}
 	}

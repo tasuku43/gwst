@@ -3,11 +3,11 @@ package workspace
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/tasuku43/gws/internal/core/gitcmd"
+	"github.com/tasuku43/gws/internal/core/paths"
 )
 
 type StatusResult struct {
@@ -41,8 +41,8 @@ func Status(ctx context.Context, rootDir, workspaceID string) (StatusResult, err
 		return StatusResult{}, fmt.Errorf("root directory is required")
 	}
 
-	wsDir := filepath.Join(rootDir, "workspaces", workspaceID)
-	if exists, err := pathExists(wsDir); err != nil {
+	wsDir := WorkspaceDir(rootDir, workspaceID)
+	if exists, err := paths.DirExists(wsDir); err != nil {
 		return StatusResult{}, err
 	} else if !exists {
 		return StatusResult{}, fmt.Errorf("workspace does not exist: %s", wsDir)
@@ -80,14 +80,7 @@ func Status(ctx context.Context, rootDir, workspaceID string) (StatusResult, err
 }
 
 func gitStatusPorcelain(ctx context.Context, worktreePath string) (string, error) {
-	res, err := gitcmd.Run(ctx, []string{"status", "--porcelain=v2", "-b"}, gitcmd.Options{Dir: worktreePath})
-	if err != nil {
-		if strings.TrimSpace(res.Stderr) != "" {
-			return "", fmt.Errorf("git status failed: %w: %s", err, strings.TrimSpace(res.Stderr))
-		}
-		return "", fmt.Errorf("git status failed: %w", err)
-	}
-	return res.Stdout, nil
+	return gitcmd.StatusPorcelainV2(ctx, worktreePath)
 }
 
 func parseStatusPorcelainV2(output, fallbackBranch string) (string, string, string, bool, int, int, int, int, int, int) {

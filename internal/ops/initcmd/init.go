@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/tasuku43/gws/internal/core/paths"
 )
 
 type Result struct {
@@ -24,12 +26,12 @@ func Run(rootDir string) (Result, error) {
 	result := Result{RootDir: rootDir}
 
 	dirs := []string{
-		filepath.Join(rootDir, "bare"),
-		filepath.Join(rootDir, "src"),
-		filepath.Join(rootDir, "workspaces"),
+		paths.BareRoot(rootDir),
+		paths.SrcRoot(rootDir),
+		paths.WorkspacesRoot(rootDir),
 	}
 	for _, dir := range dirs {
-		if exists, err := dirExists(dir); err != nil {
+		if exists, err := paths.DirExists(dir); err != nil {
 			return Result{}, err
 		} else if exists {
 			result.SkippedDirs = append(result.SkippedDirs, dir)
@@ -42,7 +44,7 @@ func Run(rootDir string) (Result, error) {
 	}
 
 	templatesPath := filepath.Join(rootDir, "templates.yaml")
-	if exists, err := fileExists(templatesPath); err != nil {
+	if exists, err := paths.FileExists(templatesPath); err != nil {
 		return Result{}, err
 	} else if exists {
 		result.SkippedFiles = append(result.SkippedFiles, templatesPath)
@@ -54,28 +56,6 @@ func Run(rootDir string) (Result, error) {
 	}
 
 	return result, nil
-}
-
-func dirExists(path string) (bool, error) {
-	info, err := os.Stat(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return false, nil
-		}
-		return false, err
-	}
-	return info.IsDir(), nil
-}
-
-func fileExists(path string) (bool, error) {
-	info, err := os.Stat(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return false, nil
-		}
-		return false, err
-	}
-	return !info.IsDir(), nil
 }
 
 type templatesFile struct {

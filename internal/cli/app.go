@@ -773,7 +773,7 @@ func runCreateTemplateWithInputs(ctx context.Context, rootDir string, inputs cre
 		return err
 	}
 
-	output.Step(formatStep("create workspace", workspaceID, relPath(rootDir, filepath.Join(rootDir, "workspaces", workspaceID))))
+	output.Step(formatStep("create workspace", workspaceID, relPath(rootDir, workspace.WorkspaceDir(rootDir, workspaceID))))
 	wsDir, err := workspace.New(ctx, rootDir, workspaceID)
 	if err != nil {
 		return err
@@ -863,13 +863,13 @@ func runWorkspaceAdd(ctx context.Context, rootDir string, args []string) error {
 	if _, err := workspace.Add(ctx, rootDir, workspaceID, repoSpec, "", false); err != nil {
 		return err
 	}
-	wsDir := filepath.Join(rootDir, "workspaces", workspaceID)
+	wsDir := workspace.WorkspaceDir(rootDir, workspaceID)
 	repos, _, _ := loadWorkspaceRepos(ctx, wsDir)
 	renderer.Blank()
 	renderer.Section("Result")
 	description := loadWorkspaceDescription(wsDir)
 	renderWorkspaceBlock(renderer, workspaceID, description, repos)
-	renderSuggestion(renderer, useColor, filepath.Join(rootDir, "workspaces", workspaceID))
+	renderSuggestion(renderer, useColor, workspace.WorkspaceDir(rootDir, workspaceID))
 	return nil
 }
 
@@ -953,7 +953,7 @@ func runCreateIssue(ctx context.Context, rootDir, issueURL, workspaceID, branch,
 		}
 	}
 
-	output.Step(formatStep("create workspace", workspaceID, relPath(rootDir, filepath.Join(rootDir, "workspaces", workspaceID))))
+	output.Step(formatStep("create workspace", workspaceID, relPath(rootDir, workspace.WorkspaceDir(rootDir, workspaceID))))
 	wsDir, err := workspace.New(ctx, rootDir, workspaceID)
 	if err != nil {
 		return err
@@ -1094,7 +1094,7 @@ func runIssue(ctx context.Context, rootDir string, args []string, noPrompt bool)
 		}
 	}
 
-	output.Step(formatStep("create workspace", workspaceID, relPath(rootDir, filepath.Join(rootDir, "workspaces", workspaceID))))
+	output.Step(formatStep("create workspace", workspaceID, relPath(rootDir, workspace.WorkspaceDir(rootDir, workspaceID))))
 	wsDir, err := workspace.New(ctx, rootDir, workspaceID)
 	if err != nil {
 		return err
@@ -1233,7 +1233,7 @@ func runIssuePicker(ctx context.Context, rootDir string, noPrompt bool, title st
 		}
 		workspaceID := fmt.Sprintf("ISSUE-%d-%s-%s", num, selectedRepo.Owner, selectedRepo.Repo)
 		branch := fmt.Sprintf("issue/%d", num)
-		output.Step(formatStep("create workspace", workspaceID, relPath(rootDir, filepath.Join(rootDir, "workspaces", workspaceID))))
+		output.Step(formatStep("create workspace", workspaceID, relPath(rootDir, workspace.WorkspaceDir(rootDir, workspaceID))))
 		wsDir, err := workspace.New(ctx, rootDir, workspaceID)
 		if err != nil {
 			failure = err
@@ -1356,7 +1356,7 @@ func runCreateIssueSelected(ctx context.Context, rootDir string, noPrompt bool, 
 		}
 		workspaceID := fmt.Sprintf("ISSUE-%d-%s-%s", num, selectedRepo.Owner, selectedRepo.Repo)
 		branch := fmt.Sprintf("issue/%d", num)
-		output.Step(formatStep("create workspace", workspaceID, relPath(rootDir, filepath.Join(rootDir, "workspaces", workspaceID))))
+		output.Step(formatStep("create workspace", workspaceID, relPath(rootDir, workspace.WorkspaceDir(rootDir, workspaceID))))
 		wsDir, err := workspace.New(ctx, rootDir, workspaceID)
 		if err != nil {
 			failure = err
@@ -1660,7 +1660,7 @@ func runCreateReview(ctx context.Context, rootDir, prURL string, noPrompt bool) 
 	}
 
 	workspaceID := fmt.Sprintf("REVIEW-PR-%d-%s-%s", pr.Number, baseOwner, baseRepo)
-	output.Step(formatStep("create workspace", workspaceID, relPath(rootDir, filepath.Join(rootDir, "workspaces", workspaceID))))
+	output.Step(formatStep("create workspace", workspaceID, relPath(rootDir, workspace.WorkspaceDir(rootDir, workspaceID))))
 	wsDir, err := workspace.New(ctx, rootDir, workspaceID)
 	if err != nil {
 		return err
@@ -1800,7 +1800,7 @@ func runCreateReviewPicker(ctx context.Context, rootDir string, noPrompt bool) e
 		}
 		description := pr.Title
 		workspaceID := fmt.Sprintf("REVIEW-PR-%d-%s-%s", num, selectedRepo.Owner, selectedRepo.Repo)
-		output.Step(formatStep("create workspace", workspaceID, relPath(rootDir, filepath.Join(rootDir, "workspaces", workspaceID))))
+		output.Step(formatStep("create workspace", workspaceID, relPath(rootDir, workspace.WorkspaceDir(rootDir, workspaceID))))
 		wsDir, err := workspace.New(ctx, rootDir, workspaceID)
 		if err != nil {
 			failure = err
@@ -1938,7 +1938,7 @@ func runCreateReviewSelected(ctx context.Context, rootDir string, noPrompt bool,
 		}
 		description := pr.Title
 		workspaceID := fmt.Sprintf("REVIEW-PR-%d-%s-%s", num, selectedRepo.Owner, selectedRepo.Repo)
-		output.Step(formatStep("create workspace", workspaceID, relPath(rootDir, filepath.Join(rootDir, "workspaces", workspaceID))))
+		output.Step(formatStep("create workspace", workspaceID, relPath(rootDir, workspace.WorkspaceDir(rootDir, workspaceID))))
 		wsDir, err := workspace.New(ctx, rootDir, workspaceID)
 		if err != nil {
 			failure = err
@@ -2225,7 +2225,7 @@ func runReview(ctx context.Context, rootDir string, args []string, noPrompt bool
 		}
 	}
 
-	output.Step(formatStep("create workspace", workspaceID, relPath(rootDir, filepath.Join(rootDir, "workspaces", workspaceID))))
+	output.Step(formatStep("create workspace", workspaceID, relPath(rootDir, workspace.WorkspaceDir(rootDir, workspaceID))))
 	wsDir, err := workspace.New(ctx, rootDir, workspaceID)
 	if err != nil {
 		return err
@@ -2574,8 +2574,8 @@ func displayTemplateRepo(repoSpec string) string {
 	if trimmed == "" {
 		return ""
 	}
-	spec, err := repospec.Normalize(trimmed)
-	if err != nil {
+	spec, ok := normalizeRepoSpec(trimmed)
+	if !ok {
 		return trimmed
 	}
 	return fmt.Sprintf("git@%s:%s/%s.git", spec.Host, spec.Owner, spec.Repo)
@@ -2590,8 +2590,8 @@ func displayRepoName(repoSpec string) string {
 	if trimmed == "" {
 		return ""
 	}
-	spec, err := repospec.Normalize(trimmed)
-	if err != nil || spec.Repo == "" {
+	spec, ok := normalizeRepoSpec(trimmed)
+	if !ok || spec.Repo == "" {
 		return trimmed
 	}
 	return spec.Repo
@@ -2610,38 +2610,50 @@ func repoDestForSpec(rootDir, repoSpec string) string {
 }
 
 func repoStoreRel(rootDir, repoSpec string) string {
-	spec, err := repospec.Normalize(strings.TrimSpace(repoSpec))
-	if err != nil {
+	spec, ok := normalizeRepoSpec(repoSpec)
+	if !ok {
 		return ""
 	}
-	storePath := filepath.Join(rootDir, "bare", spec.Host, spec.Owner, spec.Repo+".git")
+	storePath := repo.StorePath(rootDir, spec)
 	return relPath(rootDir, storePath)
 }
 
 func repoSrcRel(rootDir, repoSpec string) string {
-	spec, err := repospec.Normalize(strings.TrimSpace(repoSpec))
-	if err != nil {
+	spec, ok := normalizeRepoSpec(repoSpec)
+	if !ok {
 		return ""
 	}
-	srcPath := filepath.Join(rootDir, "src", spec.Host, spec.Owner, spec.Repo)
+	srcPath := repo.SrcPath(rootDir, spec)
 	return relPath(rootDir, srcPath)
 }
 
 func repoSrcAbs(rootDir, repoSpec string) string {
-	spec, err := repospec.Normalize(strings.TrimSpace(repoSpec))
-	if err != nil {
+	spec, ok := normalizeRepoSpec(repoSpec)
+	if !ok {
 		return ""
 	}
-	return filepath.Join(rootDir, "src", spec.Host, spec.Owner, spec.Repo)
+	return repo.SrcPath(rootDir, spec)
 }
 
 func worktreeDest(rootDir, workspaceID, repoSpec string) string {
-	spec, err := repospec.Normalize(strings.TrimSpace(repoSpec))
-	if err != nil || spec.Repo == "" {
+	spec, ok := normalizeRepoSpec(repoSpec)
+	if !ok || spec.Repo == "" {
 		return ""
 	}
-	wsPath := filepath.Join(rootDir, "workspaces", workspaceID, spec.Repo)
+	wsPath := filepath.Join(workspace.WorkspaceDir(rootDir, workspaceID), spec.Repo)
 	return relPath(rootDir, wsPath)
+}
+
+func normalizeRepoSpec(repoSpec string) (repospec.Spec, bool) {
+	trimmed := strings.TrimSpace(repoSpec)
+	if trimmed == "" {
+		return repospec.Spec{}, false
+	}
+	spec, err := repospec.Normalize(trimmed)
+	if err != nil {
+		return repospec.Spec{}, false
+	}
+	return spec, true
 }
 
 func relPath(rootDir, path string) string {
@@ -3165,7 +3177,7 @@ func runWorkspaceRemove(ctx context.Context, rootDir string, args []string) erro
 			renderer.Blank()
 		}
 		renderer.Section("Steps")
-		output.Step(formatStep("remove workspace", workspaceID, relPath(rootDir, filepath.Join(rootDir, "workspaces", workspaceID))))
+		output.Step(formatStep("remove workspace", workspaceID, relPath(rootDir, workspace.WorkspaceDir(rootDir, workspaceID))))
 
 		if err := workspace.Remove(ctx, rootDir, workspaceID); err != nil {
 			return err
@@ -3198,7 +3210,7 @@ func runWorkspaceRemove(ctx context.Context, rootDir string, args []string) erro
 
 	renderer.Section("Steps")
 	for i, selectedID := range selected {
-		output.Step(formatStepWithIndex("remove workspace", selectedID, relPath(rootDir, filepath.Join(rootDir, "workspaces", selectedID)), i+1, len(selected)))
+		output.Step(formatStepWithIndex("remove workspace", selectedID, relPath(rootDir, workspace.WorkspaceDir(rootDir, selectedID)), i+1, len(selected)))
 		if err := workspace.Remove(ctx, rootDir, selectedID); err != nil {
 			return err
 		}

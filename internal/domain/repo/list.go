@@ -1,9 +1,10 @@
 package repo
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/tasuku43/gws/internal/core/paths"
 )
 
 type Entry struct {
@@ -12,16 +13,13 @@ type Entry struct {
 }
 
 func List(rootDir string) ([]Entry, []error, error) {
-	reposRoot := filepath.Join(rootDir, "bare")
-	info, err := os.Stat(reposRoot)
+	reposRoot := paths.BareRoot(rootDir)
+	exists, err := paths.DirExists(reposRoot)
 	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, nil, nil
-		}
 		return nil, nil, err
 	}
-	if !info.IsDir() {
-		return nil, nil, fmt.Errorf("repos path is not a directory: %s", reposRoot)
+	if !exists {
+		return nil, nil, nil
 	}
 
 	var entries []Entry

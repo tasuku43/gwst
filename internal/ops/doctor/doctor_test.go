@@ -6,13 +6,15 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/tasuku43/gws/internal/core/paths"
 )
 
 func TestCheckFindsIssues(t *testing.T) {
 	rootDir := t.TempDir()
 	now := time.Now().UTC()
 
-	wsDir := filepath.Join(rootDir, "workspaces", "WS1")
+	wsDir := filepath.Join(paths.WorkspacesRoot(rootDir), "WS1")
 	if err := os.MkdirAll(wsDir, 0o755); err != nil {
 		t.Fatalf("mkdir ws: %v", err)
 	}
@@ -20,7 +22,7 @@ func TestCheckFindsIssues(t *testing.T) {
 		t.Fatalf("mkdir non-git dir: %v", err)
 	}
 
-	repoNoRemote := filepath.Join(rootDir, "bare", "example.com", "org", "noremote.git")
+	repoNoRemote := filepath.Join(paths.BareRoot(rootDir), "example.com", "org", "noremote.git")
 	if err := os.MkdirAll(repoNoRemote, 0o755); err != nil {
 		t.Fatalf("mkdir repo noremote: %v", err)
 	}

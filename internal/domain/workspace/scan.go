@@ -74,14 +74,7 @@ func inspectRepo(ctx context.Context, repoPath, alias string) (Repo, error, bool
 }
 
 func gitRevParse(ctx context.Context, repoPath, arg string) (string, error) {
-	res, err := gitcmd.Run(ctx, []string{"rev-parse", arg}, gitcmd.Options{Dir: repoPath})
-	if err != nil {
-		if strings.TrimSpace(res.Stderr) != "" {
-			return "", fmt.Errorf("git rev-parse %s failed: %w: %s", arg, err, strings.TrimSpace(res.Stderr))
-		}
-		return "", fmt.Errorf("git rev-parse %s failed: %w", arg, err)
-	}
-	return strings.TrimSpace(res.Stdout), nil
+	return gitcmd.RevParse(ctx, repoPath, arg)
 }
 
 func resolveGitPath(repoPath, value string) string {
@@ -95,22 +88,18 @@ func resolveGitPath(repoPath, value string) string {
 }
 
 func readBranch(ctx context.Context, repoPath string) string {
-	res, err := gitcmd.Run(ctx, []string{"symbolic-ref", "--short", "HEAD"}, gitcmd.Options{Dir: repoPath})
-	if err == nil {
-		return strings.TrimSpace(res.Stdout)
+	branch, ok, err := gitcmd.SymbolicRef(ctx, repoPath, "HEAD")
+	if err == nil && ok && branch != "" {
+		return strings.TrimPrefix(branch, "refs/heads/")
 	}
 	return ""
 }
 
 func readRepoSpec(ctx context.Context, repoPath string) (string, string, error) {
-	res, err := gitcmd.Run(ctx, []string{"remote", "get-url", "origin"}, gitcmd.Options{Dir: repoPath})
+	remoteURL, err := gitcmd.RemoteGetURL(ctx, repoPath, "origin")
 	if err != nil {
-		if strings.TrimSpace(res.Stderr) != "" {
-			return "", "", fmt.Errorf("origin remote missing: %s", strings.TrimSpace(res.Stderr))
-		}
-		return "", "", fmt.Errorf("origin remote missing")
+		return "", "", fmt.Errorf("origin remote missing: %w", err)
 	}
-	remoteURL := strings.TrimSpace(res.Stdout)
 	if remoteURL == "" {
 		return "", "", fmt.Errorf("origin remote is empty")
 	}

@@ -79,12 +79,13 @@ func (f *Frame) SetSuggestion(lines ...string) {
 
 func (f *Frame) Render() string {
 	var b strings.Builder
-	f.WriteTo(&b)
+	_, _ = f.WriteTo(&b)
 	return b.String()
 }
 
-func (f *Frame) WriteTo(w io.Writer) {
-	r := NewRenderer(w, f.theme, f.useColor)
+func (f *Frame) WriteTo(w io.Writer) (int64, error) {
+	cw := &countingWriter{w: w}
+	r := NewRenderer(cw, f.theme, f.useColor)
 
 	if len(f.Inputs) > 0 {
 		r.Section("Inputs")
@@ -124,6 +125,8 @@ func (f *Frame) WriteTo(w io.Writer) {
 			renderLine(r, line)
 		}
 	}
+
+	return cw.n, cw.err
 }
 
 type frameLine struct {
@@ -139,6 +142,24 @@ const (
 	lineStep
 	lineRaw
 )
+
+type countingWriter struct {
+	w   io.Writer
+	n   int64
+	err error
+}
+
+func (cw *countingWriter) Write(p []byte) (int, error) {
+	if cw.err != nil {
+		return 0, cw.err
+	}
+	n, err := cw.w.Write(p)
+	cw.n += int64(n)
+	if err != nil {
+		cw.err = err
+	}
+	return n, err
+}
 
 func renderLine(r *Renderer, line frameLine) {
 	if strings.TrimSpace(line.text) == "" {

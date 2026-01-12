@@ -3,8 +3,9 @@ package workspace
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
+
+	"github.com/tasuku43/gws/internal/core/paths"
 )
 
 type Entry struct {
@@ -14,16 +15,13 @@ type Entry struct {
 }
 
 func List(rootDir string) ([]Entry, []error, error) {
-	wsRoot := filepath.Join(rootDir, "workspaces")
-	info, err := os.Stat(wsRoot)
+	wsRoot := WorkspacesRoot(rootDir)
+	exists, err := paths.DirExists(wsRoot)
 	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, nil, nil
-		}
 		return nil, nil, err
 	}
-	if !info.IsDir() {
-		return nil, nil, fmt.Errorf("workspaces path is not a directory: %s", wsRoot)
+	if !exists {
+		return nil, nil, nil
 	}
 
 	entries, err := os.ReadDir(wsRoot)
@@ -39,7 +37,7 @@ func List(rootDir string) ([]Entry, []error, error) {
 			continue
 		}
 		wsID := entry.Name()
-		wsPath := filepath.Join(wsRoot, wsID)
+		wsPath := WorkspaceDir(rootDir, wsID)
 
 		description := ""
 		meta, err := LoadMetadata(wsPath)

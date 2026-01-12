@@ -74,7 +74,7 @@ func runWorkspaceOpen(ctx context.Context, rootDir string, args []string, noProm
 		}
 	}
 
-	wsDir := filepath.Join(rootDir, "workspaces", workspaceID)
+	wsDir := workspace.WorkspaceDir(rootDir, workspaceID)
 	if info, err := os.Stat(wsDir); err != nil {
 		if os.IsNotExist(err) {
 			return fmt.Errorf("workspace does not exist: %s", wsDir)

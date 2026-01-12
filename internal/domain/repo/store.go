@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/tasuku43/gws/internal/core/gitcmd"
+	"github.com/tasuku43/gws/internal/core/paths"
 	"github.com/tasuku43/gws/internal/domain/repospec"
 )
 
@@ -28,7 +29,7 @@ func Get(ctx context.Context, rootDir string, repo string) (Store, error) {
 
 	storePath := storePathForSpec(rootDir, spec)
 
-	exists, err := pathExists(storePath)
+	exists, err := paths.DirExists(storePath)
 	if err != nil {
 		return Store{}, err
 	}
@@ -67,7 +68,7 @@ func Open(ctx context.Context, rootDir string, repo string, fetch bool) (Store, 
 
 	storePath := storePathForSpec(rootDir, spec)
 
-	exists, err := pathExists(storePath)
+	exists, err := paths.DirExists(storePath)
 	if err != nil {
 		return Store{}, err
 	}
@@ -87,8 +88,8 @@ func Open(ctx context.Context, rootDir string, repo string, fetch bool) (Store, 
 }
 
 func ensureSrc(ctx context.Context, rootDir string, spec repospec.Spec, storePath, remoteURL string, fetch bool) error {
-	srcPath := filepath.Join(rootDir, "src", spec.Host, spec.Owner, spec.Repo)
-	if exists, err := pathExists(srcPath); err != nil {
+	srcPath := SrcPath(rootDir, spec)
+	if exists, err := paths.DirExists(srcPath); err != nil {
 		return err
 	} else if exists {
 		if fetch {
@@ -107,7 +108,7 @@ func ensureSrc(ctx context.Context, rootDir string, spec repospec.Spec, storePat
 	if _, err := gitcmd.Run(ctx, []string{"clone", storePath, srcPath}, gitcmd.Options{}); err != nil {
 		return err
 	}
-	_, _ = gitcmd.Run(ctx, []string{"remote", "set-url", "origin", remoteURL}, gitcmd.Options{Dir: srcPath})
+	_ = gitcmd.RemoteSetURL(ctx, srcPath, "origin", remoteURL)
 	return nil
 }
 
@@ -117,7 +118,7 @@ func Exists(rootDir, repo string) (string, bool, error) {
 		return "", false, err
 	}
 	storePath := storePathForSpec(rootDir, spec)
-	exists, err := pathExists(storePath)
+	exists, err := paths.DirExists(storePath)
 	if err != nil {
 		return "", false, err
 	}
@@ -125,7 +126,7 @@ func Exists(rootDir, repo string) (string, bool, error) {
 }
 
 func storePathForSpec(rootDir string, spec repospec.Spec) string {
-	return filepath.Join(rootDir, "bare", spec.Host, spec.Owner, spec.Repo+".git")
+	return StorePath(rootDir, spec)
 }
 
 func normalizeStore(ctx context.Context, storePath, display string, fetch bool) error {
@@ -215,34 +216,26 @@ func defaultBranchFromRemote(ctx context.Context, storePath string) (string, str
 
 func localRemoteHash(ctx context.Context, storePath, branch string) (string, error) {
 	ref := fmt.Sprintf("refs/remotes/origin/%s", branch)
-	res, err := gitcmd.Run(ctx, []string{"show-ref", "--verify", ref}, gitcmd.Options{Dir: storePath})
-	if err == nil {
-		fields := strings.Fields(strings.TrimSpace(res.Stdout))
-		if len(fields) >= 1 {
-			return fields[0], nil
-		}
+	hash, exists, err := gitcmd.ShowRef(ctx, storePath, ref)
+	if err != nil {
+		return "", err
+	}
+	if !exists {
 		return "", nil
 	}
-	if res.ExitCode == 1 || (res.ExitCode == 128 && strings.Contains(res.Stderr, "not a valid ref")) {
-		return "", nil
-	}
-	return "", err
+	return hash, nil
 }
 
 func localHeadHash(ctx context.Context, storePath, branch string) (string, error) {
 	ref := fmt.Sprintf("refs/heads/%s", branch)
-	res, err := gitcmd.Run(ctx, []string{"show-ref", "--verify", ref}, gitcmd.Options{Dir: storePath})
-	if err == nil {
-		fields := strings.Fields(strings.TrimSpace(res.Stdout))
-		if len(fields) >= 1 {
-			return fields[0], nil
-		}
+	hash, exists, err := gitcmd.ShowRef(ctx, storePath, ref)
+	if err != nil {
+		return "", err
+	}
+	if !exists {
 		return "", nil
 	}
-	if res.ExitCode == 1 || (res.ExitCode == 128 && strings.Contains(res.Stderr, "not a valid ref")) {
-		return "", nil
-	}
-	return "", err
+	return hash, nil
 }
 
 func pruneLocalHeads(ctx context.Context, storePath, keepBranch string) error {
@@ -277,12 +270,12 @@ func pruneLocalHeads(ctx context.Context, storePath, keepBranch string) error {
 }
 
 func worktreeBranchNames(ctx context.Context, storePath string) (map[string]struct{}, error) {
-	res, err := gitcmd.Run(ctx, []string{"worktree", "list", "--porcelain"}, gitcmd.Options{Dir: storePath})
+	out, err := gitcmd.WorktreeListPorcelain(ctx, storePath)
 	if err != nil {
 		return nil, err
 	}
 	branches := make(map[string]struct{})
-	lines := strings.Split(strings.TrimSpace(res.Stdout), "\n")
+	lines := strings.Split(strings.TrimSpace(out), "\n")
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 		if !strings.HasPrefix(line, "branch ") {
@@ -297,20 +290,6 @@ func worktreeBranchNames(ctx context.Context, storePath string) (map[string]stru
 		}
 	}
 	return branches, nil
-}
-
-func pathExists(path string) (bool, error) {
-	info, err := os.Stat(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return false, nil
-		}
-		return false, err
-	}
-	if !info.IsDir() {
-		return false, fmt.Errorf("path is not a directory: %s", path)
-	}
-	return true, nil
 }
 
 func fetchGraceDuration() time.Duration {
@@ -337,14 +316,13 @@ func recentlyFetched(storePath string, grace time.Duration) bool {
 }
 
 func localDefaultBranch(ctx context.Context, storePath string) (string, error) {
-	res, err := gitcmd.Run(ctx, []string{"symbolic-ref", "--quiet", "refs/remotes/origin/HEAD"}, gitcmd.Options{Dir: storePath})
+	ref, ok, err := gitcmd.SymbolicRef(ctx, storePath, "refs/remotes/origin/HEAD")
 	if err != nil {
-		if res.ExitCode == 1 {
-			return "", nil
-		}
 		return "", err
 	}
-	ref := strings.TrimSpace(res.Stdout)
+	if !ok {
+		return "", nil
+	}
 	if strings.HasPrefix(ref, "refs/remotes/origin/") {
 		return strings.TrimPrefix(ref, "refs/remotes/origin/"), nil
 	}
