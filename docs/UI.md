@@ -85,7 +85,7 @@ Steps
 
 ## Examples
 
-### gws new (interactive)
+### gws create --template (interactive)
 ```
 Inputs
   • template: hel
@@ -100,19 +100,19 @@ Result
     └─ helmfiles (branch: SREP-123)
 ```
 
-### gws new (non-interactive)
+### gws create --template (non-interactive)
 ```
 Steps
   › repo get git@github.com:org/repo.git
   › worktree add repo
 
 Result
-  /Users/me/gws/workspaces/REVIEW-PR-123
+  /Users/me/gws/workspaces/SREP-123
     ├─ repo
     └─ api
 ```
 
-### gws review (interactive)
+### gws create --review (interactive)
 ```
 Steps
   • repo get required for 1 repo

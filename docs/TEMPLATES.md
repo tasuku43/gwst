@@ -19,12 +19,12 @@ templates:
 - 過去の形式（`repos: - repo: ...`）も読み込み可能
 
 ルール:
-- `gws new` でテンプレート名を指定（未指定なら対話）
+- `gws create --template <name>` でテンプレート名を指定（未指定なら対話）
 - repo は `gws repo get` 済みであることが前提（未取得ならエラー）
 - テンプレートの編集は `templates.yaml` を直接編集する
 
 repo get の補助:
-- 未取得 repo がある場合は `gws new` が対話で `repo get` を実行するか確認する
+- 未取得 repo がある場合は `gws create --template` が対話で `repo get` を実行するか確認する
 
 repo 形式:
 - `git@github.com:owner/repo.git`

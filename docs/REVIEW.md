@@ -1,4 +1,4 @@
-# gws review（PR レビュー用ワークスペース）
+# gws create --review（PR レビュー用ワークスペース）
 
 状態: draft（MVP 以降）
 
@@ -7,29 +7,25 @@
 - 人間/エージェントがレビュー開始時に迷わず作業環境を整えられる
 
 ## コマンド
-- `gws review <PR URL>`
+- `gws create --review <PR URL>`
 
 ## 対象範囲（MVP 以降）
-- GitHub / GitLab / Bitbucket Cloud の PR/MR URL に対応
-- fork PR/MR も対応
-- GitLab は `owner/repo` 一階層のみ対応（サブグループ未対応）
-- Bitbucket Cloud は `bitbucket.org/<owner>/<repo>/pull-requests/<n>` をサポート
+- GitHub の PR URL に対応
+- fork PR は非対応
 - 既存 workspace がある場合はエラー
 
 ## 仕様（動作）
-1. PR/MR URL から `host/owner/repo` と番号を取得（GitHub: pull/<n>、GitLab: merge_requests/<n>）
+1. PR URL から `host/owner/repo` と番号を取得（GitHub: pull/<n>）
 2. repo store が未取得なら `repo get` と同等の導線で取得（対話）
 3. workspace を作成
    - workspace ID は `REVIEW-PR-<number>` を使用（例: `REVIEW-PR-123`）
-4. PR/MR の ref を直接 fetch
-   - GitHub: `git fetch origin pull/<n>/head:refs/remotes/gws-review/<id>`
-   - GitLab: `git fetch origin merge-requests/<n>/head:refs/remotes/gws-review/<id>`
-   - Bitbucket: `git fetch origin refs/pull-requests/<n>/from:refs/remotes/gws-review/<id>`
+4. PR の head ref を fetch
+   - `git fetch origin <head_ref>`
 5. fetch した ref を base に worktree を作成
-   - worktree ブランチ名は workspace ID と同じ
+   - worktree ブランチ名は PR の head ref と同じ
 
 ## 出力
-- `gws new` と同じ UX（インデント/進捗表示）
+- `gws create` と同じ UX（インデント/進捗表示）
 - 最後に workspace ツリーを表示
 
 ## エラー

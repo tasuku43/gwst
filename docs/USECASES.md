@@ -17,13 +17,13 @@ Rating legend:
 - **Switch roots** — Use `--root` or `GWS_ROOT` to separate environments. Rating: Excellent
 
 ## Start / During a Task
-- **Create workspace from template** — `gws new [--template <name>] [<id>]`; prompts if omitted. `workspace_id` becomes the branch name for all repos. Rating: Excellent (interactive repo-get prompt appears when a template repo is missing)
->- **Add a repo mid-task** — `gws add <id> <repo>`; branch name = workspace_id, base = origin/HEAD. Rating: Excellent
+- **Create workspace from template** — `gws create --template <name> [<id>]`; prompts if omitted. `workspace_id` becomes the branch name for all repos. Rating: Excellent (interactive repo-get prompt appears when a template repo is missing)
+- **Add a repo mid-task** — `gws add <id> <repo>`; branch name = workspace_id, base = origin/HEAD. Rating: Excellent
 - **List workspaces** — `gws ls` enumerates workspaces. Rating: Good (minimal detail only)
 - **Check status** — `gws status <id>` shows dirty/untracked counts and HEAD per repo. Rating: Excellent (lightweight)
 
 ## Reviews
-- **Start a PR/MR review** — `gws review <PR/MR URL>` creates `REVIEW-PR-<num>`, fetches the PR/MR ref directly (forks supported) for GitHub, GitLab, Bitbucket Cloud; no `gh` dependency. Rating: Excellent (limited to the three hosts)
+- **Start a PR review** — `gws create --review <PR URL>` creates `REVIEW-PR-<num>`, fetches the PR head branch (forks not supported) for GitHub; requires `gh`. Rating: Good (GitHub only)
 - **Add repos during review** — Use `gws add` after the review workspace is created. Rating: Good
 
 ## Cleanup / Maintenance
@@ -41,4 +41,4 @@ Rating legend:
 - `gws ls` lacks detail; in busy teams it’s hard to get a quick overview.
 - `gws doctor` checks only a narrow set; does not catch orphan worktrees, branch conflicts, or stale workspace artifacts.
 - No JSON/machine-readable output; agents must parse human text.
-- After `gws review`, pulling newer PR/MR updates still requires manual fetch; no auto-sync or “refresh review” command.
+- After `gws create --review`, pulling newer PR updates still requires manual fetch; no auto-sync or “refresh review” command.

@@ -90,12 +90,8 @@ func Run() error {
 		return runRepo(ctx, rootDir, args[1:])
 	case "template":
 		return runTemplate(ctx, rootDir, args[1:], noPrompt)
-	case "new":
-		return runWorkspaceNew(ctx, rootDir, args[1:], noPrompt)
-	case "review":
-		return runReview(ctx, rootDir, args[1:], noPrompt)
-	case "issue":
-		return runIssue(ctx, rootDir, args[1:], noPrompt)
+	case "create":
+		return runCreate(ctx, rootDir, args[1:], noPrompt)
 	case "add":
 		return runWorkspaceAdd(ctx, rootDir, args[1:])
 	case "ls":
@@ -181,6 +177,50 @@ func (s *stringSliceFlag) String() string {
 func (s *stringSliceFlag) Set(value string) error {
 	*s = append(*s, value)
 	return nil
+}
+
+type stringFlag struct {
+	value string
+	set   bool
+}
+
+func (s *stringFlag) String() string {
+	return s.value
+}
+
+func (s *stringFlag) Set(value string) error {
+	s.value = value
+	s.set = true
+	return nil
+}
+
+type boolFlag struct {
+	value bool
+	set   bool
+}
+
+func (b *boolFlag) String() string {
+	if b == nil {
+		return "false"
+	}
+	if b.value {
+		return "true"
+	}
+	return "false"
+}
+
+func (b *boolFlag) Set(value string) error {
+	parsed, err := strconv.ParseBool(value)
+	if err != nil {
+		return err
+	}
+	b.value = parsed
+	b.set = true
+	return nil
+}
+
+func (b *boolFlag) IsBoolFlag() bool {
+	return true
 }
 
 func runTemplateNew(ctx context.Context, rootDir string, args []string, noPrompt bool) error {
@@ -309,6 +349,141 @@ func runTemplateNew(ctx context.Context, rootDir string, args []string, noPrompt
 	}
 	renderTreeLines(renderer, reposDisplay, treeLineNormal)
 	return nil
+}
+
+func runCreate(ctx context.Context, rootDir string, args []string, noPrompt bool) error {
+	createFlags := flag.NewFlagSet("create", flag.ContinueOnError)
+	var templateName stringFlag
+	var reviewFlag boolFlag
+	var issueFlag boolFlag
+	var workspaceID string
+	var branch string
+	var baseRef string
+	var helpFlag bool
+	createFlags.Var(&templateName, "template", "template name")
+	createFlags.Var(&reviewFlag, "review", "create review workspace from PR")
+	createFlags.Var(&issueFlag, "issue", "create issue workspace from issue")
+	createFlags.StringVar(&workspaceID, "workspace-id", "", "workspace id")
+	createFlags.StringVar(&branch, "branch", "", "branch name")
+	createFlags.StringVar(&baseRef, "base", "", "base ref")
+	createFlags.BoolVar(&helpFlag, "help", false, "show help")
+	createFlags.BoolVar(&helpFlag, "h", false, "show help")
+	createFlags.SetOutput(os.Stdout)
+	createFlags.Usage = func() {
+		printCreateHelp(os.Stdout)
+	}
+	if err := createFlags.Parse(normalizeCreateArgs(args)); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return nil
+		}
+		return err
+	}
+	if helpFlag {
+		printCreateHelp(os.Stdout)
+		return nil
+	}
+
+	workspaceID = strings.TrimSpace(workspaceID)
+	branch = strings.TrimSpace(branch)
+	baseRef = strings.TrimSpace(baseRef)
+	templateName.value = strings.TrimSpace(templateName.value)
+
+	templateMode := templateName.set
+	reviewMode := reviewFlag.value
+	issueMode := issueFlag.value
+	modeCount := 0
+	if templateMode {
+		modeCount++
+	}
+	if reviewMode {
+		modeCount++
+	}
+	if issueMode {
+		modeCount++
+	}
+	if modeCount > 1 {
+		return fmt.Errorf("specify exactly one mode: --template, --review, or --issue")
+	}
+	if modeCount == 0 {
+		if noPrompt {
+			return fmt.Errorf("mode is required when --no-prompt is set")
+		}
+		if !isatty.IsTerminal(os.Stdin.Fd()) {
+			return fmt.Errorf("interactive mode picker requires a TTY")
+		}
+		theme := ui.DefaultTheme()
+		useColor := isatty.IsTerminal(os.Stdout.Fd())
+		mode, err := promptCreateMode(theme, useColor)
+		if err != nil {
+			return err
+		}
+		switch mode {
+		case "template":
+			templateMode = true
+		case "review":
+			reviewMode = true
+		case "issue":
+			issueMode = true
+		default:
+			return fmt.Errorf("unknown mode: %s", mode)
+		}
+	}
+
+	remaining := createFlags.Args()
+	if templateMode {
+		if len(remaining) > 1 {
+			return fmt.Errorf("usage: gws create --template <name> [<WORKSPACE_ID>]")
+		}
+		if len(remaining) == 1 {
+			if workspaceID != "" && workspaceID != remaining[0] {
+				return fmt.Errorf("workspace id is specified twice: %s and %s", workspaceID, remaining[0])
+			}
+			workspaceID = remaining[0]
+		}
+		return runCreateTemplate(ctx, rootDir, templateName.value, workspaceID, noPrompt)
+	}
+	if reviewMode {
+		if len(remaining) > 1 {
+			return fmt.Errorf("usage: gws create --review [<PR URL>]")
+		}
+		if workspaceID != "" || branch != "" || baseRef != "" {
+			return fmt.Errorf("--workspace-id, --branch, and --base are not valid with --review")
+		}
+		prURL := ""
+		if len(remaining) == 1 {
+			prURL = remaining[0]
+		}
+		return runCreateReview(ctx, rootDir, prURL, noPrompt)
+	}
+	if issueMode {
+		if len(remaining) > 1 {
+			return fmt.Errorf("usage: gws create --issue [<ISSUE_URL>] [--workspace-id <id>] [--branch <name>] [--base <ref>]")
+		}
+		issueURL := ""
+		if len(remaining) == 1 {
+			issueURL = remaining[0]
+		}
+		return runCreateIssue(ctx, rootDir, issueURL, workspaceID, branch, baseRef, noPrompt)
+	}
+	return fmt.Errorf("mode is required")
+}
+
+func normalizeCreateArgs(args []string) []string {
+	if len(args) == 0 {
+		return args
+	}
+	out := make([]string, 0, len(args))
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		if arg == "--template" || arg == "-template" {
+			if i+1 >= len(args) || strings.HasPrefix(args[i+1], "-") {
+				out = append(out, arg+"=")
+				continue
+			}
+		}
+		out = append(out, arg)
+	}
+	return out
 }
 
 func buildTemplateRepoChoices(rootDir string) ([]ui.PromptChoice, error) {
@@ -440,7 +615,7 @@ func runWorkspaceNew(ctx context.Context, rootDir string, args []string, noPromp
 	newFlags.BoolVar(&helpFlag, "h", false, "show help")
 	newFlags.SetOutput(os.Stdout)
 	newFlags.Usage = func() {
-		printNewHelp(os.Stdout)
+		printCreateHelp(os.Stdout)
 	}
 	if err := newFlags.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -449,17 +624,24 @@ func runWorkspaceNew(ctx context.Context, rootDir string, args []string, noPromp
 		return err
 	}
 	if helpFlag {
-		printNewHelp(os.Stdout)
+		printCreateHelp(os.Stdout)
 		return nil
 	}
 	if newFlags.NArg() > 1 {
-		return fmt.Errorf("usage: gws new [--template <name>] [<WORKSPACE_ID>]")
+		return fmt.Errorf("usage: gws create --template <name> [<WORKSPACE_ID>]")
 	}
 
 	workspaceID := ""
 	if newFlags.NArg() == 1 {
 		workspaceID = newFlags.Arg(0)
 	}
+
+	return runCreateTemplate(ctx, rootDir, templateName, workspaceID, noPrompt)
+}
+
+func runCreateTemplate(ctx context.Context, rootDir, templateName, workspaceID string, noPrompt bool) error {
+	templateName = strings.TrimSpace(templateName)
+	workspaceID = strings.TrimSpace(workspaceID)
 
 	theme := ui.DefaultTheme()
 	useColor := isatty.IsTerminal(os.Stdout.Fd())
@@ -469,7 +651,7 @@ func runWorkspaceNew(ctx context.Context, rootDir string, args []string, noPromp
 			return fmt.Errorf("template name and workspace id are required without prompt")
 		}
 		var err error
-		templateName, workspaceID, err = promptTemplateAndID(rootDir, templateName, workspaceID, theme, useColor)
+		templateName, workspaceID, err = promptTemplateAndID(rootDir, "gws create", templateName, workspaceID, theme, useColor)
 		if err != nil {
 			return err
 		}
@@ -597,6 +779,100 @@ func runWorkspaceAdd(ctx context.Context, rootDir string, args []string) error {
 	return nil
 }
 
+func runCreateIssue(ctx context.Context, rootDir, issueURL, workspaceID, branch, baseRef string, noPrompt bool) error {
+	issueURL = strings.TrimSpace(issueURL)
+	workspaceID = strings.TrimSpace(workspaceID)
+	branch = strings.TrimSpace(branch)
+	baseRef = strings.TrimSpace(baseRef)
+
+	if issueURL == "" {
+		if noPrompt {
+			return fmt.Errorf("issue URL is required when --no-prompt is set")
+		}
+		if workspaceID != "" || branch != "" || baseRef != "" {
+			return fmt.Errorf("--workspace-id, --branch, and --base are only valid when an issue URL is provided")
+		}
+		if !isatty.IsTerminal(os.Stdin.Fd()) {
+			return fmt.Errorf("interactive issue picker requires a TTY")
+		}
+		return runIssuePicker(ctx, rootDir, noPrompt, "gws create")
+	}
+
+	req, err := parseIssueURL(issueURL)
+	if err != nil {
+		return err
+	}
+	repoURL := buildRepoURLFromParts(req.Host, req.Owner, req.Repo)
+
+	branchProvided := branch != ""
+	if workspaceID == "" {
+		workspaceID = fmt.Sprintf("ISSUE-%d", req.Number)
+	}
+	if branch == "" {
+		branch = fmt.Sprintf("issue/%d", req.Number)
+	}
+
+	theme := ui.DefaultTheme()
+	useColor := isatty.IsTerminal(os.Stdout.Fd())
+
+	if !noPrompt && !branchProvided {
+		value, err := ui.PromptInputInline("branch", branch, nil, theme, useColor)
+		if err != nil {
+			return err
+		}
+		branch = strings.TrimSpace(value)
+		if branch == "" {
+			branch = fmt.Sprintf("issue/%d", req.Number)
+		}
+	}
+
+	renderer := ui.NewRenderer(os.Stdout, theme, useColor)
+	output.SetStepLogger(renderer)
+	defer output.SetStepLogger(nil)
+
+	renderer.Section("Inputs")
+	renderer.Bullet(fmt.Sprintf("provider: %s (%s)", strings.ToLower(req.Provider), req.Host))
+	renderer.Bullet(fmt.Sprintf("repo: %s/%s", req.Owner, req.Repo))
+	renderer.Bullet(fmt.Sprintf("issue: #%d", req.Number))
+	renderer.Bullet(fmt.Sprintf("branch: %s", branch))
+	if baseRef != "" {
+		renderer.Bullet(fmt.Sprintf("base: %s", baseRef))
+	}
+	renderer.Blank()
+	renderer.Section("Steps")
+
+	_, exists, err := repo.Exists(rootDir, repoURL)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		if err := ensureRepoGet(ctx, rootDir, []string{repoURL}, noPrompt, theme, useColor); err != nil {
+			return err
+		}
+	}
+
+	output.Step(formatStep("create workspace", workspaceID, relPath(rootDir, filepath.Join(rootDir, "workspaces", workspaceID))))
+	wsDir, err := workspace.New(ctx, rootDir, workspaceID)
+	if err != nil {
+		return err
+	}
+
+	output.Step(formatStep("worktree add", displayRepoName(repoURL), worktreeDest(rootDir, workspaceID, repoURL)))
+	if _, err := workspace.AddWithBranch(ctx, rootDir, workspaceID, repoURL, "", branch, baseRef, true); err != nil {
+		if rollbackErr := workspace.Remove(ctx, rootDir, workspaceID); rollbackErr != nil {
+			return fmt.Errorf("issue setup failed: %w (rollback failed: %v)", err, rollbackErr)
+		}
+		return err
+	}
+
+	renderer.Blank()
+	renderer.Section("Result")
+	repos, _, _ := loadWorkspaceRepos(ctx, wsDir)
+	renderWorkspaceBlock(renderer, workspaceID, repos)
+	renderSuggestion(renderer, useColor, wsDir)
+	return nil
+}
+
 func runIssue(ctx context.Context, rootDir string, args []string, noPrompt bool) error {
 	issueFlags := flag.NewFlagSet("issue", flag.ContinueOnError)
 	var workspaceID string
@@ -610,7 +886,7 @@ func runIssue(ctx context.Context, rootDir string, args []string, noPrompt bool)
 	issueFlags.BoolVar(&helpFlag, "h", false, "show help")
 	issueFlags.SetOutput(os.Stdout)
 	issueFlags.Usage = func() {
-		printIssueHelp(os.Stdout)
+		printCreateHelp(os.Stdout)
 	}
 	if err := issueFlags.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -619,7 +895,7 @@ func runIssue(ctx context.Context, rootDir string, args []string, noPrompt bool)
 		return err
 	}
 	if helpFlag {
-		printIssueHelp(os.Stdout)
+		printCreateHelp(os.Stdout)
 		return nil
 	}
 
@@ -637,11 +913,11 @@ func runIssue(ctx context.Context, rootDir string, args []string, noPrompt bool)
 		if !isatty.IsTerminal(os.Stdin.Fd()) {
 			return fmt.Errorf("interactive issue picker requires a TTY")
 		}
-		return runIssuePicker(ctx, rootDir, noPrompt)
+		return runIssuePicker(ctx, rootDir, noPrompt, "gws create")
 	}
 
 	if issueFlags.NArg() != 1 {
-		return fmt.Errorf("usage: gws issue [<ISSUE_URL>] [--workspace-id <id>] [--branch <name>] [--base <ref>]")
+		return fmt.Errorf("usage: gws create --issue [<ISSUE_URL>] [--workspace-id <id>] [--branch <name>] [--base <ref>]")
 	}
 
 	raw := strings.TrimSpace(issueFlags.Arg(0))
@@ -738,7 +1014,7 @@ type issueSummary struct {
 	Title  string
 }
 
-func runIssuePicker(ctx context.Context, rootDir string, noPrompt bool) error {
+func runIssuePicker(ctx context.Context, rootDir string, noPrompt bool, title string) error {
 	theme := ui.DefaultTheme()
 	useColor := isatty.IsTerminal(os.Stdout.Fd())
 
@@ -757,7 +1033,7 @@ func runIssuePicker(ctx context.Context, rootDir string, noPrompt bool) error {
 		repoByValue[choice.Value] = choice
 	}
 
-	repoSpec, err := ui.PromptChoiceSelect("gws issue", "repo", promptChoices, theme, useColor)
+	repoSpec, err := ui.PromptChoiceSelect(title, "repo", promptChoices, theme, useColor)
 	if err != nil {
 		return err
 	}
@@ -789,7 +1065,7 @@ func runIssuePicker(ctx context.Context, rootDir string, noPrompt bool) error {
 		})
 	}
 
-	selectedIssues, err := ui.PromptMultiSelect("gws issue", "issue", issueChoices, theme, useColor)
+	selectedIssues, err := ui.PromptMultiSelect(title, "issue", issueChoices, theme, useColor)
 	if err != nil {
 		return err
 	}
@@ -979,13 +1255,443 @@ func formatIssueList(values []string) string {
 	return strings.Join(out, ", ")
 }
 
+type reviewRepoChoice struct {
+	Label   string
+	Value   string
+	Host    string
+	Owner   string
+	Repo    string
+	RepoURL string
+}
+
+type prSummary struct {
+	Number   int
+	Title    string
+	HeadRef  string
+	HeadRepo string
+	BaseRepo string
+}
+
+func runCreateReview(ctx context.Context, rootDir, prURL string, noPrompt bool) error {
+	prURL = strings.TrimSpace(prURL)
+	if prURL == "" {
+		if noPrompt {
+			return fmt.Errorf("PR URL is required when --no-prompt is set")
+		}
+		if !isatty.IsTerminal(os.Stdin.Fd()) {
+			return fmt.Errorf("interactive review picker requires a TTY")
+		}
+		return runCreateReviewPicker(ctx, rootDir, noPrompt)
+	}
+
+	req, err := parsePRURL(prURL)
+	if err != nil {
+		return err
+	}
+
+	pr, err := fetchGitHubPR(ctx, req.Host, req.Owner, req.Repo, req.Number)
+	if err != nil {
+		return err
+	}
+	if !strings.EqualFold(strings.TrimSpace(pr.HeadRepo), strings.TrimSpace(pr.BaseRepo)) {
+		return fmt.Errorf("fork PRs are not supported: %s", pr.HeadRepo)
+	}
+
+	baseOwner, baseRepo, ok := splitRepoFullName(pr.BaseRepo)
+	if !ok {
+		return fmt.Errorf("invalid base repo: %s", pr.BaseRepo)
+	}
+	repoURL := buildRepoURLFromParts(req.Host, baseOwner, baseRepo)
+
+	theme := ui.DefaultTheme()
+	useColor := isatty.IsTerminal(os.Stdout.Fd())
+	renderer := ui.NewRenderer(os.Stdout, theme, useColor)
+	output.SetStepLogger(renderer)
+	defer output.SetStepLogger(nil)
+
+	renderer.Section("Inputs")
+	renderer.Bullet(fmt.Sprintf("provider: github (%s)", req.Host))
+	renderer.Bullet(fmt.Sprintf("repo: %s/%s", baseOwner, baseRepo))
+	renderer.Bullet(fmt.Sprintf("pull request: #%d", pr.Number))
+	renderer.Bullet(fmt.Sprintf("branch: %s", pr.HeadRef))
+	renderer.Blank()
+	renderer.Section("Steps")
+
+	_, exists, err := repo.Exists(rootDir, repoURL)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		if err := ensureRepoGet(ctx, rootDir, []string{repoURL}, noPrompt, theme, useColor); err != nil {
+			return err
+		}
+	}
+
+	workspaceID := fmt.Sprintf("REVIEW-PR-%d", pr.Number)
+	output.Step(formatStep("create workspace", workspaceID, relPath(rootDir, filepath.Join(rootDir, "workspaces", workspaceID))))
+	wsDir, err := workspace.New(ctx, rootDir, workspaceID)
+	if err != nil {
+		return err
+	}
+
+	store, err := repo.Open(ctx, rootDir, repoURL, false)
+	if err != nil {
+		return err
+	}
+	if err := fetchPRHead(ctx, store.StorePath, pr.HeadRef); err != nil {
+		return err
+	}
+
+	baseRef := fmt.Sprintf("refs/remotes/origin/%s", pr.HeadRef)
+	output.Step(formatStep("worktree add", displayRepoName(repoURL), worktreeDest(rootDir, workspaceID, repoURL)))
+	if _, err := workspace.AddWithBranch(ctx, rootDir, workspaceID, repoURL, "", pr.HeadRef, baseRef, false); err != nil {
+		if rollbackErr := workspace.Remove(ctx, rootDir, workspaceID); rollbackErr != nil {
+			return fmt.Errorf("review failed: %w (rollback failed: %v)", err, rollbackErr)
+		}
+		return err
+	}
+
+	renderer.Blank()
+	renderer.Section("Result")
+	repos, _, _ := loadWorkspaceRepos(ctx, wsDir)
+	renderWorkspaceBlock(renderer, workspaceID, repos)
+	renderSuggestion(renderer, useColor, wsDir)
+	return nil
+}
+
+func runCreateReviewPicker(ctx context.Context, rootDir string, noPrompt bool) error {
+	theme := ui.DefaultTheme()
+	useColor := isatty.IsTerminal(os.Stdout.Fd())
+
+	repoChoices, err := buildReviewRepoChoices(rootDir)
+	if err != nil {
+		return err
+	}
+	if len(repoChoices) == 0 {
+		return fmt.Errorf("no GitHub repos found")
+	}
+
+	promptChoices := make([]ui.PromptChoice, 0, len(repoChoices))
+	repoByValue := make(map[string]reviewRepoChoice, len(repoChoices))
+	for _, choice := range repoChoices {
+		promptChoices = append(promptChoices, ui.PromptChoice{Label: choice.Label, Value: choice.Value})
+		repoByValue[choice.Value] = choice
+	}
+
+	repoSpec, err := ui.PromptChoiceSelect("gws create", "repo", promptChoices, theme, useColor)
+	if err != nil {
+		return err
+	}
+	selectedRepo, ok := repoByValue[repoSpec]
+	if !ok {
+		return fmt.Errorf("selected repo not found")
+	}
+
+	prs, err := fetchGitHubPRs(ctx, selectedRepo.Host, selectedRepo.Owner, selectedRepo.Repo)
+	if err != nil {
+		return err
+	}
+	if len(prs) == 0 {
+		return fmt.Errorf("no pull requests found")
+	}
+
+	var prChoices []ui.PromptChoice
+	for _, pr := range prs {
+		label := fmt.Sprintf("#%d", pr.Number)
+		if strings.TrimSpace(pr.Title) != "" {
+			label = fmt.Sprintf("#%d %s", pr.Number, strings.TrimSpace(pr.Title))
+		}
+		prChoices = append(prChoices, ui.PromptChoice{
+			Label: label,
+			Value: strconv.Itoa(pr.Number),
+		})
+	}
+
+	selectedPRs, err := ui.PromptMultiSelect("gws create", "pull request", prChoices, theme, useColor)
+	if err != nil {
+		return err
+	}
+
+	renderer := ui.NewRenderer(os.Stdout, theme, useColor)
+	output.SetStepLogger(renderer)
+	defer output.SetStepLogger(nil)
+
+	renderer.Section("Inputs")
+	renderer.Bullet(fmt.Sprintf("provider: github (%s)", selectedRepo.Host))
+	renderer.Bullet(fmt.Sprintf("repo: %s/%s", selectedRepo.Owner, selectedRepo.Repo))
+	renderer.Bullet(fmt.Sprintf("pull requests: %s", formatPRList(selectedPRs)))
+	renderer.Blank()
+	renderer.Section("Steps")
+
+	_, exists, err := repo.Exists(rootDir, selectedRepo.RepoURL)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		if err := ensureRepoGet(ctx, rootDir, []string{selectedRepo.RepoURL}, noPrompt, theme, useColor); err != nil {
+			return err
+		}
+	}
+
+	prByNumber := make(map[int]prSummary, len(prs))
+	for _, pr := range prs {
+		prByNumber[pr.Number] = pr
+	}
+
+	type reviewWorkspaceResult struct {
+		workspaceID string
+		repos       []workspace.Repo
+	}
+	var results []reviewWorkspaceResult
+	var failure error
+	var failureID string
+
+	for _, value := range selectedPRs {
+		num, err := strconv.Atoi(strings.TrimSpace(value))
+		if err != nil {
+			failure = fmt.Errorf("invalid PR number: %s", value)
+			failureID = value
+			break
+		}
+		pr, ok := prByNumber[num]
+		if !ok {
+			failure = fmt.Errorf("PR not found: %d", num)
+			failureID = fmt.Sprintf("PR-%d", num)
+			break
+		}
+		if !strings.EqualFold(strings.TrimSpace(pr.HeadRepo), strings.TrimSpace(pr.BaseRepo)) {
+			failure = fmt.Errorf("fork PRs are not supported: %s", pr.HeadRepo)
+			failureID = fmt.Sprintf("PR-%d", num)
+			break
+		}
+		workspaceID := fmt.Sprintf("REVIEW-PR-%d", num)
+		output.Step(formatStep("create workspace", workspaceID, relPath(rootDir, filepath.Join(rootDir, "workspaces", workspaceID))))
+		wsDir, err := workspace.New(ctx, rootDir, workspaceID)
+		if err != nil {
+			failure = err
+			failureID = workspaceID
+			break
+		}
+
+		store, err := repo.Open(ctx, rootDir, selectedRepo.RepoURL, false)
+		if err != nil {
+			failure = err
+			failureID = workspaceID
+			break
+		}
+		if err := fetchPRHead(ctx, store.StorePath, pr.HeadRef); err != nil {
+			failure = err
+			failureID = workspaceID
+			break
+		}
+
+		baseRef := fmt.Sprintf("refs/remotes/origin/%s", pr.HeadRef)
+		output.Step(formatStep("worktree add", displayRepoName(selectedRepo.RepoURL), worktreeDest(rootDir, workspaceID, selectedRepo.RepoURL)))
+		if _, err := workspace.AddWithBranch(ctx, rootDir, workspaceID, selectedRepo.RepoURL, "", pr.HeadRef, baseRef, false); err != nil {
+			if rollbackErr := workspace.Remove(ctx, rootDir, workspaceID); rollbackErr != nil {
+				failure = fmt.Errorf("review failed: %w (rollback failed: %v)", err, rollbackErr)
+			} else {
+				failure = err
+			}
+			failureID = workspaceID
+			break
+		}
+
+		repos, _, _ := loadWorkspaceRepos(ctx, wsDir)
+		results = append(results, reviewWorkspaceResult{
+			workspaceID: workspaceID,
+			repos:       repos,
+		})
+	}
+
+	if len(results) > 0 {
+		renderer.Blank()
+		renderer.Section("Result")
+		for _, result := range results {
+			renderWorkspaceBlock(renderer, result.workspaceID, result.repos)
+		}
+	}
+	if failure != nil {
+		return fmt.Errorf("%s: %w", failureID, failure)
+	}
+	return nil
+}
+
+func buildReviewRepoChoices(rootDir string) ([]reviewRepoChoice, error) {
+	repos, _, err := repo.List(rootDir)
+	if err != nil {
+		return nil, err
+	}
+	var choices []reviewRepoChoice
+	for _, entry := range repos {
+		repoKey := displayRepoKey(entry.RepoKey)
+		parts := strings.Split(repoKey, "/")
+		if len(parts) < 3 {
+			continue
+		}
+		host := parts[0]
+		owner := parts[1]
+		repoName := parts[2]
+		if !isGitHubHost(host) {
+			continue
+		}
+		label := fmt.Sprintf("%s (%s/%s)", repoName, owner, repoName)
+		repoURL := buildRepoURLFromParts(host, owner, repoName)
+		value := repoSpecFromKey(entry.RepoKey)
+		choices = append(choices, reviewRepoChoice{
+			Label:   label,
+			Value:   value,
+			Host:    host,
+			Owner:   owner,
+			Repo:    repoName,
+			RepoURL: repoURL,
+		})
+	}
+	return choices, nil
+}
+
+func isGitHubHost(host string) bool {
+	lower := strings.ToLower(strings.TrimSpace(host))
+	return strings.Contains(lower, "github")
+}
+
+type githubPRItem struct {
+	Number int    `json:"number"`
+	Title  string `json:"title"`
+	Head   struct {
+		Ref  string `json:"ref"`
+		Repo struct {
+			FullName string `json:"full_name"`
+		} `json:"repo"`
+	} `json:"head"`
+	Base struct {
+		Repo struct {
+			FullName string `json:"full_name"`
+		} `json:"repo"`
+	} `json:"base"`
+}
+
+func fetchGitHubPR(ctx context.Context, host, owner, repoName string, number int) (prSummary, error) {
+	if strings.TrimSpace(owner) == "" || strings.TrimSpace(repoName) == "" || number <= 0 {
+		return prSummary{}, fmt.Errorf("owner/repo and PR number are required")
+	}
+	endpoint := fmt.Sprintf("repos/%s/%s/pulls/%d", owner, repoName, number)
+	args := []string{"api", "-X", "GET", endpoint}
+	if host != "" && !strings.EqualFold(host, "github.com") {
+		args = append([]string{"api", "--hostname", host}, args[1:]...)
+	}
+	cmd := exec.CommandContext(ctx, "gh", args...)
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		msg := strings.TrimSpace(stderr.String())
+		if msg != "" {
+			return prSummary{}, fmt.Errorf("gh api failed: %s", msg)
+		}
+		return prSummary{}, fmt.Errorf("gh api failed: %w", err)
+	}
+	var item githubPRItem
+	if err := json.Unmarshal(stdout.Bytes(), &item); err != nil {
+		return prSummary{}, fmt.Errorf("parse gh api response: %w", err)
+	}
+	return normalizeGitHubPR(item), nil
+}
+
+func fetchGitHubPRs(ctx context.Context, host, owner, repoName string) ([]prSummary, error) {
+	if strings.TrimSpace(owner) == "" || strings.TrimSpace(repoName) == "" {
+		return nil, fmt.Errorf("owner/repo is required")
+	}
+	endpoint := fmt.Sprintf("repos/%s/%s/pulls", owner, repoName)
+	args := []string{"api", "-X", "GET", endpoint, "-f", "state=open", "-f", "sort=updated", "-f", "direction=desc", "-f", "per_page=50"}
+	if host != "" && !strings.EqualFold(host, "github.com") {
+		args = append([]string{"api", "--hostname", host}, args[1:]...)
+	}
+	cmd := exec.CommandContext(ctx, "gh", args...)
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		msg := strings.TrimSpace(stderr.String())
+		if msg != "" {
+			return nil, fmt.Errorf("gh api failed: %s", msg)
+		}
+		return nil, fmt.Errorf("gh api failed: %w", err)
+	}
+	return parseGitHubPRs(stdout.Bytes())
+}
+
+func parseGitHubPRs(data []byte) ([]prSummary, error) {
+	var raw []githubPRItem
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return nil, fmt.Errorf("parse gh api response: %w", err)
+	}
+	var prs []prSummary
+	for _, item := range raw {
+		if item.Number == 0 {
+			continue
+		}
+		prs = append(prs, normalizeGitHubPR(item))
+	}
+	return prs, nil
+}
+
+func normalizeGitHubPR(item githubPRItem) prSummary {
+	return prSummary{
+		Number:   item.Number,
+		Title:    strings.TrimSpace(item.Title),
+		HeadRef:  strings.TrimSpace(item.Head.Ref),
+		HeadRepo: strings.TrimSpace(item.Head.Repo.FullName),
+		BaseRepo: strings.TrimSpace(item.Base.Repo.FullName),
+	}
+}
+
+func splitRepoFullName(fullName string) (string, string, bool) {
+	parts := strings.Split(strings.TrimSpace(fullName), "/")
+	if len(parts) != 2 {
+		return "", "", false
+	}
+	return parts[0], parts[1], true
+}
+
+func fetchPRHead(ctx context.Context, storePath, headRef string) error {
+	if strings.TrimSpace(storePath) == "" {
+		return fmt.Errorf("store path is required")
+	}
+	if strings.TrimSpace(headRef) == "" {
+		return fmt.Errorf("head ref is required")
+	}
+	gitcmd.Logf("git fetch origin %s", headRef)
+	if _, err := gitcmd.Run(ctx, []string{"fetch", "origin", headRef}, gitcmd.Options{Dir: storePath}); err != nil {
+		return err
+	}
+	return nil
+}
+
+func formatPRList(values []string) string {
+	if len(values) == 0 {
+		return ""
+	}
+	var out []string
+	for _, value := range values {
+		val := strings.TrimSpace(value)
+		if val == "" {
+			continue
+		}
+		out = append(out, fmt.Sprintf("#%s", val))
+	}
+	return strings.Join(out, ", ")
+}
+
 func runReview(ctx context.Context, rootDir string, args []string, noPrompt bool) error {
 	if len(args) == 0 || (len(args) == 1 && isHelpArg(args[0])) {
-		printReviewHelp(os.Stdout)
+		printCreateHelp(os.Stdout)
 		return nil
 	}
 	if len(args) != 1 {
-		return fmt.Errorf("usage: gws review <PR URL>")
+		return fmt.Errorf("usage: gws create --review [<PR URL>]")
 	}
 	raw := strings.TrimSpace(args[0])
 	if raw == "" {
@@ -1134,6 +1840,12 @@ func parsePRURL(raw string) (prRequest, error) {
 		return prRequest{}, fmt.Errorf("invalid PR/MR URL: %w", err)
 	}
 	host := strings.TrimSpace(u.Hostname())
+	if host == "" {
+		return prRequest{}, fmt.Errorf("invalid PR URL host: %s", raw)
+	}
+	if !isGitHubHost(host) {
+		return prRequest{}, fmt.Errorf("unsupported PR host: %s", host)
+	}
 	parts := strings.Split(strings.Trim(u.Path, "/"), "/")
 	if len(parts) < 4 {
 		return prRequest{}, fmt.Errorf("invalid PR/MR URL path: %s", u.Path)
@@ -1151,51 +1863,6 @@ func parsePRURL(raw string) (prRequest, error) {
 				Host:     host,
 				Owner:    parts[i-2],
 				Repo:     parts[i-1],
-				Number:   num,
-			}, nil
-		}
-	}
-
-	// Bitbucket Cloud style: /owner/repo/pull-requests/123
-	for i := 0; i < len(parts)-1; i++ {
-		if parts[i] == "pull-requests" && i >= 2 {
-			num, err := strconv.Atoi(parts[i+1])
-			if err != nil {
-				return prRequest{}, fmt.Errorf("invalid PR number: %s", parts[i+1])
-			}
-			return prRequest{
-				Provider: "bitbucket",
-				Host:     host,
-				Owner:    parts[i-2],
-				Repo:     parts[i-1],
-				Number:   num,
-			}, nil
-		}
-	}
-
-	// GitLab style: /group/repo/-/merge_requests/123
-	for i := 0; i < len(parts)-1; i++ {
-		if parts[i] == "merge_requests" && i >= 2 {
-			num, err := strconv.Atoi(parts[i+1])
-			if err != nil {
-				return prRequest{}, fmt.Errorf("invalid MR number: %s", parts[i+1])
-			}
-			repoIdx := i - 1
-			if repoIdx >= 1 && parts[repoIdx] == "-" {
-				repoIdx--
-			}
-			if repoIdx < 1 {
-				return prRequest{}, fmt.Errorf("invalid MR URL path: %s", u.Path)
-			}
-			ownerParts := parts[:repoIdx]
-			if len(ownerParts) != 1 {
-				return prRequest{}, fmt.Errorf("nested groups are not supported: %s", strings.Join(ownerParts, "/"))
-			}
-			return prRequest{
-				Provider: "gitlab",
-				Host:     host,
-				Owner:    ownerParts[0],
-				Repo:     parts[repoIdx],
 				Number:   num,
 			}, nil
 		}
@@ -1245,7 +1912,7 @@ func fetchPRRef(ctx context.Context, storePath string, req prRequest, workspaceI
 	return destRef, nil
 }
 
-func promptTemplateAndID(rootDir, templateName, workspaceID string, theme ui.Theme, useColor bool) (string, string, error) {
+func promptTemplateAndID(rootDir, title, templateName, workspaceID string, theme ui.Theme, useColor bool) (string, string, error) {
 	file, err := template.Load(rootDir)
 	if err != nil {
 		return "", "", err
@@ -1254,11 +1921,20 @@ func promptTemplateAndID(rootDir, templateName, workspaceID string, theme ui.The
 	if len(names) == 0 {
 		return "", "", fmt.Errorf("no templates found in %s", filepath.Join(rootDir, template.FileName))
 	}
-	templateName, workspaceID, err = ui.PromptNewWorkspaceInputs("gws new", names, templateName, workspaceID, theme, useColor)
+	templateName, workspaceID, err = ui.PromptNewWorkspaceInputs(title, names, templateName, workspaceID, theme, useColor)
 	if err != nil {
 		return "", "", err
 	}
 	return templateName, workspaceID, nil
+}
+
+func promptCreateMode(theme ui.Theme, useColor bool) (string, error) {
+	choices := []ui.PromptChoice{
+		{Label: "template", Value: "template"},
+		{Label: "review", Value: "review"},
+		{Label: "issue", Value: "issue"},
+	}
+	return ui.PromptChoiceSelect("gws create", "mode", choices, theme, useColor)
 }
 
 func promptTemplateBranches(ctx context.Context, tmpl template.Template, workspaceID string, theme ui.Theme, useColor bool) ([]string, error) {

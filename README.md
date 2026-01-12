@@ -13,7 +13,7 @@ so humans and multiple AI agents can work in parallel without stepping on each o
 
 - Git
 - Go 1.24+ (build/run from source)
-- gh CLI (optional; no longer required for `gws review`)
+- gh CLI (required for `gws create --review` and `gws create --issue` picker)
 
 ## Quickstart (5 minutes)
 
@@ -47,10 +47,10 @@ gws repo get git@github.com:octocat/Spoon-Knife.git
 ### 4) Create a workspace
 
 ```bash
-gws new --template example MY-123
+gws create --template example MY-123
 ```
 
-Or run `gws new` with no args to select a template and workspace id interactively.
+Or run `gws create` with no args to pick a mode and fill inputs interactively.
 
 ### 5) Work and clean up
 
@@ -63,19 +63,15 @@ gws rm MY-123
 
 gws opens an interactive subshell at the workspace root.
 
-## Review a PR/MR (GitHub, GitLab, Bitbucket)
+## Review a PR (GitHub only)
 
 ```bash
-gws review https://github.com/owner/repo/pull/123
-# or
-gws review https://gitlab.com/owner/repo/-/merge_requests/123
-# or
-gws review https://bitbucket.org/owner/repo/pull-requests/123
+gws create --review https://github.com/owner/repo/pull/123
 ```
 
 - Creates `REVIEW-PR-123`
-- Fetches the PR/MR ref directly (forks supported)
-- No `gh` dependency
+- Fetches the PR head branch (forks not supported)
+- Requires `gh` authentication
 
 ## How gws lays out files
 
@@ -111,7 +107,7 @@ Core workflow:
 - `gws repo get <repo>` - create/update bare repo and a `src/` clone
 - `gws repo ls` - list repos already fetched
 - `gws template ls` - list templates from `templates.yaml`
-- `gws new [--template <name>] [<id>]` - create a workspace from a template
+- `gws create --template <name> [<id>]` - create a workspace from a template
 - `gws add [<id>] [<repo>]` - add another repo worktree to a workspace
 - `gws ls` - list workspaces and repos
 - `gws open [<id>]` - open a workspace in an interactive subshell
@@ -120,7 +116,7 @@ Core workflow:
 
 Review workflow:
 
-- `gws review <PR URL>` - create a workspace for a GitHub PR
+- `gws create --review <PR URL>` - create a workspace for a GitHub PR
 
 Global flags:
 

@@ -1,6 +1,6 @@
 ---
 title: "gws create"
-status: planned
+status: implemented
 ---
 
 ## Synopsis
