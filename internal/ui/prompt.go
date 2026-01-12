@@ -84,6 +84,20 @@ func PromptWorkspaceWithBlocked(title string, workspaces []WorkspaceChoice, bloc
 	return strings.TrimSpace(final.workspaceID), nil
 }
 
+func PromptWorkspaceMultiSelectWithBlocked(title string, workspaces []WorkspaceChoice, blocked []BlockedChoice, theme Theme, useColor bool) ([]string, error) {
+	model := newWorkspaceMultiSelectModel(title, workspaces, blocked, theme, useColor)
+	prog := tea.NewProgram(model)
+	out, err := prog.Run()
+	if err != nil {
+		return nil, err
+	}
+	final := out.(workspaceMultiSelectModel)
+	if final.err != nil {
+		return nil, final.err
+	}
+	return append([]string(nil), final.selectedIDs...), nil
+}
+
 func PromptConfirmInline(label string, theme Theme, useColor bool) (bool, error) {
 	model := newConfirmInlineModel(label, theme, useColor)
 	prog := tea.NewProgram(model)
@@ -799,6 +813,17 @@ func removeChoice(items []PromptChoice, value string) []PromptChoice {
 	return out
 }
 
+func removeWorkspaceChoice(items []WorkspaceChoice, workspaceID string) []WorkspaceChoice {
+	var out []WorkspaceChoice
+	for _, item := range items {
+		if item.ID == workspaceID {
+			continue
+		}
+		out = append(out, item)
+	}
+	return out
+}
+
 type choiceSelectModel struct {
 	title     string
 	label     string
@@ -1317,6 +1342,180 @@ func (m workspaceSelectModel) filterWorkspaces() []WorkspaceChoice {
 	return out
 }
 
+type workspaceMultiSelectModel struct {
+	title       string
+	workspaces  []WorkspaceChoice
+	blocked     []BlockedChoice
+	filtered    []WorkspaceChoice
+	selected    []WorkspaceChoice
+	selectedIDs []string
+	cursor      int
+	err         error
+	errorLine   string
+
+	theme    Theme
+	useColor bool
+	input    textinput.Model
+}
+
+func newWorkspaceMultiSelectModel(title string, workspaces []WorkspaceChoice, blocked []BlockedChoice, theme Theme, useColor bool) workspaceMultiSelectModel {
+	input := textinput.New()
+	input.Prompt = ""
+	input.Placeholder = "search"
+	input.Focus()
+	if useColor {
+		input.PlaceholderStyle = theme.Muted
+	}
+	m := workspaceMultiSelectModel{
+		title:      title,
+		workspaces: workspaces,
+		blocked:    blocked,
+		theme:      theme,
+		useColor:   useColor,
+		input:      input,
+	}
+	m.filtered = m.filterWorkspaces()
+	return m
+}
+
+func (m workspaceMultiSelectModel) Init() tea.Cmd {
+	return textinput.Blink
+}
+
+func (m workspaceMultiSelectModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.Type {
+		case tea.KeyCtrlC, tea.KeyEsc:
+			m.err = ErrPromptCanceled
+			return m, tea.Quit
+		case tea.KeyCtrlD:
+			if len(m.selected) == 0 {
+				m.errorLine = "select at least one workspace"
+				return m, nil
+			}
+			return m, tea.Quit
+		case tea.KeyUp:
+			if m.cursor > 0 {
+				m.cursor--
+			}
+			return m, nil
+		case tea.KeyDown:
+			if m.cursor < len(m.filtered)-1 {
+				m.cursor++
+			}
+			return m, nil
+		case tea.KeyEnter:
+			value := strings.TrimSpace(m.input.Value())
+			if value == "done" {
+				if len(m.selected) == 0 {
+					m.errorLine = "select at least one workspace"
+					return m, nil
+				}
+				return m, tea.Quit
+			}
+			if len(m.filtered) == 0 {
+				return m, nil
+			}
+			choice := m.filtered[m.cursor]
+			m.selected = append(m.selected, choice)
+			m.selectedIDs = append(m.selectedIDs, choice.ID)
+			m.workspaces = removeWorkspaceChoice(m.workspaces, choice.ID)
+			m.input.SetValue("")
+			m.filtered = m.filterWorkspaces()
+			if m.cursor >= len(m.filtered) {
+				m.cursor = max(0, len(m.filtered)-1)
+			}
+			m.errorLine = ""
+			return m, nil
+		}
+	}
+
+	var cmd tea.Cmd
+	m.input, cmd = m.input.Update(msg)
+	m.filtered = m.filterWorkspaces()
+	if m.cursor >= len(m.filtered) {
+		m.cursor = max(0, len(m.filtered)-1)
+	}
+	return m, cmd
+}
+
+func (m workspaceMultiSelectModel) View() string {
+	var b strings.Builder
+	section := "Input"
+	if m.useColor {
+		section = m.theme.SectionTitle.Render(section)
+	}
+	b.WriteString(section)
+	b.WriteString("\n")
+
+	prefix := promptPrefix(m.theme, m.useColor)
+	label := promptLabel(m.theme, m.useColor, "workspace")
+	line := fmt.Sprintf("%s%s %s: %s", output.Indent, prefix, label, m.input.View())
+	b.WriteString(line)
+	b.WriteString("\n")
+	renderWorkspaceChoiceList(&b, m.filtered, m.cursor, m.useColor, m.theme)
+
+	b.WriteString("\n")
+	selTitle := "Selected"
+	if m.useColor {
+		selTitle = m.theme.SectionTitle.Render(selTitle)
+	}
+	b.WriteString(selTitle)
+	b.WriteString("\n")
+	renderSelectedWorkspaceList(&b, m.selected, m.useColor, m.theme)
+
+	if m.errorLine != "" {
+		msg := m.errorLine
+		if m.useColor {
+			msg = m.theme.Error.Render(msg)
+		}
+		b.WriteString(fmt.Sprintf("%s%s %s\n", output.Indent, mutedToken(m.theme, m.useColor, output.LogConnector), msg))
+	}
+
+	infoPrefix := mutedToken(m.theme, m.useColor, output.StepPrefix)
+	b.WriteString(fmt.Sprintf("\n%s%s finish: Ctrl+D or type \"done\"\n", output.Indent, infoPrefix))
+	b.WriteString(fmt.Sprintf("%s%s enter: add highlighted workspace\n", output.Indent, infoPrefix))
+
+	if len(m.blocked) > 0 {
+		b.WriteString("\n")
+		infoTitle := "Info"
+		if m.useColor {
+			infoTitle = m.theme.SectionTitle.Render(infoTitle)
+		}
+		b.WriteString(infoTitle)
+		b.WriteString("\n")
+		infoPrefix := output.StepPrefix
+		if m.useColor {
+			infoPrefix = m.theme.Muted.Render(infoPrefix)
+		}
+		b.WriteString(fmt.Sprintf("%s%s %s\n", output.Indent, infoPrefix, "blocked workspaces"))
+		renderBlockedChoiceList(&b, m.blocked, m.useColor, m.theme)
+	}
+	return b.String()
+}
+
+func (m workspaceMultiSelectModel) filterWorkspaces() []WorkspaceChoice {
+	q := strings.ToLower(strings.TrimSpace(m.input.Value()))
+	if q == "" {
+		return append([]WorkspaceChoice(nil), m.workspaces...)
+	}
+	var out []WorkspaceChoice
+	for _, item := range m.workspaces {
+		if strings.Contains(strings.ToLower(item.ID), q) || strings.Contains(strings.ToLower(item.Description), q) {
+			out = append(out, item)
+			continue
+		}
+		for _, repo := range item.Repos {
+			if strings.Contains(strings.ToLower(repo.Label), q) {
+				out = append(out, item)
+				break
+			}
+		}
+	}
+	return out
+}
+
 type addInputsStage int
 
 const (
@@ -1645,6 +1844,35 @@ func renderRepoDetailList(b *strings.Builder, repos []PromptChoice, indent strin
 		if useColor {
 			line = theme.Muted.Render(line)
 		}
+		b.WriteString(line)
+		b.WriteString("\n")
+	}
+}
+
+func renderSelectedWorkspaceList(b *strings.Builder, items []WorkspaceChoice, useColor bool, theme Theme) {
+	if len(items) == 0 {
+		msg := "none"
+		if useColor {
+			msg = theme.Muted.Render(msg)
+		}
+		b.WriteString(fmt.Sprintf("%s%s %s\n", output.Indent, mutedToken(theme, useColor, output.StepPrefix), msg))
+		return
+	}
+	for _, item := range items {
+		display := item.ID
+		desc := strings.TrimSpace(item.Description)
+		if desc != "" {
+			if useColor {
+				display += theme.Muted.Render(" - " + desc)
+			} else {
+				display += " - " + desc
+			}
+		}
+		prefix := output.StepPrefix
+		if useColor {
+			prefix = theme.Accent.Render(prefix)
+		}
+		line := fmt.Sprintf("%s%s %s", output.Indent, prefix, display)
 		b.WriteString(line)
 		b.WriteString("\n")
 	}

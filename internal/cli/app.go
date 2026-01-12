@@ -2744,6 +2744,7 @@ func runWorkspaceRemove(ctx context.Context, rootDir string, args []string) erro
 		workspaceID = args[0]
 	}
 
+	var selected []string
 	if workspaceID == "" {
 		workspaces, wsWarn, err := workspace.List(rootDir)
 		if err != nil {
@@ -2770,10 +2771,15 @@ func runWorkspaceRemove(ctx context.Context, rootDir string, args []string) erro
 			}
 			return fmt.Errorf("no removable workspaces")
 		}
-		workspaceID, err = ui.PromptWorkspaceWithBlocked("gws rm", removable, blocked, theme, useColor)
+		selected, err = ui.PromptWorkspaceMultiSelectWithBlocked("gws rm", removable, blocked, theme, useColor)
 		if err != nil {
 			return err
 		}
+		if len(selected) == 1 {
+			workspaceID = selected[0]
+		}
+	} else {
+		selected = []string{workspaceID}
 	}
 
 	theme := ui.DefaultTheme()
@@ -2782,21 +2788,57 @@ func runWorkspaceRemove(ctx context.Context, rootDir string, args []string) erro
 	output.SetStepLogger(renderer)
 	defer output.SetStepLogger(nil)
 
-	removeWarnings := collectRemoveWarnings(ctx, rootDir, workspaceID)
+	if len(selected) == 1 {
+		removeWarnings := collectRemoveWarnings(ctx, rootDir, workspaceID)
+		if len(removeWarnings) > 0 {
+			renderWarningsSection(renderer, "possible unpushed commits", removeWarnings, false)
+			renderer.Blank()
+		}
+		renderer.Section("Steps")
+		output.Step(formatStep("remove workspace", workspaceID, relPath(rootDir, filepath.Join(rootDir, "workspaces", workspaceID))))
+
+		if err := workspace.Remove(ctx, rootDir, workspaceID); err != nil {
+			return err
+		}
+
+		renderer.Blank()
+		renderer.Section("Result")
+		renderer.Bullet(fmt.Sprintf("%s removed", workspaceID))
+		return nil
+	}
+
+	var removeWarnings []string
+	for _, selectedID := range selected {
+		warnings := collectRemoveWarnings(ctx, rootDir, selectedID)
+		for _, warning := range warnings {
+			removeWarnings = append(removeWarnings, fmt.Sprintf("%s: %s", selectedID, warning))
+		}
+	}
 	if len(removeWarnings) > 0 {
 		renderWarningsSection(renderer, "possible unpushed commits", removeWarnings, false)
 		renderer.Blank()
 	}
-	renderer.Section("Steps")
-	output.Step(formatStep("remove workspace", workspaceID, relPath(rootDir, filepath.Join(rootDir, "workspaces", workspaceID))))
-
-	if err := workspace.Remove(ctx, rootDir, workspaceID); err != nil {
+	confirm, err := ui.PromptConfirmInline(fmt.Sprintf("Remove %d workspaces?", len(selected)), theme, useColor)
+	if err != nil {
 		return err
+	}
+	if !confirm {
+		return nil
+	}
+
+	renderer.Section("Steps")
+	for i, selectedID := range selected {
+		output.Step(formatStepWithIndex("remove workspace", selectedID, relPath(rootDir, filepath.Join(rootDir, "workspaces", selectedID)), i+1, len(selected)))
+		if err := workspace.Remove(ctx, rootDir, selectedID); err != nil {
+			return err
+		}
 	}
 
 	renderer.Blank()
 	renderer.Section("Result")
-	renderer.Bullet(fmt.Sprintf("%s removed", workspaceID))
+	for _, selectedID := range selected {
+		renderer.Bullet(fmt.Sprintf("%s removed", selectedID))
+	}
 	return nil
 }
 
