@@ -102,6 +102,7 @@ Same behavior as the former `gws issue`.
   - Branch: defaults to `issue/<number>`. Before proceeding, prompt the user with the default and allow editing unless `--no-prompt` or `--branch` is supplied.
   - For GitHub issues, uses `gh api` to fetch the issue title and saves it as the workspace description.
     - If the branch exists in the bare store, use it.
+    - If the branch exists on `origin` but not locally, fetch it and create a tracking branch.
     - If not, create it from a base ref.
   - Base ref: defaults to the standard detection used by `gws add` (prefer `HEAD`, then `origin/HEAD`, then `main`/`master`/`develop` locally or on origin). `--base` overrides detection; must resolve in the bare store or as `origin/<ref>`.
   - Repo resolution:
