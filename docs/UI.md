@@ -1,9 +1,9 @@
 # UI Specification (Bubble Tea + Bubbles + Lip Gloss)
 
 ## Goals
-- Codex CLI のように静かで一貫した出力体験を提供する
-- 対話は Bubble Tea に統一し、非対話はプレーン出力で整える
-- 出力の情報設計は全コマンドで統一する
+- Provide a quiet, consistent output experience (similar to Codex CLI)
+- Use Bubble Tea for interactive flows; use plain text for non-interactive flows
+- Keep the information architecture consistent across all commands
 
 ## Scope
 - Interactive (TTY): Bubble Tea + Bubbles + Lip Gloss
@@ -105,8 +105,8 @@ Result
 ### gws create --template (non-interactive)
 ```
 Steps
-  › repo get git@github.com:org/repo.git
-  › worktree add repo
+  • repo get git@github.com:org/repo.git
+  • worktree add repo
 
 Result
   • /Users/me/gws/workspaces/SREP-123
