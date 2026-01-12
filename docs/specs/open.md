@@ -36,11 +36,6 @@ Open a workspace by launching an interactive subshell at the workspace root, mak
 Example:
 
 ```
-Inputs
-  • workspace: ISSUE-19
-  • path: /path/to/gws/workspaces/ISSUE-19
-  • shell: /bin/zsh (interactive)
-
 Info
   • subshell; parent cwd unchanged
 

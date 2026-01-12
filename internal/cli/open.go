@@ -90,21 +90,12 @@ func runWorkspaceOpen(ctx context.Context, rootDir string, args []string, noProm
 	if len(cmdArgs) > 0 {
 		cmdDisplay = fmt.Sprintf("%s %s", cmdPath, strings.Join(cmdArgs, " "))
 	}
-	shellInfo := cmdPath
-	if len(cmdArgs) > 0 {
-		shellInfo = fmt.Sprintf("%s (interactive)", cmdPath)
-	}
 	theme := ui.DefaultTheme()
 	useColor := isatty.IsTerminal(os.Stdout.Fd())
 	renderer := ui.NewRenderer(os.Stdout, theme, useColor)
 	output.SetStepLogger(renderer)
 	defer output.SetStepLogger(nil)
 
-	renderer.Section("Inputs")
-	renderer.Bullet(fmt.Sprintf("workspace: %s", workspaceID))
-	renderer.Bullet(fmt.Sprintf("path: %s", wsDir))
-	renderer.Bullet(fmt.Sprintf("shell: %s", shellInfo))
-	renderer.Blank()
 	renderer.Section("Info")
 	renderer.Bullet("subshell; parent cwd unchanged")
 	renderer.Blank()
