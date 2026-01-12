@@ -1198,11 +1198,6 @@ func runIssuePicker(ctx context.Context, rootDir string, noPrompt bool, title st
 	output.SetStepLogger(renderer)
 	defer output.SetStepLogger(nil)
 
-	renderer.Section("Inputs")
-	renderer.Bullet(fmt.Sprintf("provider: %s (%s)", strings.ToLower(selectedRepo.Provider), selectedRepo.Host))
-	renderer.Bullet(fmt.Sprintf("repo: %s/%s", selectedRepo.Owner, selectedRepo.Repo))
-	renderer.Bullet(fmt.Sprintf("issues: %s", formatIssueList(selectedIssues)))
-	renderer.Blank()
 	renderer.Section("Steps")
 
 	_, exists, err := repo.Exists(rootDir, repoSpec)
@@ -1326,11 +1321,6 @@ func runCreateIssueSelected(ctx context.Context, rootDir string, noPrompt bool, 
 	output.SetStepLogger(renderer)
 	defer output.SetStepLogger(nil)
 
-	renderer.Section("Inputs")
-	renderer.Bullet(fmt.Sprintf("provider: %s (%s)", strings.ToLower(selectedRepo.Provider), selectedRepo.Host))
-	renderer.Bullet(fmt.Sprintf("repo: %s/%s", selectedRepo.Owner, selectedRepo.Repo))
-	renderer.Bullet(fmt.Sprintf("issues: %s", formatIssueList(selectedIssues)))
-	renderer.Blank()
 	renderer.Section("Steps")
 
 	_, exists, err := repo.Exists(rootDir, repoSpec)
@@ -1764,11 +1754,6 @@ func runCreateReviewPicker(ctx context.Context, rootDir string, noPrompt bool) e
 	output.SetStepLogger(renderer)
 	defer output.SetStepLogger(nil)
 
-	renderer.Section("Inputs")
-	renderer.Bullet(fmt.Sprintf("provider: github (%s)", selectedRepo.Host))
-	renderer.Bullet(fmt.Sprintf("repo: %s/%s", selectedRepo.Owner, selectedRepo.Repo))
-	renderer.Bullet(fmt.Sprintf("pull requests: %s", formatPRList(selectedPRs)))
-	renderer.Blank()
 	renderer.Section("Steps")
 
 	_, exists, err := repo.Exists(rootDir, selectedRepo.RepoURL)
@@ -1907,11 +1892,6 @@ func runCreateReviewSelected(ctx context.Context, rootDir string, noPrompt bool,
 	output.SetStepLogger(renderer)
 	defer output.SetStepLogger(nil)
 
-	renderer.Section("Inputs")
-	renderer.Bullet(fmt.Sprintf("provider: github (%s)", selectedRepo.Host))
-	renderer.Bullet(fmt.Sprintf("repo: %s/%s", selectedRepo.Owner, selectedRepo.Repo))
-	renderer.Bullet(fmt.Sprintf("pull requests: %s", formatPRList(selectedPRs)))
-	renderer.Blank()
 	renderer.Section("Steps")
 
 	_, exists, err := repo.Exists(rootDir, selectedRepo.RepoURL)
