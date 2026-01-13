@@ -2779,13 +2779,17 @@ func buildWorkspaceChoices(ctx context.Context, entries []workspace.Entry) []ui.
 }
 
 func buildWorkspaceChoice(ctx context.Context, entry workspace.Entry) ui.WorkspaceChoice {
+	repos, _, err := workspace.ScanRepos(ctx, entry.WorkspacePath)
+	if err != nil {
+		return buildWorkspaceChoiceFromRepos(entry, nil)
+	}
+	return buildWorkspaceChoiceFromRepos(entry, repos)
+}
+
+func buildWorkspaceChoiceFromRepos(entry workspace.Entry, repos []workspace.Repo) ui.WorkspaceChoice {
 	choice := ui.WorkspaceChoice{
 		ID:          entry.WorkspaceID,
 		Description: entry.Description,
-	}
-	repos, _, err := workspace.ScanRepos(ctx, entry.WorkspacePath)
-	if err != nil {
-		return choice
 	}
 	for _, repoEntry := range repos {
 		name := formatRepoName(repoEntry.Alias, repoEntry.RepoKey)
@@ -3263,7 +3267,7 @@ func runWorkspaceList(ctx context.Context, rootDir string, args []string) error 
 	if err != nil {
 		return err
 	}
-	writeWorkspaceListText(ctx, entries, warnings)
+	writeWorkspaceListText(ctx, rootDir, entries, warnings)
 	return nil
 }
 
@@ -3488,7 +3492,7 @@ func writeWorkspaceStatusText(result workspace.StatusResult) {
 	}
 }
 
-func writeWorkspaceListText(ctx context.Context, entries []workspace.Entry, warnings []error) {
+func writeWorkspaceListText(ctx context.Context, rootDir string, entries []workspace.Entry, warnings []error) {
 	theme := ui.DefaultTheme()
 	useColor := isatty.IsTerminal(os.Stdout.Fd())
 	renderer := ui.NewRenderer(os.Stdout, theme, useColor)
@@ -3496,6 +3500,7 @@ func writeWorkspaceListText(ctx context.Context, entries []workspace.Entry, warn
 	type workspaceListEntry struct {
 		entry workspace.Entry
 		repos []workspace.Repo
+		state workspace.WorkspaceState
 	}
 	var items []workspaceListEntry
 	var repoWarnings []string
@@ -3505,7 +3510,8 @@ func writeWorkspaceListText(ctx context.Context, entries []workspace.Entry, warn
 			repoWarnings = append(repoWarnings, fmt.Sprintf("%s: %s", entry.WorkspaceID, compactError(err)))
 		}
 		repoWarnings = appendWarningLines(repoWarnings, entry.WorkspaceID, warnings)
-		items = append(items, workspaceListEntry{entry: entry, repos: repos})
+		state := loadWorkspaceStateForRemoval(ctx, rootDir, entry.WorkspaceID)
+		items = append(items, workspaceListEntry{entry: entry, repos: repos, state: state})
 	}
 	repoWarnings = appendWarningLines(repoWarnings, "", warnings)
 	if len(repoWarnings) > 0 {
@@ -3514,8 +3520,14 @@ func writeWorkspaceListText(ctx context.Context, entries []workspace.Entry, warn
 	}
 
 	renderer.Section("Result")
+	var choices []ui.WorkspaceChoice
 	for _, item := range items {
-		renderWorkspaceBlock(renderer, item.entry.WorkspaceID, item.entry.Description, item.repos)
+		choice := buildWorkspaceChoiceFromRepos(item.entry, item.repos)
+		choice.Warning, choice.WarningStrong = workspaceRemoveWarningLabel(item.state)
+		choices = append(choices, choice)
+	}
+	for _, line := range ui.WorkspaceChoiceLines(choices, -1, useColor, theme) {
+		renderer.LineRaw(line)
 	}
 }
 
