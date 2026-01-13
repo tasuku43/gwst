@@ -1,6 +1,6 @@
 ---
 title: "gws template rm"
-status: planned
+status: implemented
 ---
 
 ## Synopsis

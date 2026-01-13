@@ -26,7 +26,7 @@ func printGlobalHelp(w io.Writer) {
 	fmt.Fprintln(w, "  rm [<ID>]                          remove workspace (confirms on warnings)")
 	fmt.Fprintln(w, "  open [<ID>]                        open workspace in subshell")
 	fmt.Fprintln(w, "  repo <subcommand>                  repo commands (get/ls)")
-	fmt.Fprintln(w, "  template <subcommand>              template commands (ls/add)")
+	fmt.Fprintln(w, "  template <subcommand>              template commands (ls/add/rm)")
 	fmt.Fprintln(w, "  doctor [--fix]                     check workspace/repo health")
 	fmt.Fprintln(w, "  init")
 	fmt.Fprintln(w, "  help [command]")
@@ -111,7 +111,7 @@ func printRepoLsHelp(w io.Writer) {
 
 func printTemplateHelp(w io.Writer) {
 	fmt.Fprintln(w, "Usage: gws template <subcommand>")
-	fmt.Fprintln(w, "  subcommands: ls, add")
+	fmt.Fprintln(w, "  subcommands: ls, add, rm")
 }
 
 func printTemplateLsHelp(w io.Writer) {
@@ -121,6 +121,10 @@ func printTemplateLsHelp(w io.Writer) {
 func printTemplateAddHelp(w io.Writer) {
 	fmt.Fprintln(w, "Usage: gws template add [<name>] [--repo <repo> ...]")
 	fmt.Fprintln(w, "  --repo <repo>  repo spec (repeatable)")
+}
+
+func printTemplateRmHelp(w io.Writer) {
+	fmt.Fprintln(w, "Usage: gws template rm [<name> ...]")
 }
 
 func printDoctorHelp(w io.Writer) {

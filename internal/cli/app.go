@@ -145,6 +145,8 @@ func runTemplate(ctx context.Context, rootDir string, args []string, noPrompt bo
 		return runTemplateList(ctx, rootDir, args[1:])
 	case "add":
 		return runTemplateAdd(ctx, rootDir, args[1:], noPrompt)
+	case "rm":
+		return runTemplateRemove(ctx, rootDir, args[1:], noPrompt)
 	default:
 		return fmt.Errorf("unknown template subcommand: %s", args[0])
 	}
@@ -220,6 +222,23 @@ func (b *boolFlag) Set(value string) error {
 
 func (b *boolFlag) IsBoolFlag() bool {
 	return true
+}
+
+func uniqueStringsPreserve(items []string) []string {
+	seen := make(map[string]struct{})
+	var out []string
+	for _, item := range items {
+		value := strings.TrimSpace(item)
+		if value == "" {
+			continue
+		}
+		if _, ok := seen[value]; ok {
+			continue
+		}
+		seen[value] = struct{}{}
+		out = append(out, value)
+	}
+	return out
 }
 
 func runTemplateAdd(ctx context.Context, rootDir string, args []string, noPrompt bool) error {
@@ -347,6 +366,99 @@ func runTemplateAdd(ctx context.Context, rootDir string, args []string, noPrompt
 		reposDisplay = append(reposDisplay, displayTemplateRepo(repoSpec))
 	}
 	renderTreeLines(renderer, reposDisplay, treeLineNormal)
+	return nil
+}
+
+func runTemplateRemove(ctx context.Context, rootDir string, args []string, noPrompt bool) error {
+	rmFlags := flag.NewFlagSet("template rm", flag.ContinueOnError)
+	var helpFlag bool
+	rmFlags.BoolVar(&helpFlag, "help", false, "show help")
+	rmFlags.BoolVar(&helpFlag, "h", false, "show help")
+	rmFlags.SetOutput(os.Stdout)
+	rmFlags.Usage = func() {
+		printTemplateRmHelp(os.Stdout)
+	}
+	if err := rmFlags.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return nil
+		}
+		return err
+	}
+	if helpFlag {
+		printTemplateRmHelp(os.Stdout)
+		return nil
+	}
+
+	file, err := template.Load(rootDir)
+	if err != nil {
+		return err
+	}
+
+	var names []string
+	showInputs := true
+	if rmFlags.NArg() > 0 {
+		names = uniqueStringsPreserve(rmFlags.Args())
+		for _, name := range names {
+			if err := template.ValidateName(name); err != nil {
+				return err
+			}
+		}
+	} else {
+		showInputs = false
+		if noPrompt {
+			return fmt.Errorf("template name is required with --no-prompt")
+		}
+		templates := template.Names(file)
+		if len(templates) == 0 {
+			return fmt.Errorf("no templates found in %s", filepath.Join(rootDir, template.FileName))
+		}
+		var choices []ui.PromptChoice
+		for _, name := range templates {
+			choices = append(choices, ui.PromptChoice{Label: name, Value: name})
+		}
+		theme := ui.DefaultTheme()
+		useColor := isatty.IsTerminal(os.Stdout.Fd())
+		selected, err := ui.PromptMultiSelect("gws template rm", "template", choices, theme, useColor)
+		if err != nil {
+			return err
+		}
+		names = uniqueStringsPreserve(selected)
+	}
+
+	for _, name := range names {
+		if _, exists := file.Templates[name]; !exists {
+			return fmt.Errorf("template not found: %s", name)
+		}
+	}
+
+	for _, name := range names {
+		delete(file.Templates, name)
+	}
+
+	if err := template.Save(rootDir, file); err != nil {
+		return err
+	}
+
+	theme := ui.DefaultTheme()
+	useColor := isatty.IsTerminal(os.Stdout.Fd())
+	renderer := ui.NewRenderer(os.Stdout, theme, useColor)
+	output.SetStepLogger(renderer)
+	defer output.SetStepLogger(nil)
+	if showInputs {
+		renderer.Section("Inputs")
+		renderer.Bullet("templates")
+		renderTreeLines(renderer, names, treeLineNormal)
+		renderer.Blank()
+	}
+	renderer.Section("Steps")
+	for i, name := range names {
+		output.Step(formatStepWithIndex("remove template", name, relPath(rootDir, filepath.Join(rootDir, template.FileName)), i+1, len(names)))
+	}
+	renderer.Blank()
+	renderer.Section("Result")
+	for _, name := range names {
+		renderer.Bullet(fmt.Sprintf("%s removed", name))
+	}
 	return nil
 }
 
