@@ -5,6 +5,10 @@ tasks:
     desc: Run gofmt on all files
     cmds:
       - gofmt -w .
+  build:dev:
+    desc: Build dev binary to ./gwsdev
+    cmds:
+      - go build -o ./gwsdev ./cmd/gws
   test:
     desc: Run tests
     cmds:
