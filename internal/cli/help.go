@@ -27,7 +27,7 @@ func printGlobalHelp(w io.Writer) {
 	fmt.Fprintln(w, "  open [<ID>]                        open workspace in subshell")
 	fmt.Fprintln(w, "  repo <subcommand>                  repo commands (get/ls)")
 	fmt.Fprintln(w, "  template <subcommand>              template commands (ls/add)")
-	fmt.Fprintln(w, "  doctor [--fix]                     check workspace/repo health")
+	fmt.Fprintln(w, "  doctor [--fix | --self]            check workspace/repo health")
 	fmt.Fprintln(w, "  init")
 	fmt.Fprintln(w, "  help [command]")
 	fmt.Fprintln(w, "")
@@ -124,7 +124,8 @@ func printTemplateAddHelp(w io.Writer) {
 }
 
 func printDoctorHelp(w io.Writer) {
-	fmt.Fprintln(w, "Usage: gws doctor [--fix]")
+	fmt.Fprintln(w, "Usage: gws doctor [--fix | --self]")
+	fmt.Fprintln(w, "  --self            run self-diagnostics for the gws environment")
 }
 
 func printInitHelp(w io.Writer) {

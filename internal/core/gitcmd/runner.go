@@ -132,6 +132,7 @@ var allowedSubcommands = map[string]struct{}{
 	"status":           {},
 	"update-ref":       {},
 	"worktree":         {},
+	"version":          {},
 }
 
 func exitCode(err error) int {

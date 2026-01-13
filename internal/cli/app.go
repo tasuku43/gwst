@@ -565,12 +565,14 @@ func buildTemplateRepoChoices(rootDir string) ([]ui.PromptChoice, error) {
 func runDoctor(ctx context.Context, rootDir string, args []string) error {
 	doctorFlags := flag.NewFlagSet("doctor", flag.ContinueOnError)
 	var fix bool
+	var self bool
 	var helpFlag bool
 	doctorFlags.SetOutput(os.Stdout)
 	doctorFlags.Usage = func() {
 		printDoctorHelp(os.Stdout)
 	}
 	doctorFlags.BoolVar(&fix, "fix", false, "remove stale locks only")
+	doctorFlags.BoolVar(&self, "self", false, "run self-diagnostics")
 	doctorFlags.BoolVar(&helpFlag, "help", false, "show help")
 	doctorFlags.BoolVar(&helpFlag, "h", false, "show help")
 	if err := doctorFlags.Parse(args); err != nil {
@@ -583,10 +585,21 @@ func runDoctor(ctx context.Context, rootDir string, args []string) error {
 		printDoctorHelp(os.Stdout)
 		return nil
 	}
+	if fix && self {
+		return fmt.Errorf("usage: gws doctor [--fix | --self]")
+	}
 	if doctorFlags.NArg() != 0 {
-		return fmt.Errorf("usage: gws doctor [--fix]")
+		return fmt.Errorf("usage: gws doctor [--fix | --self]")
 	}
 	now := time.Now().UTC()
+	if self {
+		result, err := doctor.SelfCheck(ctx)
+		if err != nil {
+			return err
+		}
+		writeDoctorSelfText(result)
+		return nil
+	}
 	if fix {
 		result, err := doctor.Fix(ctx, rootDir, now)
 		if err != nil {
@@ -3517,4 +3530,33 @@ func writeDoctorText(result doctor.Result, fixed []string) {
 		renderTreeLines(renderer, lines, treeLineNormal)
 	}
 
+}
+
+func writeDoctorSelfText(result doctor.SelfResult) {
+	theme := ui.DefaultTheme()
+	useColor := isatty.IsTerminal(os.Stdout.Fd())
+	renderer := ui.NewRenderer(os.Stdout, theme, useColor)
+
+	if len(result.Warnings) > 0 {
+		renderWarningsSection(renderer, "warnings", result.Warnings, false)
+		renderer.Blank()
+	}
+
+	renderer.Section("Result")
+	if len(result.Issues) == 0 {
+		renderer.Bullet("no issues found")
+	} else {
+		for _, issue := range result.Issues {
+			renderer.BulletError(issue.Kind)
+			details := issueDetails(issue)
+			renderTreeLines(renderer, details, treeLineError)
+		}
+	}
+
+	if len(result.Details) > 0 {
+		renderer.Blank()
+		renderer.Section("Details")
+		renderer.Bullet("environment")
+		renderTreeLines(renderer, result.Details, treeLineNormal)
+	}
 }
