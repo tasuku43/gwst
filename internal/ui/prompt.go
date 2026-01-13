@@ -3,6 +3,7 @@ package ui
 import (
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/textinput"
@@ -1015,6 +1016,21 @@ func PromptChoiceSelect(title, label string, choices []PromptChoice, theme Theme
 	return strings.TrimSpace(final.value), nil
 }
 
+// PromptChoiceSelectWithOutput lets users pick a single choice from a list with filtering.
+// It renders the prompt to the provided writer.
+func PromptChoiceSelectWithOutput(title, label string, choices []PromptChoice, theme Theme, useColor bool, out io.Writer) (string, error) {
+	model := newChoiceSelectModel(title, label, choices, theme, useColor)
+	finalModel, err := runProgramWithOutput(model, out)
+	if err != nil {
+		return "", err
+	}
+	final := finalModel.(choiceSelectModel)
+	if final.err != nil {
+		return "", final.err
+	}
+	return strings.TrimSpace(final.value), nil
+}
+
 // PromptMultiSelect lets users pick one or more choices from a list with filtering.
 func PromptMultiSelect(title, label string, choices []PromptChoice, theme Theme, useColor bool) ([]string, error) {
 	model := newMultiSelectModel(title, label, choices, theme, useColor)
@@ -1976,6 +1992,10 @@ func mutedToken(theme Theme, useColor bool, token string) string {
 
 func runProgram(model tea.Model) (tea.Model, error) {
 	return tea.NewProgram(model).Run()
+}
+
+func runProgramWithOutput(model tea.Model, out io.Writer) (tea.Model, error) {
+	return tea.NewProgram(model, tea.WithOutput(out)).Run()
 }
 
 func collectLines(render func(*strings.Builder)) []string {

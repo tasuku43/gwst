@@ -25,6 +25,7 @@ func printGlobalHelp(w io.Writer) {
 	fmt.Fprintln(w, "  status [<ID>]                      check dirty/untracked status")
 	fmt.Fprintln(w, "  rm [<ID>]                          remove workspace (confirms on warnings)")
 	fmt.Fprintln(w, "  open [<ID>]                        open workspace in subshell")
+	fmt.Fprintln(w, "  path (--workspace | --src)         print selected workspace/src path")
 	fmt.Fprintln(w, "  repo <subcommand>                  repo commands (get/ls)")
 	fmt.Fprintln(w, "  template <subcommand>              template commands (ls/add/rm)")
 	fmt.Fprintln(w, "  doctor [--fix | --self]            check workspace/repo health")
@@ -52,6 +53,8 @@ func printCommandHelp(cmd string, w io.Writer) bool {
 		printRmHelp(w)
 	case "open":
 		printOpenHelp(w)
+	case "path":
+		printPathHelp(w)
 	case "repo":
 		printRepoHelp(w)
 	case "template":
@@ -93,6 +96,12 @@ func printRmHelp(w io.Writer) {
 func printOpenHelp(w io.Writer) {
 	fmt.Fprintln(w, "Usage: gws open [<WORKSPACE_ID>] [--shell]")
 	fmt.Fprintln(w, "  Open an interactive subshell at the workspace root")
+}
+
+func printPathHelp(w io.Writer) {
+	fmt.Fprintln(w, "Usage: gws path (--workspace | --src)")
+	fmt.Fprintln(w, "  --workspace       select a workspace path")
+	fmt.Fprintln(w, "  --src             select a src path")
 }
 
 func printRepoHelp(w io.Writer) {

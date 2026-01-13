@@ -113,6 +113,7 @@ Core workflow:
 - `gws open [<id>]` - open a workspace in an interactive subshell
 - `gws status [<id>]` - show branch, dirty/untracked, and ahead/behind
 - `gws rm [<id>]` - remove a workspace (refuses if dirty)
+- `gws path (--workspace | --src)` - print a selected workspace/src path
 
 Review workflow:
 

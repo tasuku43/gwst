@@ -20,6 +20,7 @@ Rating legend:
 - **Create workspace from template** — `gws create --template <name> [<id>]`; prompts if omitted. `workspace_id` becomes the branch name for all repos. Rating: Excellent (interactive repo-get prompt appears when a template repo is missing)
 - **Add a repo mid-task** — `gws add <id> <repo>`; branch name = workspace_id, base = origin/HEAD. Rating: Excellent
 - **List workspaces** — `gws ls` enumerates workspaces. Rating: Good (minimal detail only)
+- **Jump to a path** — `gws path --workspace` or `gws path --src` prints a selected path for `cd`. Rating: Good
 - **Check status** — `gws status <id>` shows dirty/untracked counts and HEAD per repo. Rating: Excellent (lightweight)
 
 ## Reviews

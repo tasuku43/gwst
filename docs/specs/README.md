@@ -33,5 +33,6 @@ Current command specs live in this folder:
 - `docs/specs/status.md`
 - `docs/specs/rm.md`
 - `docs/specs/open.md`
+- `docs/specs/path.md`
 
 Add new files in the same format when introducing new commands or options.
