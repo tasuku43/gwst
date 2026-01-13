@@ -81,6 +81,7 @@ Steps
 - Select/confirm: Bubbles list or simple radio
 - Spinners: optional; use subtle style only
 - Help line: muted color, minimal content
+- Long selection lists should scroll so Inputs stay visible.
 
 ## Examples
 
