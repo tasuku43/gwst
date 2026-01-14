@@ -4,15 +4,15 @@ status: implemented
 ---
 
 ## Synopsis
-`gws create [--template <name> | --review [<PR URL>] | --issue [<ISSUE_URL>]] [<WORKSPACE_ID>] [--workspace-id <id>] [--branch <name>] [--base <ref>] [--no-prompt]`
+`gws create [--template <name> | --review [<PR URL>] | --issue [<ISSUE_URL>] | --repo] [<WORKSPACE_ID>] [--workspace-id <id>] [--branch <name>] [--base <ref>] [--no-prompt]`
 
 ## Intent
 Unify all workspace creation flows under a single command and keep "create" semantics consistent across modes.
 
 ## Modes and selection
-- Exactly one of `--template`, `--review`, or `--issue` can be specified. If multiple are provided, error.
+- Exactly one of `--template`, `--review`, `--issue`, or `--repo` can be specified. If multiple are provided, error.
 - If none are provided and prompts are allowed, enter an interactive mode picker.
-  - The picker presents `template`, `review`, `issue` and supports arrow selection with filterable search.
+  - The picker presents `template`, `repo`, `review`, `issue` and supports arrow selection with filterable search.
 - If none are provided and `--no-prompt` is set, error.
 
 ## Mode: template
@@ -48,6 +48,27 @@ Same behavior as the former `gws new`.
 - User declines required `repo get` operations.
 - Git errors while adding worktrees or fetching repos.
 - Workspace already exists.
+
+## Mode: repo
+Create a workspace from a selected repo without using a template.
+
+### Behavior
+- Requires prompts/TTY to select repos.
+- Step 1: select a repo (searchable single-select) from existing repo stores.
+- Step 2: same flow as template mode after selection:
+  - Decide the workspace ID.
+  - Input an optional description.
+  - Decide per-repo branch names (same validation and duplicate handling as template mode).
+- Preflights selected repos and offers to run `gws repo get` if stores are missing (same as template mode).
+
+### Success Criteria
+- Workspace directory exists with one worktree for the selected repo, on the chosen branch.
+
+### Failure Modes
+- Repo selection empty or canceled.
+- Repo stores missing and user declines/forbids `repo get`.
+- Workspace already exists or invalid workspace ID.
+- Git errors while adding worktrees or fetching repos.
 
 ## Mode: review
 Same behavior as the former `gws review`.

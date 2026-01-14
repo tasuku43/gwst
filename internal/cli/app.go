@@ -469,6 +469,7 @@ func runCreate(ctx context.Context, rootDir string, args []string, noPrompt bool
 	var templateName stringFlag
 	var reviewFlag boolFlag
 	var issueFlag boolFlag
+	var repoFlag boolFlag
 	var workspaceID string
 	var branch string
 	var baseRef string
@@ -476,6 +477,7 @@ func runCreate(ctx context.Context, rootDir string, args []string, noPrompt bool
 	createFlags.Var(&templateName, "template", "template name")
 	createFlags.Var(&reviewFlag, "review", "create review workspace from PR")
 	createFlags.Var(&issueFlag, "issue", "create issue workspace from issue")
+	createFlags.Var(&repoFlag, "repo", "create workspace from repos")
 	createFlags.StringVar(&workspaceID, "workspace-id", "", "workspace id")
 	createFlags.StringVar(&branch, "branch", "", "branch name")
 	createFlags.StringVar(&baseRef, "base", "", "base ref")
@@ -504,6 +506,7 @@ func runCreate(ctx context.Context, rootDir string, args []string, noPrompt bool
 	templateMode := templateName.set
 	reviewMode := reviewFlag.value
 	issueMode := issueFlag.value
+	repoMode := repoFlag.value
 	modeCount := 0
 	if templateMode {
 		modeCount++
@@ -514,8 +517,11 @@ func runCreate(ctx context.Context, rootDir string, args []string, noPrompt bool
 	if issueMode {
 		modeCount++
 	}
+	if repoMode {
+		modeCount++
+	}
 	if modeCount > 1 {
-		return fmt.Errorf("specify exactly one mode: --template, --review, or --issue")
+		return fmt.Errorf("specify exactly one mode: --template, --review, --issue, or --repo")
 	}
 	if modeCount == 0 {
 		if noPrompt {
@@ -527,6 +533,7 @@ func runCreate(ctx context.Context, rootDir string, args []string, noPrompt bool
 		theme := ui.DefaultTheme()
 		useColor := isatty.IsTerminal(os.Stdout.Fd())
 		templateNames, tmplErr := loadTemplateNames(rootDir)
+		repoChoices, repoErr := buildTemplateRepoChoices(rootDir)
 		reviewChoices, reviewErr := buildReviewRepoChoices(rootDir)
 		issueChoices, issueErr := buildIssueRepoChoices(rootDir)
 		reviewPrompt, reviewByValue := toPromptChoices(reviewChoices)
@@ -576,7 +583,7 @@ func runCreate(ctx context.Context, rootDir string, args []string, noPrompt bool
 		validateBranch := func(v string) error {
 			return workspace.ValidateBranchName(ctx, v)
 		}
-		mode, tmplName, tmplWorkspaceID, tmplDesc, tmplBranches, reviewRepo, reviewPRs, issueRepo, issueSelections, err := ui.PromptCreateFlow("gws create", templateNames, tmplErr, reviewPrompt, issuePrompt, loadReview, loadIssue, loadTemplateRepos, validateBranch, theme, useColor)
+		mode, tmplName, tmplWorkspaceID, tmplDesc, tmplBranches, reviewRepo, reviewPRs, issueRepo, issueSelections, repoSelected, err := ui.PromptCreateFlow("gws create", "", "", templateNames, tmplErr, repoChoices, repoErr, reviewPrompt, issuePrompt, loadReview, loadIssue, loadTemplateRepos, validateBranch, theme, useColor)
 		if err != nil {
 			return err
 		}
@@ -600,6 +607,15 @@ func runCreate(ctx context.Context, rootDir string, args []string, noPrompt bool
 				return err
 			}
 			return nil
+		case "repo":
+			inputs := createRepoInputs{
+				repos:       []string{repoSelected},
+				workspaceID: tmplWorkspaceID,
+				description: tmplDesc,
+				branches:    tmplBranches,
+				fromFlow:    true,
+			}
+			return runCreateRepoWithInputs(ctx, rootDir, inputs, noPrompt)
 		default:
 			return fmt.Errorf("unknown mode: %s", mode)
 		}
@@ -640,6 +656,40 @@ func runCreate(ctx context.Context, rootDir string, args []string, noPrompt bool
 			issueURL = remaining[0]
 		}
 		return runCreateIssue(ctx, rootDir, issueURL, workspaceID, branch, baseRef, noPrompt)
+	}
+	if repoMode {
+		if len(remaining) > 0 {
+			return fmt.Errorf("usage: gws create --repo")
+		}
+		if noPrompt {
+			return fmt.Errorf("--repo requires prompts")
+		}
+		if branch != "" || baseRef != "" {
+			return fmt.Errorf("--branch and --base are not valid with --repo")
+		}
+		if !isatty.IsTerminal(os.Stdin.Fd()) {
+			return fmt.Errorf("repo selection requires a TTY")
+		}
+		theme := ui.DefaultTheme()
+		useColor := isatty.IsTerminal(os.Stdout.Fd())
+		repoChoices, repoErr := buildTemplateRepoChoices(rootDir)
+		mode, _, tmplWorkspaceID, tmplDesc, tmplBranches, _, _, _, _, repoSelected, err := ui.PromptCreateFlow("gws create", "repo", workspaceID, nil, nil, repoChoices, repoErr, nil, nil, nil, nil, nil, func(v string) error {
+			return workspace.ValidateBranchName(ctx, v)
+		}, theme, useColor)
+		if err != nil {
+			return err
+		}
+		if mode != "repo" {
+			return fmt.Errorf("unknown mode: %s", mode)
+		}
+		inputs := createRepoInputs{
+			repos:       []string{repoSelected},
+			workspaceID: tmplWorkspaceID,
+			description: tmplDesc,
+			branches:    tmplBranches,
+			fromFlow:    true,
+		}
+		return runCreateRepoWithInputs(ctx, rootDir, inputs, noPrompt)
 	}
 	return fmt.Errorf("mode is required")
 }
@@ -836,6 +886,14 @@ type createTemplateInputs struct {
 	fromFlow     bool
 }
 
+type createRepoInputs struct {
+	repos       []string
+	workspaceID string
+	description string
+	branches    []string
+	fromFlow    bool
+}
+
 func runCreateTemplate(ctx context.Context, rootDir, templateName, workspaceID string, noPrompt bool) error {
 	inputs := createTemplateInputs{
 		templateName: templateName,
@@ -914,6 +972,108 @@ func runCreateTemplateWithInputs(ctx context.Context, rootDir string, inputs cre
 	if err := applyTemplate(ctx, rootDir, workspaceID, tmpl, branches); err != nil {
 		if rollbackErr := workspace.Remove(ctx, rootDir, workspaceID); rollbackErr != nil {
 			return fmt.Errorf("apply template failed: %w (rollback failed: %v)", err, rollbackErr)
+		}
+		return err
+	}
+
+	renderer.Blank()
+	renderer.Section("Result")
+	repos, _, _ := loadWorkspaceRepos(ctx, wsDir)
+	renderWorkspaceBlock(renderer, workspaceID, description, repos)
+	renderSuggestion(renderer, useColor, wsDir)
+	return nil
+}
+
+func runCreateRepoWithInputs(ctx context.Context, rootDir string, inputs createRepoInputs, noPrompt bool) error {
+	repoSpecs := template.NormalizeRepos(inputs.repos)
+	workspaceID := strings.TrimSpace(inputs.workspaceID)
+
+	theme := ui.DefaultTheme()
+	useColor := isatty.IsTerminal(os.Stdout.Fd())
+	description := strings.TrimSpace(inputs.description)
+
+	if len(repoSpecs) == 0 {
+		if noPrompt {
+			return fmt.Errorf("repos are required without prompt")
+		}
+		choices, err := buildTemplateRepoChoices(rootDir)
+		if err != nil {
+			return err
+		}
+		if len(choices) == 0 {
+			return fmt.Errorf("no repos found; run gws repo get first")
+		}
+		selected, err := ui.PromptChoiceSelect("gws create", "repo", choices, theme, useColor)
+		if err != nil {
+			return err
+		}
+		repoSpecs = template.NormalizeRepos([]string{selected})
+	}
+	if len(repoSpecs) != 1 {
+		return fmt.Errorf("exactly one repo is required")
+	}
+
+	if workspaceID == "" {
+		if noPrompt {
+			return fmt.Errorf("workspace id is required without prompt")
+		}
+		value, err := ui.PromptInputInline("workspace id", "", func(v string) error {
+			if strings.TrimSpace(v) == "" {
+				return fmt.Errorf("workspace id is required")
+			}
+			return nil
+		}, theme, useColor)
+		if err != nil {
+			return err
+		}
+		workspaceID = strings.TrimSpace(value)
+	}
+
+	if !noPrompt && !inputs.fromFlow {
+		value, err := ui.PromptInputInline("description", "", nil, theme, useColor)
+		if err != nil {
+			return err
+		}
+		description = strings.TrimSpace(value)
+	}
+
+	tmpl := template.Template{Repos: repoSpecs}
+	missing, err := preflightTemplateRepos(ctx, rootDir, tmpl)
+	if err != nil {
+		return err
+	}
+	renderer := ui.NewRenderer(os.Stdout, theme, useColor)
+	output.SetStepLogger(renderer)
+	defer output.SetStepLogger(nil)
+
+	branches := inputs.branches
+	if !noPrompt && !inputs.fromFlow {
+		branches, err = promptTemplateBranches(ctx, tmpl, workspaceID, theme, useColor)
+		if err != nil {
+			return err
+		}
+	}
+
+	startSteps(renderer)
+	if err := ensureRepoGet(ctx, rootDir, missing, noPrompt, theme, useColor); err != nil {
+		return err
+	}
+
+	output.Step(formatStep("create workspace", workspaceID, relPath(rootDir, workspace.WorkspaceDir(rootDir, workspaceID))))
+	wsDir, err := workspace.New(ctx, rootDir, workspaceID)
+	if err != nil {
+		return err
+	}
+	if err := workspace.SaveMetadata(wsDir, workspace.Metadata{Description: description}); err != nil {
+		if rollbackErr := workspace.Remove(ctx, rootDir, workspaceID); rollbackErr != nil {
+			return fmt.Errorf("save workspace metadata failed: %w (rollback failed: %v)", err, rollbackErr)
+		}
+		return err
+	}
+
+	if err := applyTemplate(ctx, rootDir, workspaceID, tmpl, branches); err != nil {
+		if rollbackErr := workspace.Remove(ctx, rootDir, workspaceID); rollbackErr != nil {
+			return fmt.Errorf("apply repo selection failed: %w (rollback failed: %v)", err, rollbackErr)
 		}
 		return err
 	}
@@ -2671,6 +2831,7 @@ func promptTemplateAndID(rootDir, title, templateName, workspaceID string, theme
 func promptCreateMode(theme ui.Theme, useColor bool) (string, error) {
 	choices := []ui.PromptChoice{
 		{Label: "template", Value: "template"},
+		{Label: "repo", Value: "repo"},
 		{Label: "review", Value: "review"},
 		{Label: "issue", Value: "issue"},
 	}

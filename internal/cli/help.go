@@ -70,10 +70,11 @@ func printCommandHelp(cmd string, w io.Writer) bool {
 }
 
 func printCreateHelp(w io.Writer) {
-	fmt.Fprintln(w, "Usage: gws create [--template <name> | --review [<PR URL>] | --issue [<ISSUE_URL>]] [<WORKSPACE_ID>] [--workspace-id <id>] [--branch <name>] [--base <ref>] [--no-prompt]")
+	fmt.Fprintln(w, "Usage: gws create [--template <name> | --review [<PR URL>] | --issue [<ISSUE_URL>] | --repo] [<WORKSPACE_ID>] [--workspace-id <id>] [--branch <name>] [--base <ref>] [--no-prompt]")
 	fmt.Fprintln(w, "  --template <name>  template name")
 	fmt.Fprintln(w, "  --review           create review workspace from PR")
 	fmt.Fprintln(w, "  --issue            create issue workspace from issue")
+	fmt.Fprintln(w, "  --repo             create workspace by selecting repos")
 }
 
 func printAddHelp(w io.Writer) {
