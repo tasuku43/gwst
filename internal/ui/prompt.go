@@ -15,8 +15,9 @@ import (
 var ErrPromptCanceled = errors.New("prompt canceled")
 
 type PromptChoice struct {
-	Label string
-	Value string
+	Label       string
+	Value       string
+	Description string
 }
 
 type IssueSelection struct {
@@ -693,10 +694,10 @@ func (m createFlowModel) View() string {
 func (m createFlowModel) filterModes() []PromptChoice {
 	q := strings.ToLower(strings.TrimSpace(m.modeInput.Value()))
 	choices := []PromptChoice{
-		{Label: "template", Value: "template"},
-		{Label: "repo", Value: "repo"},
-		{Label: "review", Value: "review"},
-		{Label: "issue", Value: "issue"},
+		{Label: "repo", Value: "repo", Description: "1 repo only"},
+		{Label: "issue", Value: "issue", Description: "From an issue (multi-select)"},
+		{Label: "review", Value: "review", Description: "From a review request (multi-select)"},
+		{Label: "template", Value: "template", Description: "From template"},
 	}
 	if q == "" {
 		return choices
@@ -2923,6 +2924,14 @@ func renderRepoChoiceList(b *strings.Builder, items []PromptChoice, cursor int, 
 		display := item.Label
 		if i == cursor && useColor {
 			display = lipgloss.NewStyle().Bold(true).Render(display)
+		}
+		desc := strings.TrimSpace(item.Description)
+		if desc != "" {
+			if useColor {
+				display += theme.Muted.Render(" - " + desc)
+			} else {
+				display += " - " + desc
+			}
 		}
 		b.WriteString(fmt.Sprintf("%s%s %s\n", output.Indent+output.Indent, mutedToken(theme, useColor, output.LogConnector), display))
 	}

@@ -2877,10 +2877,10 @@ func promptTemplateAndID(rootDir, title, templateName, workspaceID string, theme
 
 func promptCreateMode(theme ui.Theme, useColor bool) (string, error) {
 	choices := []ui.PromptChoice{
-		{Label: "template", Value: "template"},
-		{Label: "repo", Value: "repo"},
-		{Label: "review", Value: "review"},
-		{Label: "issue", Value: "issue"},
+		{Label: "repo", Value: "repo", Description: "1 repo only"},
+		{Label: "issue", Value: "issue", Description: "From an issue (multi-select)"},
+		{Label: "review", Value: "review", Description: "From a review request (multi-select)"},
+		{Label: "template", Value: "template", Description: "From template"},
 	}
 	return ui.PromptChoiceSelect("gws create", "mode", choices, theme, useColor)
 }
