@@ -1784,7 +1784,8 @@ func renderIssueBranchEditFrame(model issueBranchSelectModel, headerLines ...str
 				}
 				branchDisplay = model.branchInputs[i].View()
 			}
-			b.WriteString(fmt.Sprintf("%s%s %s | branch: %s\n", output.Indent+output.Indent, mutedToken(model.theme, model.useColor, output.LogConnector), display, branchDisplay))
+			b.WriteString(fmt.Sprintf("%s%s %s\n", output.Indent+output.Indent, mutedToken(model.theme, model.useColor, output.LogConnector), display))
+			b.WriteString(fmt.Sprintf("%s%s  branch: %s\n", output.Indent+output.Indent+output.Indent, mutedToken(model.theme, model.useColor, output.LogConnector), branchDisplay))
 		}
 	})
 	frame.AppendInputsRaw(rawLines...)
