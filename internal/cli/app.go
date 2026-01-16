@@ -583,7 +583,7 @@ func runCreate(ctx context.Context, rootDir string, args []string, noPrompt bool
 		validateBranch := func(v string) error {
 			return workspace.ValidateBranchName(ctx, v)
 		}
-		mode, tmplName, tmplWorkspaceID, tmplDesc, tmplBranches, reviewRepo, reviewPRs, issueRepo, issueSelections, repoSelected, err := ui.PromptCreateFlow("gws create", "", "", templateNames, tmplErr, repoChoices, repoErr, reviewPrompt, issuePrompt, loadReview, loadIssue, loadTemplateRepos, validateBranch, theme, useColor, "")
+		mode, tmplName, tmplWorkspaceID, tmplDesc, tmplBranches, reviewRepo, reviewPRs, issueRepo, issueSelections, repoSelected, err := ui.PromptCreateFlow("gws create", "", "", "", templateNames, tmplErr, repoChoices, repoErr, reviewPrompt, issuePrompt, loadReview, loadIssue, loadTemplateRepos, validateBranch, theme, useColor, "")
 		if err != nil {
 			return err
 		}
@@ -681,7 +681,7 @@ func runCreate(ctx context.Context, rootDir string, args []string, noPrompt bool
 			theme := ui.DefaultTheme()
 			useColor := isatty.IsTerminal(os.Stdout.Fd())
 			repoChoices, repoErr := buildTemplateRepoChoices(rootDir)
-			mode, _, tmplWorkspaceID, tmplDesc, tmplBranches, _, _, _, _, repoSelected, err := ui.PromptCreateFlow("gws create", "repo", workspaceID, nil, nil, repoChoices, repoErr, nil, nil, nil, nil, nil, func(v string) error {
+			mode, _, tmplWorkspaceID, tmplDesc, tmplBranches, _, _, _, _, repoSelected, err := ui.PromptCreateFlow("gws create", "repo", workspaceID, "", nil, nil, repoChoices, repoErr, nil, nil, nil, nil, nil, func(v string) error {
 				return workspace.ValidateBranchName(ctx, v)
 			}, theme, useColor, "")
 			if err != nil {
@@ -705,7 +705,7 @@ func runCreate(ctx context.Context, rootDir string, args []string, noPrompt bool
 			}
 			theme := ui.DefaultTheme()
 			useColor := isatty.IsTerminal(os.Stdout.Fd())
-			mode, _, tmplWorkspaceID, tmplDesc, tmplBranches, _, _, _, _, repoSelected, err := ui.PromptCreateFlow("gws create", "repo", workspaceID, nil, nil, nil, nil, nil, nil, nil, nil, nil, func(v string) error {
+			mode, _, tmplWorkspaceID, tmplDesc, tmplBranches, _, _, _, _, repoSelected, err := ui.PromptCreateFlow("gws create", "repo", workspaceID, "", nil, nil, nil, nil, nil, nil, nil, nil, nil, func(v string) error {
 				return workspace.ValidateBranchName(ctx, v)
 			}, theme, useColor, repoSpec)
 			if err != nil {
@@ -956,18 +956,46 @@ func runCreateTemplateWithInputs(ctx context.Context, rootDir string, inputs cre
 	theme := ui.DefaultTheme()
 	useColor := isatty.IsTerminal(os.Stdout.Fd())
 	description := strings.TrimSpace(inputs.description)
+	branches := inputs.branches
+	fromFlow := inputs.fromFlow
+
+	if !noPrompt && !fromFlow {
+		templateNames, tmplErr := loadTemplateNames(rootDir)
+		loadTemplateRepos := func(name string) ([]string, error) {
+			file, err := template.Load(rootDir)
+			if err != nil {
+				return nil, err
+			}
+			tmpl, ok := file.Templates[name]
+			if !ok {
+				return nil, fmt.Errorf("template not found: %s", name)
+			}
+			return append([]string(nil), tmpl.Repos...), nil
+		}
+		validateBranch := func(v string) error {
+			return workspace.ValidateBranchName(ctx, v)
+		}
+		mode, tmplName, tmplWorkspaceID, tmplDesc, tmplBranches, _, _, _, _, _, err := ui.PromptCreateFlow("gws create", "template", workspaceID, templateName, templateNames, tmplErr, nil, nil, nil, nil, nil, nil, loadTemplateRepos, validateBranch, theme, useColor, "")
+		if err != nil {
+			return err
+		}
+		if mode != "template" {
+			return fmt.Errorf("unknown mode: %s", mode)
+		}
+		templateName = tmplName
+		workspaceID = tmplWorkspaceID
+		description = tmplDesc
+		branches = tmplBranches
+		fromFlow = true
+	}
 
 	if templateName == "" || workspaceID == "" {
 		if noPrompt {
 			return fmt.Errorf("template name and workspace id are required without prompt")
 		}
-		var err error
-		templateName, workspaceID, err = promptTemplateAndID(rootDir, "gws create", templateName, workspaceID, theme, useColor)
-		if err != nil {
-			return err
-		}
+		return fmt.Errorf("template name and workspace id are required")
 	}
-	if !noPrompt && !inputs.fromFlow {
+	if !noPrompt && !fromFlow {
 		value, err := ui.PromptInputInline("description", "", nil, theme, useColor)
 		if err != nil {
 			return err
@@ -991,8 +1019,7 @@ func runCreateTemplateWithInputs(ctx context.Context, rootDir string, inputs cre
 	output.SetStepLogger(renderer)
 	defer output.SetStepLogger(nil)
 
-	branches := inputs.branches
-	if !noPrompt && !inputs.fromFlow {
+	if !noPrompt && !fromFlow {
 		branches, err = promptTemplateBranches(ctx, tmpl, workspaceID, theme, useColor)
 		if err != nil {
 			return err
@@ -1489,148 +1516,32 @@ func runIssuePicker(ctx context.Context, rootDir string, noPrompt bool, title st
 		return fmt.Errorf("no repos with supported hosts found")
 	}
 
-	promptChoices := make([]ui.PromptChoice, 0, len(repoChoices))
-	repoByValue := make(map[string]issueRepoChoice, len(repoChoices))
-	for _, choice := range repoChoices {
-		promptChoices = append(promptChoices, ui.PromptChoice{Label: choice.Label, Value: choice.Value})
-		repoByValue[choice.Value] = choice
-	}
-
-	repoSpec, err := ui.PromptChoiceSelect(title, "repo", promptChoices, theme, useColor)
-	if err != nil {
-		return err
-	}
-	selectedRepo, ok := repoByValue[repoSpec]
-	if !ok {
-		return fmt.Errorf("selected repo not found")
-	}
-	if strings.ToLower(selectedRepo.Provider) != "github" {
-		return fmt.Errorf("issue picker supports GitHub only for now: %s", selectedRepo.Host)
-	}
-
-	issues, err := fetchGitHubIssues(ctx, selectedRepo.Host, selectedRepo.Owner, selectedRepo.Repo)
-	if err != nil {
-		return err
-	}
-	if len(issues) == 0 {
-		return fmt.Errorf("no issues found")
-	}
-
-	issueByNumber := make(map[int]issueSummary, len(issues))
-	var issueChoices []ui.PromptChoice
-	for _, issue := range issues {
-		issueByNumber[issue.Number] = issue
-		label := fmt.Sprintf("#%d", issue.Number)
-		if strings.TrimSpace(issue.Title) != "" {
-			label = fmt.Sprintf("#%d %s", issue.Number, strings.TrimSpace(issue.Title))
+	promptChoices, repoByValue := toIssuePromptChoices(repoChoices)
+	loadIssue := func(value string) ([]ui.PromptChoice, error) {
+		selected, ok := repoByValue[value]
+		if !ok {
+			return nil, fmt.Errorf("selected repo not found")
 		}
-		issueChoices = append(issueChoices, ui.PromptChoice{
-			Label: label,
-			Value: strconv.Itoa(issue.Number),
-		})
+		if strings.ToLower(selected.Provider) != "github" {
+			return nil, fmt.Errorf("issue picker supports GitHub only for now: %s", selected.Host)
+		}
+		issues, err := fetchGitHubIssues(ctx, selected.Host, selected.Owner, selected.Repo)
+		if err != nil {
+			return nil, err
+		}
+		return buildIssueChoices(issues), nil
 	}
-
 	validateBranch := func(value string) error {
 		return workspace.ValidateBranchName(ctx, value)
 	}
-	selectedIssues, err := ui.PromptIssueSelectWithBranches(title, "issue", issueChoices, validateBranch, theme, useColor)
+	mode, _, _, _, _, _, _, issueRepo, issueSelections, _, err := ui.PromptCreateFlow(title, "issue", "", "", nil, nil, nil, nil, nil, promptChoices, nil, loadIssue, nil, validateBranch, theme, useColor, "")
 	if err != nil {
 		return err
 	}
-
-	renderer := ui.NewRenderer(os.Stdout, theme, useColor)
-	output.SetStepLogger(renderer)
-	defer output.SetStepLogger(nil)
-
-	renderer.Section("Steps")
-
-	_, exists, err := repo.Exists(rootDir, repoSpec)
-	if err != nil {
-		return err
+	if mode != "issue" {
+		return fmt.Errorf("unknown mode: %s", mode)
 	}
-	if !exists {
-		if err := ensureRepoGet(ctx, rootDir, []string{repoSpec}, noPrompt, theme, useColor); err != nil {
-			return err
-		}
-	}
-	store, err := repo.Open(ctx, rootDir, repoSpec, true)
-	if err != nil {
-		return err
-	}
-
-	repoURL := buildRepoURLFromParts(selectedRepo.Host, selectedRepo.Owner, selectedRepo.Repo)
-	type issueWorkspaceResult struct {
-		workspaceID string
-		description string
-		repos       []workspace.Repo
-	}
-	var results []issueWorkspaceResult
-	var failure error
-	var failureID string
-
-	for _, selection := range selectedIssues {
-		num, err := strconv.Atoi(strings.TrimSpace(selection.Value))
-		if err != nil {
-			failure = fmt.Errorf("invalid issue number: %s", selection.Value)
-			failureID = selection.Value
-			break
-		}
-		description := ""
-		if issue, ok := issueByNumber[num]; ok {
-			description = issue.Title
-		}
-		workspaceID := formatIssueWorkspaceID(selectedRepo.Owner, selectedRepo.Repo, num)
-		branch := strings.TrimSpace(selection.Branch)
-		if branch == "" {
-			branch = fmt.Sprintf("issue/%d", num)
-		}
-		output.Step(formatStep("create workspace", workspaceID, relPath(rootDir, workspace.WorkspaceDir(rootDir, workspaceID))))
-		wsDir, err := workspace.New(ctx, rootDir, workspaceID)
-		if err != nil {
-			failure = err
-			failureID = workspaceID
-			break
-		}
-		if err := workspace.SaveMetadata(wsDir, workspace.Metadata{Description: description}); err != nil {
-			if rollbackErr := workspace.Remove(ctx, rootDir, workspaceID); rollbackErr != nil {
-				failure = fmt.Errorf("save workspace metadata failed: %w (rollback failed: %v)", err, rollbackErr)
-			} else {
-				failure = err
-			}
-			failureID = workspaceID
-			break
-		}
-
-		output.Step(formatStep("worktree add", displayRepoName(repoURL), worktreeDest(rootDir, workspaceID, repoURL)))
-		if _, err := addIssueWorktree(ctx, rootDir, workspaceID, repoURL, branch, "", store.StorePath); err != nil {
-			if rollbackErr := workspace.Remove(ctx, rootDir, workspaceID); rollbackErr != nil {
-				failure = fmt.Errorf("issue setup failed: %w (rollback failed: %v)", err, rollbackErr)
-			} else {
-				failure = err
-			}
-			failureID = workspaceID
-			break
-		}
-
-		repos, _, _ := loadWorkspaceRepos(ctx, wsDir)
-		results = append(results, issueWorkspaceResult{
-			workspaceID: workspaceID,
-			description: description,
-			repos:       repos,
-		})
-	}
-
-	if len(results) > 0 {
-		renderer.Blank()
-		renderer.Section("Result")
-		for _, result := range results {
-			renderWorkspaceBlock(renderer, result.workspaceID, result.description, result.repos)
-		}
-	}
-	if failure != nil {
-		return fmt.Errorf("%s: %w", failureID, failure)
-	}
-	return nil
+	return runCreateIssueSelected(ctx, rootDir, noPrompt, issueRepo, issueSelections)
 }
 
 func runCreateIssueSelected(ctx context.Context, rootDir string, noPrompt bool, repoSpec string, selectedIssues []ui.IssueSelection) error {
@@ -2072,157 +1983,26 @@ func runCreateReviewPicker(ctx context.Context, rootDir string, noPrompt bool) e
 		return fmt.Errorf("no GitHub repos found")
 	}
 
-	promptChoices := make([]ui.PromptChoice, 0, len(repoChoices))
-	repoByValue := make(map[string]reviewRepoChoice, len(repoChoices))
-	for _, choice := range repoChoices {
-		promptChoices = append(promptChoices, ui.PromptChoice{Label: choice.Label, Value: choice.Value})
-		repoByValue[choice.Value] = choice
-	}
-
-	repoSpec, err := ui.PromptChoiceSelect("gws create", "repo", promptChoices, theme, useColor)
-	if err != nil {
-		return err
-	}
-	selectedRepo, ok := repoByValue[repoSpec]
-	if !ok {
-		return fmt.Errorf("selected repo not found")
-	}
-
-	prs, err := fetchGitHubPRs(ctx, selectedRepo.Host, selectedRepo.Owner, selectedRepo.Repo)
-	if err != nil {
-		return err
-	}
-	if len(prs) == 0 {
-		return fmt.Errorf("no pull requests found")
-	}
-
-	var prChoices []ui.PromptChoice
-	for _, pr := range prs {
-		label := fmt.Sprintf("#%d", pr.Number)
-		if strings.TrimSpace(pr.Title) != "" {
-			label = fmt.Sprintf("#%d %s", pr.Number, strings.TrimSpace(pr.Title))
-		}
-		prChoices = append(prChoices, ui.PromptChoice{
-			Label: label,
-			Value: strconv.Itoa(pr.Number),
-		})
-	}
-
-	selectedPRs, err := ui.PromptMultiSelect("gws create", "pull request", prChoices, theme, useColor)
-	if err != nil {
-		return err
-	}
-
-	renderer := ui.NewRenderer(os.Stdout, theme, useColor)
-	output.SetStepLogger(renderer)
-	defer output.SetStepLogger(nil)
-
-	renderer.Section("Steps")
-
-	_, exists, err := repo.Exists(rootDir, selectedRepo.RepoURL)
-	if err != nil {
-		return err
-	}
-	if !exists {
-		if err := ensureRepoGet(ctx, rootDir, []string{selectedRepo.RepoURL}, noPrompt, theme, useColor); err != nil {
-			return err
-		}
-	}
-
-	prByNumber := make(map[int]prSummary, len(prs))
-	for _, pr := range prs {
-		prByNumber[pr.Number] = pr
-	}
-
-	type reviewWorkspaceResult struct {
-		workspaceID string
-		description string
-		repos       []workspace.Repo
-	}
-	var results []reviewWorkspaceResult
-	var failure error
-	var failureID string
-
-	for _, value := range selectedPRs {
-		num, err := strconv.Atoi(strings.TrimSpace(value))
-		if err != nil {
-			failure = fmt.Errorf("invalid PR number: %s", value)
-			failureID = value
-			break
-		}
-		pr, ok := prByNumber[num]
+	promptChoices, repoByValue := toPromptChoices(repoChoices)
+	loadReview := func(value string) ([]ui.PromptChoice, error) {
+		selected, ok := repoByValue[value]
 		if !ok {
-			failure = fmt.Errorf("PR not found: %d", num)
-			failureID = fmt.Sprintf("PR-%d", num)
-			break
+			return nil, fmt.Errorf("selected repo not found")
 		}
-		if !strings.EqualFold(strings.TrimSpace(pr.HeadRepo), strings.TrimSpace(pr.BaseRepo)) {
-			failure = fmt.Errorf("fork PRs are not supported: %s", pr.HeadRepo)
-			failureID = fmt.Sprintf("PR-%d", num)
-			break
-		}
-		description := pr.Title
-		workspaceID := formatReviewWorkspaceID(selectedRepo.Owner, selectedRepo.Repo, num)
-		output.Step(formatStep("create workspace", workspaceID, relPath(rootDir, workspace.WorkspaceDir(rootDir, workspaceID))))
-		wsDir, err := workspace.New(ctx, rootDir, workspaceID)
+		prs, err := fetchGitHubPRs(ctx, selected.Host, selected.Owner, selected.Repo)
 		if err != nil {
-			failure = err
-			failureID = workspaceID
-			break
+			return nil, err
 		}
-		if err := workspace.SaveMetadata(wsDir, workspace.Metadata{Description: description}); err != nil {
-			if rollbackErr := workspace.Remove(ctx, rootDir, workspaceID); rollbackErr != nil {
-				failure = fmt.Errorf("save workspace metadata failed: %w (rollback failed: %v)", err, rollbackErr)
-			} else {
-				failure = err
-			}
-			failureID = workspaceID
-			break
-		}
-
-		store, err := repo.Open(ctx, rootDir, selectedRepo.RepoURL, false)
-		if err != nil {
-			failure = err
-			failureID = workspaceID
-			break
-		}
-		if err := fetchPRHead(ctx, store.StorePath, pr.HeadRef); err != nil {
-			failure = err
-			failureID = workspaceID
-			break
-		}
-
-		headRef := fmt.Sprintf("refs/remotes/origin/%s", pr.HeadRef)
-		output.Step(formatStep("worktree add", displayRepoName(selectedRepo.RepoURL), worktreeDest(rootDir, workspaceID, selectedRepo.RepoURL)))
-		if _, err := workspace.AddWithTrackingBranch(ctx, rootDir, workspaceID, selectedRepo.RepoURL, "", pr.HeadRef, headRef, false); err != nil {
-			if rollbackErr := workspace.Remove(ctx, rootDir, workspaceID); rollbackErr != nil {
-				failure = fmt.Errorf("review failed: %w (rollback failed: %v)", err, rollbackErr)
-			} else {
-				failure = err
-			}
-			failureID = workspaceID
-			break
-		}
-
-		repos, _, _ := loadWorkspaceRepos(ctx, wsDir)
-		results = append(results, reviewWorkspaceResult{
-			workspaceID: workspaceID,
-			description: description,
-			repos:       repos,
-		})
+		return buildPRChoices(prs), nil
 	}
-
-	if len(results) > 0 {
-		renderer.Blank()
-		renderer.Section("Result")
-		for _, result := range results {
-			renderWorkspaceBlock(renderer, result.workspaceID, result.description, result.repos)
-		}
+	mode, _, _, _, _, reviewRepo, reviewPRs, _, _, _, err := ui.PromptCreateFlow("gws create", "review", "", "", nil, nil, nil, nil, promptChoices, nil, loadReview, nil, nil, nil, theme, useColor, "")
+	if err != nil {
+		return err
 	}
-	if failure != nil {
-		return fmt.Errorf("%s: %w", failureID, failure)
+	if mode != "review" {
+		return fmt.Errorf("unknown mode: %s", mode)
 	}
-	return nil
+	return runCreateReviewSelected(ctx, rootDir, noPrompt, reviewRepo, reviewPRs)
 }
 
 func runCreateReviewSelected(ctx context.Context, rootDir string, noPrompt bool, repoSpec string, selectedPRs []string) error {

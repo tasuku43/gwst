@@ -14,6 +14,7 @@ Unify all workspace creation flows under a single command and keep "create" sema
 - If none are provided and prompts are allowed, enter an interactive mode picker.
   - The picker presents `template`, `repo`, `review`, `issue` and supports arrow selection with filterable search.
 - If none are provided and `--no-prompt` is set, error.
+- When prompts are used, mode flags (`--template`, `--review`, `--issue`, `--repo`) still run the unified create prompt flow so the Inputs section is rendered as a single in-place interaction.
 
 ## Mode: template
 Same behavior as the former `gws new`.
