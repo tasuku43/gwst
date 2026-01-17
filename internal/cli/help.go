@@ -35,7 +35,7 @@ func printGlobalHelp(w io.Writer) {
 	fmt.Fprintln(w, "Global flags:")
 	fmt.Fprintln(w, "  --root <path>      override GWS_ROOT")
 	fmt.Fprintln(w, "  --no-prompt        disable interactive prompt")
-	fmt.Fprintln(w, "  --verbose, -v      verbose logs")
+	fmt.Fprintln(w, "  --debug            write debug logs to file")
 	fmt.Fprintln(w, "  --help, -h         show help")
 }
 

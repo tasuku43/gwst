@@ -1,29 +1,7 @@
 package gitcmd
 
-import (
-	"fmt"
-	"os"
-
-	"github.com/tasuku43/gws/internal/core/output"
-)
-
-var verbose bool
-
-func SetVerbose(v bool) {
-	verbose = v
-}
-
-func IsVerbose() bool {
-	return verbose
-}
+import "github.com/tasuku43/gws/internal/core/output"
 
 func Logf(format string, args ...any) {
-	if verbose {
-		return
-	}
-	if output.HasStepLogger() {
-		output.Logf("$ "+format, args...)
-		return
-	}
-	fmt.Fprintf(os.Stderr, "%s$ "+format+"\n", append([]any{output.Indent}, args...)...)
+	output.Logf("$ "+format, args...)
 }

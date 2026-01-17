@@ -57,9 +57,10 @@ Steps
 ```
 
 ## Command execution logs
-- Logs are included in Steps (not only verbose).
+- Steps may include user-facing command logs.
 - Use muted color (low contrast, non-flashy).
 - Command output lines can be visually connected using tree glyphs.
+- Debug logging is written to files when `--debug` is provided (no on-screen Debug section).
 
 Example:
 ```

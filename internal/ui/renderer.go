@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/tasuku43/gws/internal/core/debuglog"
 	"github.com/tasuku43/gws/internal/core/output"
 )
 
@@ -32,6 +33,18 @@ func (r *Renderer) Blank() {
 }
 
 func (r *Renderer) Section(title string) {
+	switch strings.ToLower(strings.TrimSpace(title)) {
+	case "inputs":
+		debuglog.SetPhase("inputs")
+	case "info":
+		debuglog.SetPhase("info")
+	case "steps":
+		debuglog.SetPhase("steps")
+	case "result":
+		debuglog.SetPhase("result")
+	default:
+		debuglog.SetPhase("none")
+	}
 	r.writeLine(r.style(title, r.theme.SectionTitle))
 }
 

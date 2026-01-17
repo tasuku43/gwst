@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/tasuku43/gws/internal/core/debuglog"
 	"github.com/tasuku43/gws/internal/core/output"
 )
 
@@ -53,6 +54,8 @@ type BlockedChoice struct {
 }
 
 func PromptNewWorkspaceInputs(title string, templates []string, templateName string, workspaceID string, theme Theme, useColor bool) (string, string, error) {
+	debuglog.SetPrompt("workspace-inputs")
+	defer debuglog.ClearPrompt()
 	model := newInputsModel(title, templates, templateName, workspaceID, theme, useColor)
 	out, err := runProgram(model)
 	if err != nil {
@@ -66,6 +69,8 @@ func PromptNewWorkspaceInputs(title string, templates []string, templateName str
 }
 
 func PromptWorkspaceAndRepo(title string, workspaces []WorkspaceChoice, repos []PromptChoice, workspaceID, repoSpec string, theme Theme, useColor bool) (string, string, error) {
+	debuglog.SetPrompt("workspace-and-repo")
+	defer debuglog.ClearPrompt()
 	model := newAddInputsModel(title, workspaces, repos, workspaceID, repoSpec, theme, useColor)
 	out, err := runProgram(model)
 	if err != nil {
@@ -79,6 +84,8 @@ func PromptWorkspaceAndRepo(title string, workspaces []WorkspaceChoice, repos []
 }
 
 func PromptWorkspace(title string, workspaces []WorkspaceChoice, theme Theme, useColor bool) (string, error) {
+	debuglog.SetPrompt("workspace")
+	defer debuglog.ClearPrompt()
 	model := newWorkspaceSelectModel(title, workspaces, theme, useColor)
 	out, err := runProgram(model)
 	if err != nil {
@@ -92,6 +99,8 @@ func PromptWorkspace(title string, workspaces []WorkspaceChoice, theme Theme, us
 }
 
 func PromptWorkspaceWithBlocked(title string, workspaces []WorkspaceChoice, blocked []BlockedChoice, theme Theme, useColor bool) (string, error) {
+	debuglog.SetPrompt("workspace")
+	defer debuglog.ClearPrompt()
 	model := newWorkspaceSelectModelWithBlocked(title, workspaces, blocked, theme, useColor)
 	out, err := runProgram(model)
 	if err != nil {
@@ -105,6 +114,8 @@ func PromptWorkspaceWithBlocked(title string, workspaces []WorkspaceChoice, bloc
 }
 
 func PromptWorkspaceMultiSelectWithBlocked(title string, workspaces []WorkspaceChoice, blocked []BlockedChoice, theme Theme, useColor bool) ([]string, error) {
+	debuglog.SetPrompt("workspace")
+	defer debuglog.ClearPrompt()
 	model := newWorkspaceMultiSelectModel(title, workspaces, blocked, theme, useColor)
 	out, err := runProgram(model)
 	if err != nil {
@@ -121,6 +132,8 @@ func PromptWorkspaceMultiSelectWithBlocked(title string, workspaces []WorkspaceC
 }
 
 func PromptConfirmInline(label string, theme Theme, useColor bool) (bool, error) {
+	debuglog.SetPrompt(label)
+	defer debuglog.ClearPrompt()
 	model := newConfirmInlineModel(label, theme, useColor, false, nil, nil)
 	out, err := runProgram(model)
 	if err != nil {
@@ -134,6 +147,8 @@ func PromptConfirmInline(label string, theme Theme, useColor bool) (bool, error)
 }
 
 func PromptConfirmInlineInfo(label string, theme Theme, useColor bool) (bool, error) {
+	debuglog.SetPrompt(label)
+	defer debuglog.ClearPrompt()
 	model := newConfirmInlineModel(label, theme, useColor, true, nil, nil)
 	out, err := runProgram(model)
 	if err != nil {
@@ -1047,6 +1062,8 @@ func (m confirmInlineModel) View() string {
 // PromptInputInline collects a single inline value with an optional default and validation.
 // Empty input accepts the default. Validation errors are shown inline and reprompted.
 func PromptInputInline(label, defaultValue string, validate func(string) error, theme Theme, useColor bool) (string, error) {
+	debuglog.SetPrompt(label)
+	defer debuglog.ClearPrompt()
 	model := newInputInlineModel(label, defaultValue, validate, theme, useColor)
 	out, err := runProgram(model)
 	if err != nil {
@@ -1151,6 +1168,8 @@ func (m inputInlineModel) View() string {
 // PromptTemplateRepos lets users pick one or more repos from a list with filtering.
 // It can also collect a template name when not provided.
 func PromptTemplateRepos(title string, templateName string, choices []PromptChoice, theme Theme, useColor bool) (string, []string, error) {
+	debuglog.SetPrompt("template-repos")
+	defer debuglog.ClearPrompt()
 	model := newTemplateRepoSelectModel(title, templateName, choices, theme, useColor)
 	out, err := runProgram(model)
 	if err != nil {
@@ -1165,6 +1184,8 @@ func PromptTemplateRepos(title string, templateName string, choices []PromptChoi
 
 // PromptTemplateName asks for a template name via text input.
 func PromptTemplateName(title string, defaultValue string, theme Theme, useColor bool) (string, error) {
+	debuglog.SetPrompt("template-name")
+	defer debuglog.ClearPrompt()
 	model := newTemplateNameModel(title, defaultValue, theme, useColor)
 	out, err := runProgram(model)
 	if err != nil {
@@ -1179,6 +1200,8 @@ func PromptTemplateName(title string, defaultValue string, theme Theme, useColor
 
 // PromptChoiceSelect lets users pick a single choice from a list with filtering.
 func PromptChoiceSelect(title, label string, choices []PromptChoice, theme Theme, useColor bool) (string, error) {
+	debuglog.SetPrompt(label)
+	defer debuglog.ClearPrompt()
 	model := newChoiceSelectModel(title, label, choices, theme, useColor)
 	out, err := runProgram(model)
 	if err != nil {
@@ -1194,6 +1217,8 @@ func PromptChoiceSelect(title, label string, choices []PromptChoice, theme Theme
 // PromptChoiceSelectWithOutput lets users pick a single choice from a list with filtering.
 // It renders the prompt to the provided writer.
 func PromptChoiceSelectWithOutput(title, label string, choices []PromptChoice, theme Theme, useColor bool, out io.Writer) (string, error) {
+	debuglog.SetPrompt(label)
+	defer debuglog.ClearPrompt()
 	model := newChoiceSelectModel(title, label, choices, theme, useColor)
 	finalModel, err := runProgramWithOutput(model, out)
 	if err != nil {
@@ -1208,6 +1233,8 @@ func PromptChoiceSelectWithOutput(title, label string, choices []PromptChoice, t
 
 // PromptMultiSelect lets users pick one or more choices from a list with filtering.
 func PromptMultiSelect(title, label string, choices []PromptChoice, theme Theme, useColor bool) ([]string, error) {
+	debuglog.SetPrompt(label)
+	defer debuglog.ClearPrompt()
 	model := newMultiSelectModel(title, label, choices, theme, useColor)
 	out, err := runProgram(model)
 	if err != nil {
@@ -1221,6 +1248,8 @@ func PromptMultiSelect(title, label string, choices []PromptChoice, theme Theme,
 }
 
 func PromptIssueSelectWithBranches(title, label string, choices []PromptChoice, validateBranch func(string) error, theme Theme, useColor bool) ([]IssueSelection, error) {
+	debuglog.SetPrompt(label)
+	defer debuglog.ClearPrompt()
 	model := newIssueBranchSelectModel(title, label, choices, validateBranch, theme, useColor)
 	out, err := runProgram(model)
 	if err != nil {
@@ -1234,6 +1263,8 @@ func PromptIssueSelectWithBranches(title, label string, choices []PromptChoice, 
 }
 
 func PromptCreateFlow(title string, startMode string, defaultWorkspaceID string, templateName string, templates []string, templateErr error, repoChoices []PromptChoice, repoErr error, reviewRepos []PromptChoice, issueRepos []PromptChoice, loadReview func(string) ([]PromptChoice, error), loadIssue func(string) ([]PromptChoice, error), loadTemplateRepos func(string) ([]string, error), validateBranch func(string) error, theme Theme, useColor bool, selectedRepo string) (string, string, string, string, []string, string, []string, string, []IssueSelection, string, error) {
+	debuglog.SetPrompt("create-flow")
+	defer debuglog.ClearPrompt()
 	model := newCreateFlowModel(title, templates, templateErr, repoChoices, repoErr, defaultWorkspaceID, templateName, reviewRepos, issueRepos, loadReview, loadIssue, loadTemplateRepos, validateBranch, theme, useColor, startMode, selectedRepo)
 	if model.err != nil {
 		return "", "", "", "", nil, "", nil, "", nil, "", model.err

@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/mattn/go-isatty"
+	"github.com/tasuku43/gws/internal/core/debuglog"
 	"github.com/tasuku43/gws/internal/core/output"
 	"github.com/tasuku43/gws/internal/domain/workspace"
 	"github.com/tasuku43/gws/internal/ui"
@@ -128,8 +129,17 @@ func runWorkspaceOpen(ctx context.Context, rootDir string, args []string, noProm
 	cmd.Stderr = os.Stderr
 	cmd.Env = append(os.Environ(), fmt.Sprintf("GWS_WORKSPACE=%s", workspaceID))
 	cmd.Env = append(cmd.Env, extraEnv...)
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("open shell: %w", err)
+	trace := ""
+	if debuglog.Enabled() {
+		trace = debuglog.NewTrace("exec")
+		debuglog.LogCommand(trace, debuglog.FormatCommand(cmdPath, launchArgs))
+	}
+	runErr := cmd.Run()
+	if debuglog.Enabled() {
+		debuglog.LogExit(trace, debuglog.ExitCode(runErr))
+	}
+	if runErr != nil {
+		return fmt.Errorf("open shell: %w", runErr)
 	}
 	return nil
 }

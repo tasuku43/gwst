@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/mattn/go-isatty"
+	"github.com/tasuku43/gws/internal/core/debuglog"
 	"github.com/tasuku43/gws/internal/core/gitcmd"
 	"github.com/tasuku43/gws/internal/core/output"
 	"github.com/tasuku43/gws/internal/core/paths"
@@ -34,12 +35,11 @@ func Run() error {
 	fs := flag.NewFlagSet("gws", flag.ContinueOnError)
 	var rootFlag string
 	var noPrompt bool
-	verboseFlag := envBool("GWS_VERBOSE")
+	var debugFlag bool
 	var helpFlag bool
 	fs.StringVar(&rootFlag, "root", "", "override gws root")
 	fs.BoolVar(&noPrompt, "no-prompt", false, "disable interactive prompt")
-	fs.BoolVar(&verboseFlag, "verbose", verboseFlag, "show detailed logs")
-	fs.BoolVar(&verboseFlag, "v", verboseFlag, "show detailed logs")
+	fs.BoolVar(&debugFlag, "debug", false, "write debug logs to file")
 	fs.BoolVar(&helpFlag, "help", false, "show help")
 	fs.BoolVar(&helpFlag, "h", false, "show help")
 	fs.SetOutput(os.Stdout)
@@ -52,8 +52,6 @@ func Run() error {
 		}
 		return err
 	}
-	gitcmd.SetVerbose(verboseFlag)
-
 	args := fs.Args()
 	if helpFlag {
 		if len(args) > 0 && printCommandHelp(args[0], os.Stdout) {
@@ -77,6 +75,12 @@ func Run() error {
 	rootDir, err := paths.ResolveRoot(rootFlag)
 	if err != nil {
 		return err
+	}
+	if debugFlag {
+		if err := debuglog.Enable(rootDir); err != nil {
+			return err
+		}
+		defer debuglog.Close()
 	}
 
 	ctx := context.Background()
@@ -122,19 +126,6 @@ func runInit(rootDir string, args []string) error {
 	}
 	writeInitText(result)
 	return nil
-}
-
-func envBool(key string) bool {
-	val := strings.TrimSpace(os.Getenv(key))
-	if val == "" {
-		return false
-	}
-	switch strings.ToLower(val) {
-	case "0", "false", "no", "off":
-		return false
-	default:
-		return true
-	}
 }
 
 func runTemplate(ctx context.Context, rootDir string, args []string, noPrompt bool) error {
@@ -1736,6 +1727,26 @@ type githubIssueItem struct {
 	PullRequest json.RawMessage `json:"pull_request"`
 }
 
+func runExternalCommand(ctx context.Context, name string, args []string) (string, string, error) {
+	cmd := exec.CommandContext(ctx, name, args...)
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	trace := ""
+	if debuglog.Enabled() {
+		trace = debuglog.NewTrace("exec")
+		debuglog.LogCommand(trace, debuglog.FormatCommand(name, args))
+	}
+	err := cmd.Run()
+	if debuglog.Enabled() {
+		debuglog.LogStdoutLines(trace, stdout.String())
+		debuglog.LogStderrLines(trace, stderr.String())
+		debuglog.LogExit(trace, debuglog.ExitCode(err))
+	}
+	return stdout.String(), stderr.String(), err
+}
+
 func fetchGitHubIssues(ctx context.Context, host, owner, repoName string) ([]issueSummary, error) {
 	if strings.TrimSpace(owner) == "" || strings.TrimSpace(repoName) == "" {
 		return nil, fmt.Errorf("owner/repo is required")
@@ -1745,19 +1756,15 @@ func fetchGitHubIssues(ctx context.Context, host, owner, repoName string) ([]iss
 	if host != "" && !strings.EqualFold(host, "github.com") {
 		args = append([]string{"api", "--hostname", host}, args[1:]...)
 	}
-	cmd := exec.CommandContext(ctx, "gh", args...)
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		msg := strings.TrimSpace(stderr.String())
+	stdout, stderr, err := runExternalCommand(ctx, "gh", args)
+	if err != nil {
+		msg := strings.TrimSpace(stderr)
 		if msg != "" {
 			return nil, fmt.Errorf("gh api failed: %s", msg)
 		}
 		return nil, fmt.Errorf("gh api failed: %w", err)
 	}
-	return parseGitHubIssues(stdout.Bytes())
+	return parseGitHubIssues([]byte(stdout))
 }
 
 func fetchGitHubIssue(ctx context.Context, host, owner, repoName string, number int) (issueSummary, error) {
@@ -1769,20 +1776,16 @@ func fetchGitHubIssue(ctx context.Context, host, owner, repoName string, number 
 	if host != "" && !strings.EqualFold(host, "github.com") {
 		args = append([]string{"api", "--hostname", host}, args[1:]...)
 	}
-	cmd := exec.CommandContext(ctx, "gh", args...)
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		msg := strings.TrimSpace(stderr.String())
+	stdout, stderr, err := runExternalCommand(ctx, "gh", args)
+	if err != nil {
+		msg := strings.TrimSpace(stderr)
 		if msg != "" {
 			return issueSummary{}, fmt.Errorf("gh api failed: %s", msg)
 		}
 		return issueSummary{}, fmt.Errorf("gh api failed: %w", err)
 	}
 	var item githubIssueItem
-	if err := json.Unmarshal(stdout.Bytes(), &item); err != nil {
+	if err := json.Unmarshal([]byte(stdout), &item); err != nil {
 		return issueSummary{}, fmt.Errorf("parse gh api response: %w", err)
 	}
 	if item.Number == 0 {
@@ -2216,20 +2219,16 @@ func fetchGitHubPR(ctx context.Context, host, owner, repoName string, number int
 	if host != "" && !strings.EqualFold(host, "github.com") {
 		args = append([]string{"api", "--hostname", host}, args[1:]...)
 	}
-	cmd := exec.CommandContext(ctx, "gh", args...)
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		msg := strings.TrimSpace(stderr.String())
+	stdout, stderr, err := runExternalCommand(ctx, "gh", args)
+	if err != nil {
+		msg := strings.TrimSpace(stderr)
 		if msg != "" {
 			return prSummary{}, fmt.Errorf("gh api failed: %s", msg)
 		}
 		return prSummary{}, fmt.Errorf("gh api failed: %w", err)
 	}
 	var item githubPRItem
-	if err := json.Unmarshal(stdout.Bytes(), &item); err != nil {
+	if err := json.Unmarshal([]byte(stdout), &item); err != nil {
 		return prSummary{}, fmt.Errorf("parse gh api response: %w", err)
 	}
 	return normalizeGitHubPR(item), nil
@@ -2244,19 +2243,15 @@ func fetchGitHubPRs(ctx context.Context, host, owner, repoName string) ([]prSumm
 	if host != "" && !strings.EqualFold(host, "github.com") {
 		args = append([]string{"api", "--hostname", host}, args[1:]...)
 	}
-	cmd := exec.CommandContext(ctx, "gh", args...)
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		msg := strings.TrimSpace(stderr.String())
+	stdout, stderr, err := runExternalCommand(ctx, "gh", args)
+	if err != nil {
+		msg := strings.TrimSpace(stderr)
 		if msg != "" {
 			return nil, fmt.Errorf("gh api failed: %s", msg)
 		}
 		return nil, fmt.Errorf("gh api failed: %w", err)
 	}
-	return parseGitHubPRs(stdout.Bytes())
+	return parseGitHubPRs([]byte(stdout))
 }
 
 func parseGitHubPRs(data []byte) ([]prSummary, error) {

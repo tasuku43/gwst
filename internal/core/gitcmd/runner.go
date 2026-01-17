@@ -5,11 +5,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
-	"os"
 	"os/exec"
-	"strings"
 
+	"github.com/tasuku43/gws/internal/core/debuglog"
 	"github.com/tasuku43/gws/internal/core/output"
 )
 
@@ -21,7 +19,7 @@ type Result struct {
 
 type Options struct {
 	Dir string
-	// ShowOutput prints stdout/stderr even when verbose is off.
+	// ShowOutput prints stdout/stderr even when debug logging is off.
 	ShowOutput bool
 }
 
@@ -43,12 +41,10 @@ func Run(ctx context.Context, args []string, opts Options) (Result, error) {
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
-	if verbose {
-		if output.HasStepLogger() {
-			output.Logf("$ git %s", strings.Join(args, " "))
-		} else {
-			fmt.Fprintf(os.Stderr, "%s$ git %s\n", output.Indent, strings.Join(args, " "))
-		}
+	trace := ""
+	if debuglog.Enabled() {
+		trace = debuglog.NewTrace("git")
+		debuglog.LogCommand(trace, debuglog.FormatCommand("git", args))
 	}
 	err := cmd.Run()
 	result := Result{
@@ -56,27 +52,17 @@ func Run(ctx context.Context, args []string, opts Options) (Result, error) {
 		Stderr:   stderr.String(),
 		ExitCode: exitCode(err),
 	}
-	if verbose || opts.ShowOutput {
+	if debuglog.Enabled() {
+		debuglog.LogStdoutLines(trace, result.Stdout)
+		debuglog.LogStderrLines(trace, result.Stderr)
+		debuglog.LogExit(trace, result.ExitCode)
+	}
+	if opts.ShowOutput {
 		if result.Stdout != "" {
-			if output.HasStepLogger() {
-				output.LogLines(result.Stdout)
-			} else {
-				writeIndented(os.Stderr, result.Stdout, output.Indent)
-			}
+			output.LogLines(result.Stdout)
 		}
 		if result.Stderr != "" {
-			if output.HasStepLogger() {
-				output.LogLines(result.Stderr)
-			} else {
-				writeIndented(os.Stderr, result.Stderr, output.Indent)
-			}
-		}
-		if verbose {
-			if output.HasStepLogger() {
-				output.LogOutputf("exit: %d", result.ExitCode)
-			} else {
-				fmt.Fprintf(os.Stderr, "%sexit: %d\n", output.Indent, result.ExitCode)
-			}
+			output.LogLines(result.Stderr)
 		}
 	}
 	if err != nil {
@@ -98,24 +84,6 @@ func validateArgs(args []string) error {
 func isAllowedSubcommand(subcommand string) bool {
 	_, ok := allowedSubcommands[subcommand]
 	return ok
-}
-
-func writeIndented(w io.Writer, text, prefix string) {
-	lines := strings.SplitAfter(text, "\n")
-	for _, line := range lines {
-		if line == "" {
-			continue
-		}
-		if line == "\n" {
-			fmt.Fprint(w, prefix)
-			continue
-		}
-		fmt.Fprint(w, prefix)
-		fmt.Fprint(w, line)
-	}
-	if !strings.HasSuffix(text, "\n") {
-		fmt.Fprintln(w)
-	}
 }
 
 var allowedSubcommands = map[string]struct{}{
