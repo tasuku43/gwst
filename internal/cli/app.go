@@ -3027,6 +3027,30 @@ func buildWorkspaceChoiceFromRepos(entry workspace.Entry, repos []workspace.Repo
 	return choice
 }
 
+func buildWorkspaceChoiceWithDetails(ctx context.Context, entry workspace.Entry, repos []workspace.Repo, status workspace.StatusResult) ui.WorkspaceChoice {
+	choice := ui.WorkspaceChoice{
+		ID:          entry.WorkspaceID,
+		Description: entry.Description,
+	}
+	statusByPath := make(map[string]workspace.RepoStatus, len(status.Repos))
+	for _, repoStatus := range status.Repos {
+		statusByPath[repoStatus.WorktreePath] = repoStatus
+	}
+	for _, repoEntry := range repos {
+		name := formatRepoName(repoEntry.Alias, repoEntry.RepoKey)
+		label := formatRepoLabel(name, repoEntry.Branch)
+		prompt := ui.PromptChoice{
+			Label: label,
+			Value: displayRepoKey(repoEntry.RepoKey),
+		}
+		if repoStatus, ok := statusByPath[repoEntry.WorktreePath]; ok {
+			prompt.Details = buildRepoStatusDetails(ctx, repoStatus)
+		}
+		choice.Repos = append(choice.Repos, prompt)
+	}
+	return choice
+}
+
 func displayRepoKey(repoKey string) string {
 	display := strings.TrimSuffix(repoKey, ".git")
 	display = strings.TrimSuffix(display, "/")
@@ -3661,18 +3685,31 @@ func applyTemplate(ctx context.Context, rootDir, workspaceID string, tmpl templa
 }
 
 func runWorkspaceList(ctx context.Context, rootDir string, args []string) error {
-	if len(args) == 1 && isHelpArg(args[0]) {
+	lsFlags := flag.NewFlagSet("ls", flag.ContinueOnError)
+	lsFlags.SetOutput(os.Stdout)
+	var showDetails bool
+	var helpFlag bool
+	lsFlags.BoolVar(&showDetails, "details", false, "show git status details")
+	lsFlags.BoolVar(&helpFlag, "help", false, "show help")
+	lsFlags.BoolVar(&helpFlag, "h", false, "show help")
+	if err := lsFlags.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return nil
+		}
+		return err
+	}
+	if helpFlag {
 		printLsHelp(os.Stdout)
 		return nil
 	}
-	if len(args) != 0 {
-		return fmt.Errorf("usage: gws ls")
+	if lsFlags.NArg() != 0 {
+		return fmt.Errorf("usage: gws ls [--details]")
 	}
 	entries, warnings, err := workspace.List(rootDir)
 	if err != nil {
 		return err
 	}
-	writeWorkspaceListText(ctx, rootDir, entries, warnings)
+	writeWorkspaceListText(ctx, rootDir, entries, warnings, showDetails)
 	return nil
 }
 
@@ -3897,15 +3934,16 @@ func writeWorkspaceStatusText(result workspace.StatusResult) {
 	}
 }
 
-func writeWorkspaceListText(ctx context.Context, rootDir string, entries []workspace.Entry, warnings []error) {
+func writeWorkspaceListText(ctx context.Context, rootDir string, entries []workspace.Entry, warnings []error, showDetails bool) {
 	theme := ui.DefaultTheme()
 	useColor := isatty.IsTerminal(os.Stdout.Fd())
 	renderer := ui.NewRenderer(os.Stdout, theme, useColor)
 
 	type workspaceListEntry struct {
-		entry workspace.Entry
-		repos []workspace.Repo
-		state workspace.WorkspaceState
+		entry  workspace.Entry
+		repos  []workspace.Repo
+		state  workspace.WorkspaceState
+		status workspace.StatusResult
 	}
 	var items []workspaceListEntry
 	var repoWarnings []string
@@ -3915,8 +3953,8 @@ func writeWorkspaceListText(ctx context.Context, rootDir string, entries []works
 			repoWarnings = append(repoWarnings, fmt.Sprintf("%s: %s", entry.WorkspaceID, compactError(err)))
 		}
 		repoWarnings = appendWarningLines(repoWarnings, entry.WorkspaceID, warnings)
-		_, state := loadWorkspaceStatusForRemoval(ctx, rootDir, entry.WorkspaceID)
-		items = append(items, workspaceListEntry{entry: entry, repos: repos, state: state})
+		status, state := loadWorkspaceStatusForRemoval(ctx, rootDir, entry.WorkspaceID)
+		items = append(items, workspaceListEntry{entry: entry, repos: repos, state: state, status: status})
 	}
 	repoWarnings = appendWarningLines(repoWarnings, "", warnings)
 	if len(repoWarnings) > 0 {
@@ -3928,10 +3966,17 @@ func writeWorkspaceListText(ctx context.Context, rootDir string, entries []works
 	var choices []ui.WorkspaceChoice
 	for _, item := range items {
 		choice := buildWorkspaceChoiceFromRepos(item.entry, item.repos)
+		if showDetails {
+			choice = buildWorkspaceChoiceWithDetails(ctx, item.entry, item.repos, item.status)
+		}
 		choice.Warning, choice.WarningStrong = workspaceRemoveWarningLabel(item.state)
 		choices = append(choices, choice)
 	}
-	for _, line := range ui.WorkspaceChoiceLines(choices, -1, useColor, theme) {
+	lines := ui.WorkspaceChoiceLines(choices, -1, useColor, theme)
+	if showDetails {
+		lines = ui.WorkspaceChoiceConfirmLines(choices, useColor, theme)
+	}
+	for _, line := range lines {
 		renderer.LineRaw(line)
 	}
 }

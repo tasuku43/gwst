@@ -134,7 +134,7 @@ Core workflow:
 - `gws create --template <name> [<id>]` - create a workspace from a template
 - `gws create --repo [<repo>]` - create a workspace from a repo (prompts for id)
 - `gws add [<id>] [<repo>]` - add another repo worktree to a workspace
-- `gws ls` - list workspaces and repos
+- `gws ls [--details]` - list workspaces and repos (optionally with git status details)
 - `gws open [<id>]` - open a workspace in an interactive subshell
 - `gws status [<id>]` - show branch, dirty/untracked, and ahead/behind
 - `gws rm [<id>]` - remove a workspace (refuses if dirty)

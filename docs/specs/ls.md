@@ -6,7 +6,7 @@ pending:
 ---
 
 ## Synopsis
-`gws ls [--search <query>] [--select]`
+`gws ls [--details] [--search <query>] [--select]`
 
 ## Intent
 List workspaces under `<root>/workspaces` and show a quick view of the repos attached to each.
@@ -17,6 +17,7 @@ List workspaces under `<root>/workspaces` and show a quick view of the repos att
 - If a workspace description is available, show it alongside the workspace ID.
 - If a workspace has status warnings (dirty, unpushed, diverged, unknown), show an inline tag next to the workspace ID (same labels as `gws rm`).
 - Collects and reports non-fatal warnings from scanning workspaces or repos.
+- `--details`: include repo-level git status details (same output as `gws rm` confirmation: `git status --short --branch` for repos that need warnings).
 - `--search <query>`: prefilters the list using case-insensitive substring match against workspace ID and repo aliases/paths. Applies to both normal and selection mode.
 - `--select`: launches an interactive TUI picker (requires TTY; errors under `--no-prompt`) that lists the filtered workspaces with live search. On `<Enter>`, returns the selected workspace ID to stdout (single line, no sections) and exits 0. If nothing to select, returns an error.
 

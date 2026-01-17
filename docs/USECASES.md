@@ -19,7 +19,7 @@ Rating legend:
 ## Start / During a Task
 - **Create workspace from template** — `gws create --template <name> [<id>]`; prompts if omitted. `workspace_id` becomes the branch name for all repos. Rating: Excellent (interactive repo-get prompt appears when a template repo is missing)
 - **Add a repo mid-task** — `gws add <id> <repo>`; branch name = workspace_id, base = origin/HEAD. Rating: Excellent
-- **List workspaces** — `gws ls` enumerates workspaces. Rating: Good (minimal detail only)
+- **List workspaces** — `gws ls` enumerates workspaces; `gws ls --details` shows git status lines for warning repos. Rating: Good
 - **Jump to a path** — `gws path --workspace` prints a selected path for `cd`. Rating: Good
 - **Check status** — `gws status <id>` shows dirty/untracked counts and HEAD per repo. Rating: Excellent (lightweight)
 
@@ -38,7 +38,7 @@ Rating legend:
 
 ## Known Gaps / Improvement Ideas
 - Keeping the bare store “always fresh” depends on manual `git fetch`; no built-in auto/update flow.
-- `gws ls` lacks detail; in busy teams it’s hard to get a quick overview.
+- Default `gws ls` is minimal; use `gws ls --details` for git status context.
 - `gws doctor` checks only a narrow set; does not catch orphan worktrees, branch conflicts, or stale workspace artifacts.
 - No JSON/machine-readable output; agents must parse human text.
 - After `gws create --review`, pulling newer PR updates still requires manual fetch; no auto-sync or “refresh review” command.
