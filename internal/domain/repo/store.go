@@ -80,6 +80,26 @@ func Open(ctx context.Context, rootDir string, repo string, fetch bool) (Store, 
 	}, nil
 }
 
+func Prefetch(ctx context.Context, rootDir string, repo string) error {
+	spec, _, err := Normalize(repo)
+	if err != nil {
+		return err
+	}
+
+	storePath := storePathForSpec(rootDir, spec)
+
+	exists, err := paths.DirExists(storePath)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return fmt.Errorf("repo store not found, run: gws repo get %s", repo)
+	}
+
+	_, err = ensureDefaultBranch(ctx, storePath, true, false)
+	return err
+}
+
 func Exists(rootDir, repo string) (string, bool, error) {
 	spec, _, err := Normalize(repo)
 	if err != nil {
@@ -100,8 +120,16 @@ func storePathForSpec(rootDir string, spec Spec) string {
 // (moved to paths.go)
 
 func normalizeStore(ctx context.Context, storePath, display string, fetch bool) error {
-	if _, err := gitcmd.Run(ctx, []string{"config", "remote.origin.fetch", "+refs/heads/*:refs/remotes/origin/*"}, gitcmd.Options{Dir: storePath}); err != nil {
+	defaultBranch, err := ensureDefaultBranch(ctx, storePath, fetch, true)
+	if err != nil {
 		return err
+	}
+	return pruneLocalHeads(ctx, storePath, defaultBranch)
+}
+
+func ensureDefaultBranch(ctx context.Context, storePath string, fetch bool, log bool) (string, error) {
+	if _, err := gitcmd.Run(ctx, []string{"config", "remote.origin.fetch", "+refs/heads/*:refs/remotes/origin/*"}, gitcmd.Options{Dir: storePath}); err != nil {
+		return "", err
 	}
 	defaultBranch, _ := localDefaultBranch(ctx, storePath)
 
@@ -112,7 +140,7 @@ func normalizeStore(ctx context.Context, storePath, display string, fetch bool) 
 		var err error
 		defaultBranch, remoteHash, err = defaultBranchFromRemote(ctx, storePath)
 		if err != nil {
-			return err
+			return "", err
 		}
 		remoteChecked = true
 	}
@@ -122,14 +150,14 @@ func normalizeStore(ctx context.Context, storePath, display string, fetch bool) 
 
 	localRemote, err := localRemoteHash(ctx, storePath, defaultBranch)
 	if err != nil {
-		return err
+		return "", err
 	}
 	remoteTrackingMissing := localRemote == ""
 	localHash := localRemote
 	if localHash == "" {
 		localHash, err = localHeadHash(ctx, storePath, defaultBranch)
 		if err != nil {
-			return err
+			return "", err
 		}
 	}
 
@@ -142,12 +170,19 @@ func normalizeStore(ctx context.Context, storePath, display string, fetch bool) 
 	}
 
 	if needsFetch {
-		gitcmd.Logf("git fetch --prune")
+		if log {
+			gitcmd.Logf("git fetch --prune")
+		}
 		if _, err := gitcmd.Run(ctx, []string{"fetch", "--prune"}, gitcmd.Options{Dir: storePath}); err != nil {
-			return err
+			return "", err
+		}
+	} else if remoteChecked {
+		if err := touchFetchHead(storePath); err != nil {
+			return "", err
 		}
 	}
-	return pruneLocalHeads(ctx, storePath, defaultBranch)
+
+	return defaultBranch, nil
 }
 
 func defaultBranchFromRemote(ctx context.Context, storePath string) (string, string, error) {
@@ -283,6 +318,27 @@ func recentlyFetched(storePath string, grace time.Duration) bool {
 		return false
 	}
 	return time.Since(info.ModTime()) <= grace
+}
+
+func touchFetchHead(storePath string) error {
+	if strings.TrimSpace(storePath) == "" {
+		return fmt.Errorf("store path is required")
+	}
+	path := filepath.Join(storePath, "FETCH_HEAD")
+	now := time.Now()
+	if _, err := os.Stat(path); err != nil {
+		if !os.IsNotExist(err) {
+			return err
+		}
+		file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0o644)
+		if err != nil {
+			return err
+		}
+		if err := file.Close(); err != nil {
+			return err
+		}
+	}
+	return os.Chtimes(path, now, now)
 }
 
 func localDefaultBranch(ctx context.Context, storePath string) (string, error) {

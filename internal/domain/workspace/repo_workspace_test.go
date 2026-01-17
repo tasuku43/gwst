@@ -137,10 +137,8 @@ func TestWorkspaceAddSkipsFetchWhenUpToDate(t *testing.T) {
 		t.Fatalf("workspace add: %v", err)
 	}
 
-	if _, err := os.Stat(fetchHeadPath); err == nil {
-		t.Fatalf("expected fetch to be skipped when store is up-to-date")
-	} else if !os.IsNotExist(err) {
-		t.Fatalf("stat FETCH_HEAD: %v", err)
+	if _, err := os.Stat(fetchHeadPath); err != nil {
+		t.Fatalf("expected FETCH_HEAD to be touched when store is up-to-date: %v", err)
 	}
 }
 

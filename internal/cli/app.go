@@ -3112,8 +3112,7 @@ func (p *prefetcher) start(ctx context.Context, rootDir, repoSpec string) (bool,
 			fetchCtx, cancel = context.WithTimeout(ctx, p.timeout)
 		}
 		defer cancel()
-		_, err := repo.Open(fetchCtx, rootDir, repoSpec, true)
-		if err != nil {
+		if err := repo.Prefetch(fetchCtx, rootDir, repoSpec); err != nil {
 			task.err = err
 		}
 	}()
