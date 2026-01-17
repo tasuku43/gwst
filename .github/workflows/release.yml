@@ -46,10 +46,19 @@ jobs:
           fi
           echo "stable=true" >>"${GITHUB_OUTPUT}"
 
+      - name: Checkout Homebrew tap
+        if: steps.channel.outputs.stable == 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: tasuku43/homebrew-gws
+          token: ${{ secrets.GITHUB_TOKEN }}
+          path: homebrew-tap
+
       - name: Update Homebrew formula (working tree)
         if: steps.channel.outputs.stable == 'true'
+        working-directory: homebrew-tap
         run: |
-          ./.github/scripts/update-homebrew-formula.sh "${GITHUB_REF_NAME}" "dist/checksums.txt"
+          ../.github/scripts/update-homebrew-formula.sh "${GITHUB_REF_NAME}" "../dist/checksums.txt"
 
       - name: Create PR for Homebrew formula update
         if: steps.channel.outputs.stable == 'true'
@@ -57,6 +66,7 @@ jobs:
         id: cpr
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          path: homebrew-tap
           commit-message: "Update Homebrew formula for ${{ github.ref_name }}"
           title: "Update Homebrew formula for ${{ github.ref_name }}"
           body: |
