@@ -12,7 +12,7 @@ Rating legend:
 
 ## Setup / Preparation
 - **Initialize root** — `gws init` creates bare/workspaces and `templates.yaml` in one shot. Once per environment. Rating: Excellent
-- **Define / check templates** — Edit `templates.yaml` directly, confirm names with `gws template ls`. Rating: Good (manual YAML editing, no validation)
+- **Define / check templates** — Edit `templates.yaml` directly, confirm names with `gws template ls`, validate with `gws template validate`. Rating: Good
 - **Fetch repositories** — `gws repo get <repo>` creates bare store; `gws repo ls` lists fetched repos. Rating: Good (does not fetch when bare already exists, so not ideal for updating)
 - **Switch roots** — Use `--root` or `GWS_ROOT` to separate environments. Rating: Excellent
 

@@ -26,6 +26,7 @@ Current command specs live in this folder:
 - `docs/specs/template-ls.md`
 - `docs/specs/template-add.md`
 - `docs/specs/template-rm.md`
+- `docs/specs/template-validate.md`
 - `docs/specs/resume.md`
 - `docs/specs/create.md`
 - `docs/specs/add.md`

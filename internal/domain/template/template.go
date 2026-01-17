@@ -1,6 +1,7 @@
 package template
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -130,9 +131,15 @@ func Save(rootDir string, file File) error {
 		return err
 	}
 
-	data, err := yaml.Marshal(file)
-	if err != nil {
-		return err
+	var buf bytes.Buffer
+	enc := yaml.NewEncoder(&buf)
+	enc.SetIndent(2)
+	if err := enc.Encode(file); err != nil {
+		_ = enc.Close()
+		return fmt.Errorf("marshal templates: %w", err)
+	}
+	if err := enc.Close(); err != nil {
+		return fmt.Errorf("close templates encoder: %w", err)
 	}
 
 	dir := filepath.Dir(path)
@@ -141,7 +148,7 @@ func Save(rootDir string, file File) error {
 		return fmt.Errorf("create temp templates file: %w", err)
 	}
 	tmpPath := tmp.Name()
-	if _, err := tmp.Write(data); err != nil {
+	if _, err := tmp.Write(buf.Bytes()); err != nil {
 		tmp.Close()
 		_ = os.Remove(tmpPath)
 		return fmt.Errorf("write temp templates file: %w", err)

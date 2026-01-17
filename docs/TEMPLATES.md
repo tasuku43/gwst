@@ -22,6 +22,7 @@ templates:
 - `gws create --template <name>` でテンプレート名を指定（未指定なら対話）
 - repo は `gws repo get` 済みであることが前提（未取得ならエラー）
 - テンプレートの編集は `templates.yaml` を直接編集する
+- 編集後は `gws template validate` で整合性を確認する
 
 repo get の補助:
 - 未取得 repo がある場合は `gws create --template` が対話で `repo get` を実行するか確認する

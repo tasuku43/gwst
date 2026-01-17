@@ -36,6 +36,12 @@ templates:
       - git@github.com:octocat/Spoon-Knife.git
 ```
 
+Validate the file:
+
+```bash
+gws template validate
+```
+
 ### 3) Fetch repos (bare store)
 
 ```bash
@@ -110,6 +116,7 @@ Core workflow:
 - `gws repo get <repo>` - create/update bare repo store
 - `gws repo ls` - list repos already fetched
 - `gws template ls` - list templates from `templates.yaml`
+- `gws template validate` - validate `templates.yaml` entries
 - `gws create --template <name> [<id>]` - create a workspace from a template
 - `gws create --repo [<repo>]` - create a workspace from a repo (prompts for id)
 - `gws add [<id>] [<repo>]` - add another repo worktree to a workspace

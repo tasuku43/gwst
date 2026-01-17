@@ -149,6 +149,8 @@ func runTemplate(ctx context.Context, rootDir string, args []string, noPrompt bo
 		return runTemplateAdd(ctx, rootDir, args[1:], noPrompt)
 	case "rm":
 		return runTemplateRemove(ctx, rootDir, args[1:], noPrompt)
+	case "validate":
+		return runTemplateValidate(ctx, rootDir, args[1:])
 	default:
 		return fmt.Errorf("unknown template subcommand: %s", args[0])
 	}
@@ -462,6 +464,38 @@ func runTemplateRemove(ctx context.Context, rootDir string, args []string, noPro
 		renderer.Bullet(fmt.Sprintf("%s removed", name))
 	}
 	return nil
+}
+
+func runTemplateValidate(ctx context.Context, rootDir string, args []string) error {
+	if len(args) == 1 && isHelpArg(args[0]) {
+		printTemplateValidateHelp(os.Stdout)
+		return nil
+	}
+	if len(args) != 0 {
+		return fmt.Errorf("usage: gws template validate")
+	}
+	result, err := template.Validate(rootDir)
+	if err != nil {
+		return err
+	}
+
+	theme := ui.DefaultTheme()
+	useColor := isatty.IsTerminal(os.Stdout.Fd())
+	renderer := ui.NewRenderer(os.Stdout, theme, useColor)
+	renderer.Section("Result")
+	if len(result.Issues) == 0 {
+		renderer.Bullet("no issues found")
+		return nil
+	}
+
+	for _, issue := range result.Issues {
+		renderer.BulletError(issue.Kind)
+		details := templateIssueDetails(issue, result.Path)
+		if len(details) > 0 {
+			renderTreeLines(renderer, details, treeLineError)
+		}
+	}
+	return fmt.Errorf("template validation failed")
 }
 
 func runCreate(ctx context.Context, rootDir string, args []string, noPrompt bool) error {
@@ -3011,6 +3045,23 @@ func issueDetails(issue doctor.Issue) []string {
 	var details []string
 	if strings.TrimSpace(issue.Path) != "" {
 		details = append(details, fmt.Sprintf("path: %s", issue.Path))
+	}
+	if strings.TrimSpace(issue.Message) != "" {
+		details = append(details, fmt.Sprintf("message: %s", issue.Message))
+	}
+	return details
+}
+
+func templateIssueDetails(issue template.ValidationIssue, path string) []string {
+	var details []string
+	if strings.TrimSpace(path) != "" && (issue.Kind == template.IssueKindFile || issue.Kind == template.IssueKindInvalidYAML) {
+		details = append(details, fmt.Sprintf("path: %s", path))
+	}
+	if strings.TrimSpace(issue.Template) != "" {
+		details = append(details, fmt.Sprintf("template: %s", issue.Template))
+	}
+	if strings.TrimSpace(issue.Repo) != "" {
+		details = append(details, fmt.Sprintf("repo: %s", issue.Repo))
 	}
 	if strings.TrimSpace(issue.Message) != "" {
 		details = append(details, fmt.Sprintf("message: %s", issue.Message))
