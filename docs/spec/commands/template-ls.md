@@ -1,10 +1,10 @@
 ---
-title: "gws template ls"
+title: "gwst template ls"
 status: implemented
 ---
 
 ## Synopsis
-`gws template ls`
+`gwst template ls`
 
 ## Intent
 Show available workspace templates defined in `templates.yaml` so users can choose one when creating workspaces.

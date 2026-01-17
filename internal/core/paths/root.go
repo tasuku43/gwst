@@ -6,14 +6,14 @@ import (
 	"strings"
 )
 
-const defaultRootDir = "gws"
+const defaultRootDir = "gwst"
 
 func ResolveRoot(flagRoot string) (string, error) {
 	if flagRoot != "" {
 		return normalizeRoot(flagRoot)
 	}
 
-	envRoot := os.Getenv("GWS_ROOT")
+	envRoot := os.Getenv("GWST_ROOT")
 	if envRoot != "" {
 		return normalizeRoot(envRoot)
 	}

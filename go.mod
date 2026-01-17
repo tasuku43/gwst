@@ -1,4 +1,4 @@
-module github.com/tasuku43/gws
+module github.com/tasuku43/gwst
 
 go 1.24.0
 

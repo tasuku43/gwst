@@ -7,7 +7,7 @@ import (
 	"sync/atomic"
 	"unicode/utf8"
 
-	"github.com/tasuku43/gws/internal/core/debuglog"
+	"github.com/tasuku43/gwst/internal/core/debuglog"
 )
 
 const (

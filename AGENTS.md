@@ -1,7 +1,7 @@
-# AGENTS.md — gws repository instructions
+# AGENTS.md — gwst repository instructions
 
 ## Project summary
-- Project: gws (Git Workspace Manager)
+- Project: gwst (Git Workspace Manager)
 - Language: Go
 - Goal: Manage workspaces (task-based directories) backed by bare repo stores + git worktrees.
 
@@ -34,8 +34,8 @@
 ## Repository contracts
 - Root resolution precedence:
     1) CLI flag `--root`
-    2) env `GWS_ROOT`
-    3) default `~/gws`
+    2) env `GWST_ROOT`
+    3) default `~/gwst`
 - Directory layout under root:
     - `<root>/bare` (bare repo store)
     - `<root>/src` (human working tree)
@@ -57,7 +57,7 @@ Only implement:
 - When creating issues or PRs with `gh`, pass the body via a here-doc to preserve newlines for proper GitHub rendering:
   ```sh
   gh issue create \
-    --title "Implement gws create unified command" \
+    --title "Implement gwst create unified command" \
     --body "$(cat <<'EOF'
   ## Summary
   ...

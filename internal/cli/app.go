@@ -17,16 +17,16 @@ import (
 	"time"
 
 	"github.com/mattn/go-isatty"
-	"github.com/tasuku43/gws/internal/core/debuglog"
-	"github.com/tasuku43/gws/internal/core/gitcmd"
-	"github.com/tasuku43/gws/internal/core/output"
-	"github.com/tasuku43/gws/internal/core/paths"
-	"github.com/tasuku43/gws/internal/domain/repo"
-	"github.com/tasuku43/gws/internal/domain/template"
-	"github.com/tasuku43/gws/internal/domain/workspace"
-	"github.com/tasuku43/gws/internal/ops/doctor"
-	"github.com/tasuku43/gws/internal/ops/initcmd"
-	"github.com/tasuku43/gws/internal/ui"
+	"github.com/tasuku43/gwst/internal/core/debuglog"
+	"github.com/tasuku43/gwst/internal/core/gitcmd"
+	"github.com/tasuku43/gwst/internal/core/output"
+	"github.com/tasuku43/gwst/internal/core/paths"
+	"github.com/tasuku43/gwst/internal/domain/repo"
+	"github.com/tasuku43/gwst/internal/domain/template"
+	"github.com/tasuku43/gwst/internal/domain/workspace"
+	"github.com/tasuku43/gwst/internal/ops/doctor"
+	"github.com/tasuku43/gwst/internal/ops/initcmd"
+	"github.com/tasuku43/gwst/internal/ui"
 )
 
 const defaultRepoProtocol = "ssh"
@@ -34,13 +34,13 @@ const defaultPrefetchTimeout = 60 * time.Second
 
 // Run is a placeholder for the CLI entrypoint.
 func Run() error {
-	fs := flag.NewFlagSet("gws", flag.ContinueOnError)
+	fs := flag.NewFlagSet("gwst", flag.ContinueOnError)
 	var rootFlag string
 	var noPrompt bool
 	var debugFlag bool
 	var helpFlag bool
 	var versionFlag bool
-	fs.StringVar(&rootFlag, "root", "", "override gws root")
+	fs.StringVar(&rootFlag, "root", "", "override gwst root")
 	fs.BoolVar(&noPrompt, "no-prompt", false, "disable interactive prompt")
 	fs.BoolVar(&debugFlag, "debug", false, "write debug logs to file")
 	fs.BoolVar(&helpFlag, "help", false, "show help")
@@ -130,7 +130,7 @@ func runInit(rootDir string, args []string) error {
 		return nil
 	}
 	if len(args) != 0 {
-		return fmt.Errorf("usage: gws init")
+		return fmt.Errorf("usage: gwst init")
 	}
 	result, err := initcmd.Run(rootDir)
 	if err != nil {
@@ -165,7 +165,7 @@ func runTemplateList(ctx context.Context, rootDir string, args []string) error {
 		return nil
 	}
 	if len(args) != 0 {
-		return fmt.Errorf("usage: gws template ls")
+		return fmt.Errorf("usage: gwst template ls")
 	}
 	file, err := template.Load(rootDir)
 	if err != nil {
@@ -270,7 +270,7 @@ func runTemplateAdd(ctx context.Context, rootDir string, args []string, noPrompt
 		return nil
 	}
 	if addFlags.NArg() > 1 {
-		return fmt.Errorf("usage: gws template add [<name>] [--repo <repo> ...]")
+		return fmt.Errorf("usage: gwst template add [<name>] [--repo <repo> ...]")
 	}
 
 	name := ""
@@ -297,9 +297,9 @@ func runTemplateAdd(ctx context.Context, rootDir string, args []string, noPrompt
 			return err
 		}
 		if len(choices) == 0 {
-			return fmt.Errorf("no repos found; run gws repo get first")
+			return fmt.Errorf("no repos found; run gwst repo get first")
 		}
-		name, repoSpecs, err = ui.PromptTemplateRepos("gws template add", name, choices, theme, useColor)
+		name, repoSpecs, err = ui.PromptTemplateRepos("gwst template add", name, choices, theme, useColor)
 		if err != nil {
 			return err
 		}
@@ -309,7 +309,7 @@ func runTemplateAdd(ctx context.Context, rootDir string, args []string, noPrompt
 			if noPrompt {
 				return fmt.Errorf("template name is required with --no-prompt")
 			}
-			name, err = ui.PromptTemplateName("gws template add", "", theme, useColor)
+			name, err = ui.PromptTemplateName("gwst template add", "", theme, useColor)
 			if err != nil {
 				return err
 			}
@@ -323,10 +323,10 @@ func runTemplateAdd(ctx context.Context, rootDir string, args []string, noPrompt
 				return err
 			}
 			if len(choices) == 0 {
-				return fmt.Errorf("no repos found; run gws repo get first")
+				return fmt.Errorf("no repos found; run gwst repo get first")
 			}
 			var selected []string
-			name, selected, err = ui.PromptTemplateRepos("gws template add", name, choices, theme, useColor)
+			name, selected, err = ui.PromptTemplateRepos("gwst template add", name, choices, theme, useColor)
 			if err != nil {
 				return err
 			}
@@ -352,7 +352,7 @@ func runTemplateAdd(ctx context.Context, rootDir string, args []string, noPrompt
 		if _, exists, err := repo.Exists(rootDir, repoSpec); err != nil {
 			return err
 		} else if !exists {
-			return fmt.Errorf("repo store not found, run: gws repo get %s", repoSpec)
+			return fmt.Errorf("repo store not found, run: gwst repo get %s", repoSpec)
 		}
 	}
 
@@ -374,8 +374,8 @@ func runTemplateAdd(ctx context.Context, rootDir string, args []string, noPrompt
 	}
 	renderTreeLines(renderer, reposDisplay, treeLineNormal)
 	renderSuggestions(renderer, useColor, []string{
-		"gws create --template",
-		"gws create --template <name>",
+		"gwst create --template",
+		"gwst create --template <name>",
 	})
 	return nil
 }
@@ -429,7 +429,7 @@ func runTemplateRemove(ctx context.Context, rootDir string, args []string, noPro
 		}
 		theme := ui.DefaultTheme()
 		useColor := isatty.IsTerminal(os.Stdout.Fd())
-		selected, err := ui.PromptMultiSelect("gws template rm", "template", choices, theme, useColor)
+		selected, err := ui.PromptMultiSelect("gwst template rm", "template", choices, theme, useColor)
 		if err != nil {
 			return err
 		}
@@ -479,7 +479,7 @@ func runTemplateValidate(ctx context.Context, rootDir string, args []string) err
 		return nil
 	}
 	if len(args) != 0 {
-		return fmt.Errorf("usage: gws template validate")
+		return fmt.Errorf("usage: gwst template validate")
 	}
 	result, err := template.Validate(rootDir)
 	if err != nil {
@@ -638,7 +638,7 @@ func runCreate(ctx context.Context, rootDir string, args []string, noPrompt bool
 				_, _ = prefetch.start(ctx, rootDir, repoSpec)
 			}
 		}
-		mode, tmplName, tmplWorkspaceID, tmplDesc, tmplBranches, reviewRepo, reviewPRs, issueRepo, issueSelections, repoSelected, err := ui.PromptCreateFlow("gws create", "", "", "", templateNames, tmplErr, repoChoices, repoErr, reviewPrompt, issuePrompt, loadReview, loadIssue, loadTemplateRepos, onReposResolved, validateBranch, theme, useColor, "")
+		mode, tmplName, tmplWorkspaceID, tmplDesc, tmplBranches, reviewRepo, reviewPRs, issueRepo, issueSelections, repoSelected, err := ui.PromptCreateFlow("gwst create", "", "", "", templateNames, tmplErr, repoChoices, repoErr, reviewPrompt, issuePrompt, loadReview, loadIssue, loadTemplateRepos, onReposResolved, validateBranch, theme, useColor, "")
 		if err != nil {
 			return err
 		}
@@ -679,7 +679,7 @@ func runCreate(ctx context.Context, rootDir string, args []string, noPrompt bool
 	remaining := createFlags.Args()
 	if templateMode {
 		if len(remaining) > 1 {
-			return fmt.Errorf("usage: gws create --template <name> [<WORKSPACE_ID>]")
+			return fmt.Errorf("usage: gwst create --template <name> [<WORKSPACE_ID>]")
 		}
 		if len(remaining) == 1 {
 			if workspaceID != "" && workspaceID != remaining[0] {
@@ -691,7 +691,7 @@ func runCreate(ctx context.Context, rootDir string, args []string, noPrompt bool
 	}
 	if reviewMode {
 		if len(remaining) > 1 {
-			return fmt.Errorf("usage: gws create --review [<PR URL>]")
+			return fmt.Errorf("usage: gwst create --review [<PR URL>]")
 		}
 		if workspaceID != "" || branch != "" || baseRef != "" {
 			return fmt.Errorf("--workspace-id, --branch, and --base are not valid with --review")
@@ -704,7 +704,7 @@ func runCreate(ctx context.Context, rootDir string, args []string, noPrompt bool
 	}
 	if issueMode {
 		if len(remaining) > 1 {
-			return fmt.Errorf("usage: gws create --issue [<ISSUE_URL>] [--workspace-id <id>] [--branch <name>] [--base <ref>]")
+			return fmt.Errorf("usage: gwst create --issue [<ISSUE_URL>] [--workspace-id <id>] [--branch <name>] [--base <ref>]")
 		}
 		issueURL := ""
 		if len(remaining) == 1 {
@@ -714,7 +714,7 @@ func runCreate(ctx context.Context, rootDir string, args []string, noPrompt bool
 	}
 	if repoMode {
 		if len(remaining) > 1 {
-			return fmt.Errorf("usage: gws create --repo [<repo>]")
+			return fmt.Errorf("usage: gwst create --repo [<repo>]")
 		}
 		if branch != "" || baseRef != "" {
 			return fmt.Errorf("--branch and --base are not valid with --repo")
@@ -741,7 +741,7 @@ func runCreate(ctx context.Context, rootDir string, args []string, noPrompt bool
 					_, _ = prefetch.start(ctx, rootDir, repoSpec)
 				}
 			}
-			mode, _, tmplWorkspaceID, tmplDesc, tmplBranches, _, _, _, _, repoSelected, err := ui.PromptCreateFlow("gws create", "repo", workspaceID, "", nil, nil, repoChoices, repoErr, nil, nil, nil, nil, nil, onReposResolved, func(v string) error {
+			mode, _, tmplWorkspaceID, tmplDesc, tmplBranches, _, _, _, _, repoSelected, err := ui.PromptCreateFlow("gwst create", "repo", workspaceID, "", nil, nil, repoChoices, repoErr, nil, nil, nil, nil, nil, onReposResolved, func(v string) error {
 				return workspace.ValidateBranchName(ctx, v)
 			}, theme, useColor, "")
 			if err != nil {
@@ -770,7 +770,7 @@ func runCreate(ctx context.Context, rootDir string, args []string, noPrompt bool
 					_, _ = prefetch.start(ctx, rootDir, repoSpec)
 				}
 			}
-			mode, _, tmplWorkspaceID, tmplDesc, tmplBranches, _, _, _, _, repoSelected, err := ui.PromptCreateFlow("gws create", "repo", workspaceID, "", nil, nil, nil, nil, nil, nil, nil, nil, nil, onReposResolved, func(v string) error {
+			mode, _, tmplWorkspaceID, tmplDesc, tmplBranches, _, _, _, _, repoSelected, err := ui.PromptCreateFlow("gwst create", "repo", workspaceID, "", nil, nil, nil, nil, nil, nil, nil, nil, nil, onReposResolved, func(v string) error {
 				return workspace.ValidateBranchName(ctx, v)
 			}, theme, useColor, repoSpec)
 			if err != nil {
@@ -863,10 +863,10 @@ func runDoctor(ctx context.Context, rootDir string, args []string) error {
 		return nil
 	}
 	if fix && self {
-		return fmt.Errorf("usage: gws doctor [--fix | --self]")
+		return fmt.Errorf("usage: gwst doctor [--fix | --self]")
 	}
 	if doctorFlags.NArg() != 0 {
-		return fmt.Errorf("usage: gws doctor [--fix | --self]")
+		return fmt.Errorf("usage: gwst doctor [--fix | --self]")
 	}
 	now := time.Now().UTC()
 	if self {
@@ -915,7 +915,7 @@ func runRepoGet(ctx context.Context, rootDir string, args []string) error {
 		return nil
 	}
 	if len(args) != 1 {
-		return fmt.Errorf("usage: gws repo get <repo>")
+		return fmt.Errorf("usage: gwst repo get <repo>")
 	}
 	repoSpec := strings.TrimSpace(args[0])
 	if repoSpec == "" {
@@ -939,8 +939,8 @@ func runRepoGet(ctx context.Context, rootDir string, args []string) error {
 	renderer.Section("Result")
 	renderer.Bullet(fmt.Sprintf("%s %s", store.RepoKey, store.StorePath))
 	renderSuggestions(renderer, useColor, []string{
-		"gws create",
-		"gws create --repo <repo>",
+		"gwst create",
+		"gwst create --repo <repo>",
 	})
 	return nil
 }
@@ -951,7 +951,7 @@ func runRepoList(ctx context.Context, rootDir string, args []string) error {
 		return nil
 	}
 	if len(args) != 0 {
-		return fmt.Errorf("usage: gws repo ls")
+		return fmt.Errorf("usage: gwst repo ls")
 	}
 	entries, warnings, err := repo.List(rootDir)
 	if err != nil {
@@ -983,7 +983,7 @@ func runWorkspaceNew(ctx context.Context, rootDir string, args []string, noPromp
 		return nil
 	}
 	if newFlags.NArg() > 1 {
-		return fmt.Errorf("usage: gws create --template <name> [<WORKSPACE_ID>]")
+		return fmt.Errorf("usage: gwst create --template <name> [<WORKSPACE_ID>]")
 	}
 
 	workspaceID := ""
@@ -1051,7 +1051,7 @@ func runCreateTemplateWithInputs(ctx context.Context, rootDir string, inputs cre
 				_, _ = prefetch.start(ctx, rootDir, repoSpec)
 			}
 		}
-		mode, tmplName, tmplWorkspaceID, tmplDesc, tmplBranches, _, _, _, _, _, err := ui.PromptCreateFlow("gws create", "template", workspaceID, templateName, templateNames, tmplErr, nil, nil, nil, nil, nil, nil, loadTemplateRepos, onReposResolved, validateBranch, theme, useColor, "")
+		mode, tmplName, tmplWorkspaceID, tmplDesc, tmplBranches, _, _, _, _, _, err := ui.PromptCreateFlow("gwst create", "template", workspaceID, templateName, templateNames, tmplErr, nil, nil, nil, nil, nil, nil, loadTemplateRepos, onReposResolved, validateBranch, theme, useColor, "")
 		if err != nil {
 			return err
 		}
@@ -1143,7 +1143,7 @@ func runCreateTemplateWithInputs(ctx context.Context, rootDir string, inputs cre
 	repos, _, _ := loadWorkspaceRepos(ctx, wsDir)
 	renderWorkspaceBlock(renderer, workspaceID, description, repos)
 	renderSuggestions(renderer, useColor, []string{
-		"gws open",
+		"gwst open",
 	})
 	return nil
 }
@@ -1166,9 +1166,9 @@ func runCreateRepoWithInputs(ctx context.Context, rootDir string, inputs createR
 			return err
 		}
 		if len(choices) == 0 {
-			return fmt.Errorf("no repos found; run gws repo get first")
+			return fmt.Errorf("no repos found; run gwst repo get first")
 		}
-		selected, err := ui.PromptChoiceSelect("gws create", "repo", choices, theme, useColor)
+		selected, err := ui.PromptChoiceSelect("gwst create", "repo", choices, theme, useColor)
 		if err != nil {
 			return err
 		}
@@ -1260,7 +1260,7 @@ func runCreateRepoWithInputs(ctx context.Context, rootDir string, inputs createR
 	repos, _, _ := loadWorkspaceRepos(ctx, wsDir)
 	renderWorkspaceBlock(renderer, workspaceID, description, repos)
 	renderSuggestions(renderer, useColor, []string{
-		"gws open",
+		"gwst open",
 	})
 	return nil
 }
@@ -1271,7 +1271,7 @@ func runWorkspaceAdd(ctx context.Context, rootDir string, args []string) error {
 		return nil
 	}
 	if len(args) > 2 {
-		return fmt.Errorf("usage: gws add [<WORKSPACE_ID>] [<repo>]")
+		return fmt.Errorf("usage: gwst add [<WORKSPACE_ID>] [<repo>]")
 	}
 	workspaceID := ""
 	repoSpec := ""
@@ -1315,7 +1315,7 @@ func runWorkspaceAdd(ctx context.Context, rootDir string, args []string) error {
 		}
 
 		if workspaceID == "" || repoSpec == "" {
-			workspaceID, repoSpec, err = ui.PromptWorkspaceAndRepo("gws add", workspaceChoices, repoChoices, workspaceID, repoSpec, theme, useColor)
+			workspaceID, repoSpec, err = ui.PromptWorkspaceAndRepo("gwst add", workspaceChoices, repoChoices, workspaceID, repoSpec, theme, useColor)
 			if err != nil {
 				return err
 			}
@@ -1335,7 +1335,7 @@ func runWorkspaceAdd(ctx context.Context, rootDir string, args []string) error {
 	description := loadWorkspaceDescription(wsDir)
 	renderWorkspaceBlock(renderer, workspaceID, description, repos)
 	renderSuggestions(renderer, useColor, []string{
-		fmt.Sprintf("gws open %s", workspaceID),
+		fmt.Sprintf("gwst open %s", workspaceID),
 	})
 	return nil
 }
@@ -1357,7 +1357,7 @@ func runCreateIssue(ctx context.Context, rootDir, issueURL, workspaceID, branch,
 		if !isatty.IsTerminal(os.Stdin.Fd()) {
 			return fmt.Errorf("interactive issue picker requires a TTY")
 		}
-		return runIssuePicker(ctx, rootDir, noPrompt, "gws create", prefetch)
+		return runIssuePicker(ctx, rootDir, noPrompt, "gwst create", prefetch)
 	}
 
 	req, err := parseIssueURL(issueURL)
@@ -1479,7 +1479,7 @@ func runCreateIssue(ctx context.Context, rootDir, issueURL, workspaceID, branch,
 	repos, _, _ := loadWorkspaceRepos(ctx, wsDir)
 	renderWorkspaceBlock(renderer, workspaceID, description, repos)
 	renderSuggestions(renderer, useColor, []string{
-		"gws open",
+		"gwst open",
 	})
 	return nil
 }
@@ -1525,11 +1525,11 @@ func runIssue(ctx context.Context, rootDir string, args []string, noPrompt bool)
 		if !isatty.IsTerminal(os.Stdin.Fd()) {
 			return fmt.Errorf("interactive issue picker requires a TTY")
 		}
-		return runIssuePicker(ctx, rootDir, noPrompt, "gws create", prefetch)
+		return runIssuePicker(ctx, rootDir, noPrompt, "gwst create", prefetch)
 	}
 
 	if issueFlags.NArg() != 1 {
-		return fmt.Errorf("usage: gws create --issue [<ISSUE_URL>] [--workspace-id <id>] [--branch <name>] [--base <ref>]")
+		return fmt.Errorf("usage: gwst create --issue [<ISSUE_URL>] [--workspace-id <id>] [--branch <name>] [--base <ref>]")
 	}
 
 	raw := strings.TrimSpace(issueFlags.Arg(0))
@@ -1656,7 +1656,7 @@ func runIssue(ctx context.Context, rootDir string, args []string, noPrompt bool)
 	repos, _, _ := loadWorkspaceRepos(ctx, wsDir)
 	renderWorkspaceBlock(renderer, workspaceID, description, repos)
 	renderSuggestions(renderer, useColor, []string{
-		"gws open",
+		"gwst open",
 	})
 	return nil
 }
@@ -2191,7 +2191,7 @@ func runCreateReview(ctx context.Context, rootDir, prURL string, noPrompt bool, 
 	repos, _, _ := loadWorkspaceRepos(ctx, wsDir)
 	renderWorkspaceBlock(renderer, workspaceID, description, repos)
 	renderSuggestions(renderer, useColor, []string{
-		"gws open",
+		"gwst open",
 	})
 	return nil
 }
@@ -2230,7 +2230,7 @@ func runCreateReviewPicker(ctx context.Context, rootDir string, noPrompt bool, p
 			_, _ = prefetch.start(ctx, rootDir, repoSpec)
 		}
 	}
-	mode, _, _, _, _, reviewRepo, reviewPRs, _, _, _, err := ui.PromptCreateFlow("gws create", "review", "", "", nil, nil, nil, nil, promptChoices, nil, loadReview, nil, nil, onReposResolved, nil, theme, useColor, "")
+	mode, _, _, _, _, reviewRepo, reviewPRs, _, _, _, err := ui.PromptCreateFlow("gwst create", "review", "", "", nil, nil, nil, nil, promptChoices, nil, loadReview, nil, nil, onReposResolved, nil, theme, useColor, "")
 	if err != nil {
 		return err
 	}
@@ -2647,7 +2647,7 @@ func runReview(ctx context.Context, rootDir string, args []string, noPrompt bool
 		return nil
 	}
 	if len(args) != 1 {
-		return fmt.Errorf("usage: gws create --review [<PR URL>]")
+		return fmt.Errorf("usage: gwst create --review [<PR URL>]")
 	}
 	raw := strings.TrimSpace(args[0])
 	if raw == "" {
@@ -2727,7 +2727,7 @@ func runReview(ctx context.Context, rootDir string, args []string, noPrompt bool
 	repos, _, _ := loadWorkspaceRepos(ctx, wsDir)
 	renderWorkspaceBlock(renderer, workspaceID, description, repos)
 	renderSuggestions(renderer, useColor, []string{
-		"gws open",
+		"gwst open",
 	})
 	return nil
 }
@@ -2875,7 +2875,7 @@ func fetchPRRef(ctx context.Context, storePath string, req prRequest, workspaceI
 	default:
 		return "", fmt.Errorf("unsupported provider: %s", req.Provider)
 	}
-	destRef := fmt.Sprintf("refs/remotes/gws-review/%s", workspaceID)
+	destRef := fmt.Sprintf("refs/remotes/gwst-review/%s", workspaceID)
 	spec := fmt.Sprintf("%s:%s", srcRef, destRef)
 	gitcmd.Logf("git fetch origin %s", spec)
 	if _, err := gitcmd.Run(ctx, []string{"fetch", "origin", spec}, gitcmd.Options{Dir: storePath}); err != nil {
@@ -2907,7 +2907,7 @@ func promptCreateMode(theme ui.Theme, useColor bool) (string, error) {
 		{Label: "review", Value: "review", Description: "From a review request (multi-select, GitHub only)"},
 		{Label: "template", Value: "template", Description: "From template"},
 	}
-	return ui.PromptChoiceSelect("gws create", "mode", choices, theme, useColor)
+	return ui.PromptChoiceSelect("gwst create", "mode", choices, theme, useColor)
 }
 
 func loadTemplateNames(rootDir string) ([]string, error) {
@@ -3305,7 +3305,7 @@ func ensureRepoGet(ctx context.Context, rootDir string, repoSpecs []string, noPr
 	}
 	output.Step(fmt.Sprintf("repo get required for %d %s", len(missing), label))
 	for _, repoSpec := range missing {
-		output.Log(fmt.Sprintf("gws repo get %s", displayRepoSpec(repoSpec)))
+		output.Log(fmt.Sprintf("gwst repo get %s", displayRepoSpec(repoSpec)))
 	}
 	confirm, err := ui.PromptConfirmInline("run now?", theme, useColor)
 	if err != nil {
@@ -3713,7 +3713,7 @@ func runWorkspaceList(ctx context.Context, rootDir string, args []string) error 
 		return nil
 	}
 	if lsFlags.NArg() != 0 {
-		return fmt.Errorf("usage: gws ls [--details]")
+		return fmt.Errorf("usage: gwst ls [--details]")
 	}
 	entries, warnings, err := workspace.List(rootDir)
 	if err != nil {
@@ -3729,7 +3729,7 @@ func runWorkspaceStatus(ctx context.Context, rootDir string, args []string) erro
 		return nil
 	}
 	if len(args) > 1 {
-		return fmt.Errorf("usage: gws status [<WORKSPACE_ID>]")
+		return fmt.Errorf("usage: gwst status [<WORKSPACE_ID>]")
 	}
 	workspaceID := ""
 	if len(args) == 1 {
@@ -3749,7 +3749,7 @@ func runWorkspaceStatus(ctx context.Context, rootDir string, args []string) erro
 		}
 		theme := ui.DefaultTheme()
 		useColor := isatty.IsTerminal(os.Stdout.Fd())
-		workspaceID, err = ui.PromptWorkspace("gws status", workspaceChoices, theme, useColor)
+		workspaceID, err = ui.PromptWorkspace("gwst status", workspaceChoices, theme, useColor)
 		if err != nil {
 			return err
 		}
@@ -3769,7 +3769,7 @@ func runWorkspaceRemove(ctx context.Context, rootDir string, args []string) erro
 		return nil
 	}
 	if len(args) > 1 {
-		return fmt.Errorf("usage: gws rm [<WORKSPACE_ID>]")
+		return fmt.Errorf("usage: gwst rm [<WORKSPACE_ID>]")
 	}
 	workspaceID := ""
 	if len(args) == 1 {
@@ -3798,7 +3798,7 @@ func runWorkspaceRemove(ctx context.Context, rootDir string, args []string) erro
 			renderer.Bullet("no removable workspaces")
 			return fmt.Errorf("no removable workspaces")
 		}
-		selected, err = ui.PromptWorkspaceMultiSelectWithBlocked("gws rm", removable, nil, theme, useColor)
+		selected, err = ui.PromptWorkspaceMultiSelectWithBlocked("gwst rm", removable, nil, theme, useColor)
 		if err != nil {
 			return err
 		}
@@ -4017,8 +4017,8 @@ func writeTemplateListText(file template.File, names []string) {
 	if len(names) == 0 {
 		renderer.Bullet("no templates found")
 		renderSuggestions(renderer, useColor, []string{
-			"gws create --template",
-			"gws create --template <name>",
+			"gwst create --template",
+			"gwst create --template <name>",
 		})
 		return
 	}
@@ -4039,8 +4039,8 @@ func writeTemplateListText(file template.File, names []string) {
 		renderTreeLines(renderer, repos, treeLineNormal)
 	}
 	renderSuggestions(renderer, useColor, []string{
-		"gws create --template",
-		"gws create --template <name>",
+		"gwst create --template",
+		"gwst create --template <name>",
 	})
 }
 
@@ -4092,8 +4092,8 @@ func writeInitText(result initcmd.Result) {
 	renderer.Bullet(fmt.Sprintf("root: %s", result.RootDir))
 
 	renderSuggestions(renderer, useColor, []string{
-		"gws template ls",
-		"gws repo get <repo>",
+		"gwst template ls",
+		"gwst repo get <repo>",
 		fmt.Sprintf("Edit templates.yaml: %s", filepath.Join(result.RootDir, "templates.yaml")),
 	})
 }

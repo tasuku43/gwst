@@ -10,19 +10,19 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tasuku43/gws/internal/domain/repo"
-	"github.com/tasuku43/gws/internal/domain/workspace"
+	"github.com/tasuku43/gwst/internal/domain/repo"
+	"github.com/tasuku43/gwst/internal/domain/workspace"
 )
 
 func TestRepoGetWorkspaceAddRemove(t *testing.T) {
-	t.Setenv("GIT_AUTHOR_NAME", "gws")
-	t.Setenv("GIT_AUTHOR_EMAIL", "gws@example.com")
-	t.Setenv("GIT_COMMITTER_NAME", "gws")
-	t.Setenv("GIT_COMMITTER_EMAIL", "gws@example.com")
+	t.Setenv("GIT_AUTHOR_NAME", "gwst")
+	t.Setenv("GIT_AUTHOR_EMAIL", "gwst@example.com")
+	t.Setenv("GIT_COMMITTER_NAME", "gwst")
+	t.Setenv("GIT_COMMITTER_EMAIL", "gwst@example.com")
 
 	ctx := context.Background()
 	tmp := t.TempDir()
-	rootDir := filepath.Join(tmp, "gws")
+	rootDir := filepath.Join(tmp, "gwst")
 
 	remoteBase := filepath.Join(tmp, "remotes")
 	remotePath := filepath.Join(remoteBase, "org", "repo.git")
@@ -82,14 +82,14 @@ func TestRepoGetWorkspaceAddRemove(t *testing.T) {
 }
 
 func TestWorkspaceAddSkipsFetchWhenUpToDate(t *testing.T) {
-	t.Setenv("GIT_AUTHOR_NAME", "gws")
-	t.Setenv("GIT_AUTHOR_EMAIL", "gws@example.com")
-	t.Setenv("GIT_COMMITTER_NAME", "gws")
-	t.Setenv("GIT_COMMITTER_EMAIL", "gws@example.com")
+	t.Setenv("GIT_AUTHOR_NAME", "gwst")
+	t.Setenv("GIT_AUTHOR_EMAIL", "gwst@example.com")
+	t.Setenv("GIT_COMMITTER_NAME", "gwst")
+	t.Setenv("GIT_COMMITTER_EMAIL", "gwst@example.com")
 
 	ctx := context.Background()
 	tmp := t.TempDir()
-	rootDir := filepath.Join(tmp, "gws")
+	rootDir := filepath.Join(tmp, "gwst")
 
 	remoteBase := filepath.Join(tmp, "remotes")
 	remotePath := filepath.Join(remoteBase, "org", "repo.git")
@@ -143,15 +143,15 @@ func TestWorkspaceAddSkipsFetchWhenUpToDate(t *testing.T) {
 }
 
 func TestWorkspaceAddRespectsFetchGrace(t *testing.T) {
-	t.Setenv("GIT_AUTHOR_NAME", "gws")
-	t.Setenv("GIT_AUTHOR_EMAIL", "gws@example.com")
-	t.Setenv("GIT_COMMITTER_NAME", "gws")
-	t.Setenv("GIT_COMMITTER_EMAIL", "gws@example.com")
-	t.Setenv("GWS_FETCH_GRACE_SECONDS", "3600")
+	t.Setenv("GIT_AUTHOR_NAME", "gwst")
+	t.Setenv("GIT_AUTHOR_EMAIL", "gwst@example.com")
+	t.Setenv("GIT_COMMITTER_NAME", "gwst")
+	t.Setenv("GIT_COMMITTER_EMAIL", "gwst@example.com")
+	t.Setenv("GWST_FETCH_GRACE_SECONDS", "3600")
 
 	ctx := context.Background()
 	tmp := t.TempDir()
-	rootDir := filepath.Join(tmp, "gws")
+	rootDir := filepath.Join(tmp, "gwst")
 
 	remoteBase := filepath.Join(tmp, "remotes")
 	remotePath := filepath.Join(remoteBase, "org", "repo.git")

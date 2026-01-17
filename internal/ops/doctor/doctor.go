@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/tasuku43/gws/internal/core/paths"
-	"github.com/tasuku43/gws/internal/domain/repo"
-	"github.com/tasuku43/gws/internal/domain/workspace"
+	"github.com/tasuku43/gwst/internal/core/paths"
+	"github.com/tasuku43/gwst/internal/domain/repo"
+	"github.com/tasuku43/gwst/internal/domain/workspace"
 )
 
 type Issue struct {

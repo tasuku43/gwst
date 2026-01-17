@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/tasuku43/gws/internal/core/gitcmd"
-	"github.com/tasuku43/gws/internal/core/paths"
+	"github.com/tasuku43/gwst/internal/core/gitcmd"
+	"github.com/tasuku43/gwst/internal/core/paths"
 )
 
 type StatusResult struct {

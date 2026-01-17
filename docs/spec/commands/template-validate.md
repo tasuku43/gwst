@@ -1,10 +1,10 @@
 ---
-title: "gws template validate"
+title: "gwst template validate"
 status: implemented
 ---
 
 ## Synopsis
-`gws template validate`
+`gwst template validate`
 
 ## Intent
 Validate `templates.yaml` to catch malformed templates before use.
@@ -16,7 +16,7 @@ Validate `templates.yaml` to catch malformed templates before use.
   - top-level `templates` mapping exists.
   - each template entry includes a non-empty `repos` list.
 - Detects duplicate template names in the YAML source.
-- Validates template names using the same rules as `gws template add`.
+- Validates template names using the same rules as `gwst template add`.
 - Validates each repo spec via the existing repo spec normalization rules.
 - Output uses the standard “Result” section with one bullet per issue; when no issues are found, prints “no issues found”.
 

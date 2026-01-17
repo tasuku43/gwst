@@ -1,13 +1,13 @@
 ---
-title: "gws doctor"
+title: "gwst doctor"
 status: implemented
 ---
 
 ## Synopsis
-`gws doctor [--fix | --self]`
+`gwst doctor [--fix | --self]`
 
 ## Intent
-Detect common problems that block gws from working and surface them before users run other commands.
+Detect common problems that block gwst from working and surface them before users run other commands.
 
 ## Behavior
 - Validates that a root directory was resolved.

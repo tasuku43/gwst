@@ -1,6 +1,6 @@
 # Support
 
-Thank you for using gws.  
+Thank you for using gwst.  
 Please choose the appropriate channel depending on the purpose of your inquiry.
 
 ---
@@ -8,7 +8,7 @@ Please choose the appropriate channel depending on the purpose of your inquiry.
 ## Questions (Usage / General help)
 
 - GitHub Discussions:  
-  https://github.com/tasuku43/gws/discussions
+  https://github.com/tasuku43/gwst/discussions
 
 Before asking a question, please make sure to check:
 
@@ -22,7 +22,7 @@ the specifications and behavior from there may help it arrive at an answer or id
 ### Information to include when asking a question
 - The command you executed
 - Expected result / Actual result
-- `gws --version`
+- `gwst --version`
 - OS / Shell (e.g. macOS 14 / zsh)
 - Relevant logs (please mask sensitive information)
 
@@ -31,7 +31,7 @@ the specifications and behavior from there may help it arrive at an answer or id
 ## Bug Reports
 
 - GitHub Issues:  
-  https://github.com/tasuku43/gws/issues/new
+  https://github.com/tasuku43/gwst/issues/new
 
 Please report bugs via GitHub Issues.
 
@@ -39,7 +39,7 @@ Please report bugs via GitHub Issues.
 - Short summary of the bug (1–2 lines)
 - Steps to reproduce (minimal reproduction preferred)
 - Expected behavior / Actual behavior
-- `gws --version`
+- `gwst --version`
 - OS / Execution environment
 - Logs or stack traces
 - Related configuration or repository state (as far as you can share)
@@ -50,7 +50,7 @@ Please report bugs via GitHub Issues.
 
 - GitHub Issues (Feature request)
 - Or GitHub Discussions:  
-  https://github.com/tasuku43/gws/discussions
+  https://github.com/tasuku43/gwst/discussions
 
 ### Information to include in a feature request
 - The problem you want to solve (who is affected and how)

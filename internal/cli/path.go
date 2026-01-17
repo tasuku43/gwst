@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"github.com/mattn/go-isatty"
-	"github.com/tasuku43/gws/internal/domain/workspace"
-	"github.com/tasuku43/gws/internal/ui"
+	"github.com/tasuku43/gwst/internal/domain/workspace"
+	"github.com/tasuku43/gwst/internal/ui"
 )
 
 func runPath(rootDir string, args []string, noPrompt bool) error {
@@ -34,13 +34,13 @@ func runPath(rootDir string, args []string, noPrompt bool) error {
 		return nil
 	}
 	if pathFlags.NArg() != 0 {
-		return fmt.Errorf("usage: gws path --workspace")
+		return fmt.Errorf("usage: gwst path --workspace")
 	}
 	if noPrompt {
-		return fmt.Errorf("gws path requires interactive prompt (omit --no-prompt)")
+		return fmt.Errorf("gwst path requires interactive prompt (omit --no-prompt)")
 	}
 	if !workspaceFlag {
-		return fmt.Errorf("usage: gws path --workspace")
+		return fmt.Errorf("usage: gwst path --workspace")
 	}
 
 	theme := ui.DefaultTheme()
@@ -64,7 +64,7 @@ func runPath(rootDir string, args []string, noPrompt bool) error {
 			Value: entry.WorkspaceID,
 		})
 	}
-	workspaceID, err := ui.PromptChoiceSelectWithOutput("gws path", "workspace", choices, theme, useColor, os.Stderr)
+	workspaceID, err := ui.PromptChoiceSelectWithOutput("gwst path", "workspace", choices, theme, useColor, os.Stderr)
 	if err != nil {
 		return err
 	}

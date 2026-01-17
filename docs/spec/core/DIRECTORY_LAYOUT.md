@@ -1,24 +1,24 @@
 ---
-title: "Directory layout under GWS_ROOT"
+title: "Directory layout under GWST_ROOT"
 status: implemented
 ---
 
-# Directory layout under GWS_ROOT
+# Directory layout under GWST_ROOT
 
-`gws` manages a single root directory (`GWS_ROOT`) that contains the bare repo store and workspaces.
+`gwst` manages a single root directory (`GWST_ROOT`) that contains the bare repo store and workspaces.
 
 ## Root resolution
 
-`GWS_ROOT` is resolved in this order:
+`GWST_ROOT` is resolved in this order:
 
 1. `--root <path>`
-2. `GWS_ROOT` environment variable
-3. default `~/gws`
+2. `GWST_ROOT` environment variable
+3. default `~/gwst`
 
 ## Layout
 
 ```
-GWS_ROOT/
+GWST_ROOT/
   bare/         # bare repo store (shared Git objects)
   workspaces/   # workspaces (task-scoped worktrees)
   templates.yaml
@@ -30,10 +30,10 @@ GWS_ROOT/
 Each workspace is a directory under `workspaces/` and contains one or more repo worktrees:
 
 ```
-GWS_ROOT/workspaces/<WORKSPACE_ID>/
+GWST_ROOT/workspaces/<WORKSPACE_ID>/
   <alias1>/
   <alias2>/
-  .gws/metadata.json   # optional workspace metadata (e.g. description)
+  .gwst/metadata.json   # optional workspace metadata (e.g. description)
 ```
 
-`gws open` runs a subshell with `GWS_WORKSPACE=<WORKSPACE_ID>` set for the child process.
+`gwst open` runs a subshell with `GWST_WORKSPACE=<WORKSPACE_ID>` set for the child process.

@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/tasuku43/gws/internal/core/gitcmd"
-	"github.com/tasuku43/gws/internal/domain/repo"
+	"github.com/tasuku43/gwst/internal/core/gitcmd"
+	"github.com/tasuku43/gwst/internal/domain/repo"
 )
 
 func ScanRepos(ctx context.Context, wsDir string) ([]Repo, []error, error) {
@@ -22,7 +22,7 @@ func ScanRepos(ctx context.Context, wsDir string) ([]Repo, []error, error) {
 		if !entry.IsDir() {
 			continue
 		}
-		if entry.Name() == ".gws" {
+		if entry.Name() == ".gwst" {
 			continue
 		}
 		repoPath := filepath.Join(wsDir, entry.Name())

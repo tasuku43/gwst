@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"os/exec"
 
-	"github.com/tasuku43/gws/internal/core/debuglog"
-	"github.com/tasuku43/gws/internal/core/output"
+	"github.com/tasuku43/gwst/internal/core/debuglog"
+	"github.com/tasuku43/gwst/internal/core/output"
 )
 
 type Result struct {

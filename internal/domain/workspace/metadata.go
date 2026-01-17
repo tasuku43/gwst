@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	metadataDirName  = ".gws"
+	metadataDirName  = ".gwst"
 	metadataFileName = "metadata.json"
 )
 

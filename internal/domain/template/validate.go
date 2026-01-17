@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/tasuku43/gws/internal/domain/repo"
+	"github.com/tasuku43/gwst/internal/domain/repo"
 	"gopkg.in/yaml.v3"
 )
 

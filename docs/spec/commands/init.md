@@ -1,10 +1,10 @@
 ---
-title: "gws init"
+title: "gwst init"
 status: implemented
 ---
 
 ## Synopsis
-`gws init`
+`gwst init`
 
 ## Intent
 Create the minimum directory and file layout under the resolved GWS root so other commands can operate safely.

@@ -15,7 +15,7 @@ if [[ ! -f "${checksums_path}" ]]; then
 fi
 
 version="${tag#v}"
-formula_path="Formula/gws.rb"
+formula_path="Formula/gwst.rb"
 formula_dir="$(dirname "${formula_path}")"
 
 sha_for() {
@@ -23,47 +23,47 @@ sha_for() {
   awk -v asset="${asset}" '($2 == asset) { print $1; found=1 } END { if (!found) exit 3 }' "${checksums_path}"
 }
 
-macos_arm64_sha="$(sha_for "gws_${tag}_macos_arm64.tar.gz")"
-macos_x64_sha="$(sha_for "gws_${tag}_macos_x64.tar.gz")"
-linux_arm64_sha="$(sha_for "gws_${tag}_linux_arm64.tar.gz")"
-linux_x64_sha="$(sha_for "gws_${tag}_linux_x64.tar.gz")"
+macos_arm64_sha="$(sha_for "gwst_${tag}_macos_arm64.tar.gz")"
+macos_x64_sha="$(sha_for "gwst_${tag}_macos_x64.tar.gz")"
+linux_arm64_sha="$(sha_for "gwst_${tag}_linux_arm64.tar.gz")"
+linux_x64_sha="$(sha_for "gwst_${tag}_linux_x64.tar.gz")"
 
 mkdir -p "${formula_dir}"
 
 cat >"${formula_path}" <<EOF
-class Gws < Formula
+class Gwst < Formula
   desc "Git Workspaces for Human + Agentic Development"
-  homepage "https://github.com/tasuku43/gws"
+  homepage "https://github.com/tasuku43/gwst"
   license "MIT"
 
   version "${version}"
 
   on_macos do
     if Hardware::CPU.arm?
-      url "https://github.com/tasuku43/gws/releases/download/${tag}/gws_${tag}_macos_arm64.tar.gz"
+      url "https://github.com/tasuku43/gwst/releases/download/${tag}/gwst_${tag}_macos_arm64.tar.gz"
       sha256 "${macos_arm64_sha}"
     else
-      url "https://github.com/tasuku43/gws/releases/download/${tag}/gws_${tag}_macos_x64.tar.gz"
+      url "https://github.com/tasuku43/gwst/releases/download/${tag}/gwst_${tag}_macos_x64.tar.gz"
       sha256 "${macos_x64_sha}"
     end
   end
 
   on_linux do
     if Hardware::CPU.arm?
-      url "https://github.com/tasuku43/gws/releases/download/${tag}/gws_${tag}_linux_arm64.tar.gz"
+      url "https://github.com/tasuku43/gwst/releases/download/${tag}/gwst_${tag}_linux_arm64.tar.gz"
       sha256 "${linux_arm64_sha}"
     else
-      url "https://github.com/tasuku43/gws/releases/download/${tag}/gws_${tag}_linux_x64.tar.gz"
+      url "https://github.com/tasuku43/gwst/releases/download/${tag}/gwst_${tag}_linux_x64.tar.gz"
       sha256 "${linux_x64_sha}"
     end
   end
 
   def install
-    bin.install "gws"
+    bin.install "gwst"
   end
 
   test do
-    system "#{bin}/gws", "--version"
+    system "#{bin}/gwst", "--version"
   end
 end
 EOF

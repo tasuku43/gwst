@@ -91,7 +91,7 @@ Steps
 
 ## Examples
 
-### gws create --template (interactive)
+### gwst create --template (interactive)
 ```
 Inputs
   • template: hel
@@ -105,11 +105,11 @@ Steps
   • worktree add helmfiles
 
 Result
-  • /Users/me/gws/workspaces/PROJ-123
+  • /Users/me/gwst/workspaces/PROJ-123
     └─ helmfiles (branch: PROJ-123)
 ```
 
-### gws create (mode picker)
+### gwst create (mode picker)
 ```
 Inputs
   • mode: s
@@ -119,27 +119,27 @@ Inputs
     └─ template - From template
 ```
 
-### gws create --template (non-interactive)
+### gwst create --template (non-interactive)
 ```
 Steps
   • repo get git@github.com:org/repo.git
   • worktree add repo
 
 Result
-  • /Users/me/gws/workspaces/PROJ-123
+  • /Users/me/gwst/workspaces/PROJ-123
     ├─ repo
     └─ api
 ```
 
-### gws create --review (interactive)
+### gwst create --review (interactive)
 ```
 Steps
   • repo get required for 1 repo
-    └─ gws repo get git@github.com:org/repo.git
+    └─ gwst repo get git@github.com:org/repo.git
   • run now? (y/n)
 ```
 
-### gws status
+### gwst status
 ```
 Result
   • api (branch: PROJ-123)
