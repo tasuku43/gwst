@@ -50,7 +50,7 @@ func RemoveWithOptions(ctx context.Context, rootDir, workspaceID string, opts Re
 			}
 			continue
 		}
-		_, _, _, dirty, _, _, _, _, _, _ := parseStatusPorcelainV2(statusOut, "")
+		_, _, _, _, _, dirty, _, _, _, _, _, _ := parseStatusPorcelainV2(statusOut, "")
 		if dirty {
 			if !opts.AllowDirty {
 				return fmt.Errorf("workspace has dirty changes: %s", repo.Alias)

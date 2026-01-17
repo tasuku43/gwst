@@ -21,6 +21,8 @@ type RepoStatus struct {
 	Branch         string
 	Upstream       string
 	Head           string
+	Detached       bool
+	HeadMissing    bool
 	Dirty          bool
 	UntrackedCount int
 	StagedCount    int
@@ -72,7 +74,7 @@ func Status(ctx context.Context, rootDir, workspaceID string) (StatusResult, err
 		}
 
 		repoStatus.RawStatus = statusOut
-		repoStatus.Branch, repoStatus.Upstream, repoStatus.Head, repoStatus.Dirty, repoStatus.UntrackedCount, repoStatus.StagedCount, repoStatus.UnstagedCount, repoStatus.UnmergedCount, repoStatus.AheadCount, repoStatus.BehindCount = parseStatusPorcelainV2(statusOut, repoStatus.Branch)
+		repoStatus.Branch, repoStatus.Upstream, repoStatus.Head, repoStatus.Detached, repoStatus.HeadMissing, repoStatus.Dirty, repoStatus.UntrackedCount, repoStatus.StagedCount, repoStatus.UnstagedCount, repoStatus.UnmergedCount, repoStatus.AheadCount, repoStatus.BehindCount = parseStatusPorcelainV2(statusOut, repoStatus.Branch)
 		result.Repos = append(result.Repos, repoStatus)
 	}
 
@@ -83,10 +85,12 @@ func gitStatusPorcelain(ctx context.Context, worktreePath string) (string, error
 	return gitcmd.StatusPorcelainV2(ctx, worktreePath)
 }
 
-func parseStatusPorcelainV2(output, fallbackBranch string) (string, string, string, bool, int, int, int, int, int, int) {
+func parseStatusPorcelainV2(output, fallbackBranch string) (string, string, string, bool, bool, bool, int, int, int, int, int, int) {
 	branch := fallbackBranch
 	var upstream string
 	var head string
+	var detached bool
+	var headMissing bool
 	var dirty bool
 	var untracked int
 	var staged int
@@ -107,11 +111,18 @@ func parseStatusPorcelainV2(output, fallbackBranch string) (string, string, stri
 			}
 			switch fields[1] {
 			case "branch.oid":
-				if fields[2] != "(initial)" {
+				if fields[2] == "(initial)" {
+					headMissing = true
+				} else {
 					head = shortSHA(fields[2])
 				}
 			case "branch.head":
-				if fields[2] != "(detached)" && fields[2] != "(unknown)" {
+				switch fields[2] {
+				case "(detached)":
+					detached = true
+				case "(unknown)":
+					headMissing = true
+				default:
 					branch = fields[2]
 				}
 			case "branch.upstream":
@@ -163,7 +174,7 @@ func parseStatusPorcelainV2(output, fallbackBranch string) (string, string, stri
 		dirty = true
 	}
 
-	return branch, upstream, head, dirty, untracked, staged, unstaged, unmerged, ahead, behind
+	return branch, upstream, head, detached, headMissing, dirty, untracked, staged, unstaged, unmerged, ahead, behind
 }
 
 func shortSHA(oid string) string {

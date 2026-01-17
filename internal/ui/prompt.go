@@ -19,6 +19,7 @@ type PromptChoice struct {
 	Label       string
 	Value       string
 	Description string
+	Details     []string
 }
 
 type IssueSelection struct {
@@ -2638,7 +2639,7 @@ func (m workspaceMultiSelectModel) startConfirmIfNeeded() (workspaceMultiSelectM
 		return m, tea.Quit
 	}
 	m.confirmModel = newConfirmInlineModel(label, m.theme, m.useColor, false, nil, nil)
-	m.confirmInputsRaw = WorkspaceChoiceLines(m.selected, -1, m.useColor, m.theme)
+	m.confirmInputsRaw = WorkspaceChoiceConfirmLines(m.selected, m.useColor, m.theme)
 	m.stage = multiSelectStageConfirm
 	return m, nil
 }
@@ -3192,6 +3193,8 @@ func renderWorkspaceChoiceList(b *strings.Builder, items []WorkspaceChoice, curs
 		warnTag := ""
 		if hasWarn {
 			warnTag = "[" + shortWarningTag(item.Warning) + "]"
+		} else {
+			warnTag = "[clean]"
 		}
 		if useColor {
 			if hasWarn {
@@ -3208,7 +3211,11 @@ func renderWorkspaceChoiceList(b *strings.Builder, items []WorkspaceChoice, curs
 		if warnTag != "" {
 			tag := warnTag
 			if useColor {
-				tag = warnStyle.Render(warnTag)
+				if hasWarn {
+					tag = warnStyle.Render(warnTag)
+				} else {
+					tag = theme.Accent.Render(warnTag)
+				}
 			}
 			display += tag
 		}
@@ -3243,6 +3250,88 @@ func WorkspaceChoiceLines(items []WorkspaceChoice, cursor int, useColor bool, th
 	return collectLines(func(b *strings.Builder) {
 		renderWorkspaceChoiceList(b, items, cursor, 0, useColor, theme)
 	})
+}
+
+func WorkspaceChoiceConfirmLines(items []WorkspaceChoice, useColor bool, theme Theme) []string {
+	return collectLines(func(b *strings.Builder) {
+		renderWorkspaceChoiceConfirmList(b, items, useColor, theme)
+	})
+}
+
+func renderWorkspaceChoiceConfirmList(b *strings.Builder, items []WorkspaceChoice, useColor bool, theme Theme) {
+	if len(items) == 0 {
+		msg := "no matches"
+		if useColor {
+			msg = theme.Muted.Render(msg)
+		}
+		b.WriteString(fmt.Sprintf("%s%s %s\n", output.Indent+output.Indent, mutedToken(theme, useColor, output.LogConnector), msg))
+		return
+	}
+	for _, item := range items {
+		displayID := item.ID
+		hasWarn := strings.TrimSpace(item.Warning) != ""
+		warnStyle := theme.SoftWarn
+		if item.WarningStrong {
+			warnStyle = theme.Warn
+		}
+		warnTag := ""
+		if hasWarn {
+			warnTag = "[" + shortWarningTag(item.Warning) + "]"
+		} else {
+			warnTag = "[clean]"
+		}
+		if useColor && hasWarn {
+			displayID = warnStyle.Render(displayID)
+		}
+		display := displayID
+		if warnTag != "" {
+			tag := warnTag
+			if useColor {
+				if hasWarn {
+					tag = warnStyle.Render(warnTag)
+				} else {
+					tag = theme.Accent.Render(warnTag)
+				}
+			}
+			display += tag
+		}
+		desc := strings.TrimSpace(item.Description)
+		if desc != "" {
+			if useColor {
+				display += theme.Muted.Render(" - " + desc)
+			} else {
+				display += " - " + desc
+			}
+		}
+		b.WriteString(fmt.Sprintf("%s%s %s\n", output.Indent+output.Indent, mutedToken(theme, useColor, output.LogConnector), display))
+		for j, repo := range item.Repos {
+			connector := "├─"
+			if j == len(item.Repos)-1 {
+				connector = "└─"
+			}
+			line := fmt.Sprintf("%s%s %s", output.Indent+output.Indent+output.Indent, connector, repo.Label)
+			if useColor {
+				line = theme.Muted.Render(line)
+			}
+			b.WriteString(line)
+			b.WriteString("\n")
+			if len(repo.Details) == 0 {
+				continue
+			}
+			detailPrefix := output.Indent + output.Indent + output.Indent + output.Indent
+			for _, detail := range repo.Details {
+				if strings.TrimSpace(detail) == "" {
+					continue
+				}
+				detailLine := fmt.Sprintf("%s| %s", detailPrefix, detail)
+				if useColor {
+					detailLine = theme.Muted.Render(detailLine)
+				}
+				b.WriteString(detailLine)
+				b.WriteString("\n")
+			}
+		}
+	}
 }
 
 func shortWarningTag(value string) string {

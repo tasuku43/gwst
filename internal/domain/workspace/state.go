@@ -88,8 +88,12 @@ func repoStateFromStatus(repo RepoStatus) RepoState {
 		state.Kind = RepoStateDirty
 		return state
 	}
+	if repo.Detached || repo.HeadMissing {
+		state.Kind = RepoStateUnknown
+		return state
+	}
 	if strings.TrimSpace(repo.Upstream) == "" {
-		state.Kind = RepoStateDiverged
+		state.Kind = RepoStateUnknown
 		return state
 	}
 	if repo.AheadCount > 0 && repo.BehindCount > 0 {
@@ -101,7 +105,7 @@ func repoStateFromStatus(repo RepoStatus) RepoState {
 		return state
 	}
 	if repo.BehindCount > 0 {
-		state.Kind = RepoStateDiverged
+		state.Kind = RepoStateClean
 		return state
 	}
 	state.Kind = RepoStateClean
@@ -141,7 +145,7 @@ func aggregateWorkspaceState(repos []RepoState) WorkspaceStateKind {
 
 func RequiresRemoveConfirmation(kind WorkspaceStateKind) bool {
 	switch kind {
-	case WorkspaceStateUnpushed, WorkspaceStateDiverged, WorkspaceStateUnknown:
+	case WorkspaceStateDirty, WorkspaceStateUnpushed, WorkspaceStateDiverged, WorkspaceStateUnknown:
 		return true
 	default:
 		return false

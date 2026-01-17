@@ -13,8 +13,19 @@ Safely remove a workspace and all of its worktrees, warning/confirming for risky
 - **Clean**: no uncommitted changes; upstream set; no ahead/behind.
 - **Dirty**: uncommitted changes exist (confirmation required).
 - **Unpushed**: local branch is ahead of upstream (confirmation required).
-- **Diverged**: local branch is behind or both ahead/behind of upstream, or upstream is missing (confirmation required).
-- **Unknown**: status cannot be determined (confirmation required).
+- **Diverged**: local branch is both ahead and behind upstream (confirmation required).
+- **Unknown**: status cannot be determined or branch/upstream cannot be resolved (confirmation required).
+
+## Warning/Confirmation Rules
+- Source of truth for comparison: `git status --porcelain=v2 -b` (local remote-tracking refs; no implicit fetch/prune).
+- Warn/confirm when any repo is:
+  - Dirty or unmerged.
+  - Ahead of upstream (unpushed).
+  - Ahead and behind upstream (diverged).
+  - Upstream missing or status cannot be determined (unknown).
+  - Detached HEAD / no HEAD (unknown).
+- Do **not** warn for behind-only (upstream advanced with no local changes).
+- Workspace-level warning is the aggregation of repo warnings; Dirty/Unknown are strong warnings.
 
 ## Behavior
 - With `WORKSPACE_ID` provided: targets that workspace.
@@ -27,6 +38,7 @@ Safely remove a workspace and all of its worktrees, warning/confirming for risky
   - Filterable list by substring (case-insensitive); lightweight fuzzy match is acceptable.
 - Before removal, gathers warnings (e.g., dirty changes, unpushed commits, upstream missing, status unknown) and displays them.
 - Before removal, require explicit confirmation for risky states (Dirty/Unpushed/Diverged/Unknown). For multiple selections, the confirmation prompt must mention warnings when present, with stronger wording for Dirty/Unknown.
+- When confirmation is shown, include `git status --short --branch` output for repos in warning states under each affected workspace.
 - Before removal, if multiple workspaces are selected, ask for confirmation (default No).
 - Calls `workspace.RemoveWithOptions`, which:
   - Validates the workspace exists.

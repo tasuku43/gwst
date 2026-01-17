@@ -3483,27 +3483,94 @@ func appendWarningLines(lines []string, prefix string, warnings []error) []strin
 	return lines
 }
 
-func loadWorkspaceStateForRemoval(ctx context.Context, rootDir, workspaceID string) workspace.WorkspaceState {
-	state, err := workspace.State(ctx, rootDir, workspaceID)
+func loadWorkspaceStatusForRemoval(ctx context.Context, rootDir, workspaceID string) (workspace.StatusResult, workspace.WorkspaceState) {
+	status, err := workspace.Status(ctx, rootDir, workspaceID)
 	if err == nil {
-		return state
+		return status, workspace.StateFromStatus(status)
 	}
-	return workspace.WorkspaceState{
-		WorkspaceID: workspaceID,
-		Kind:        workspace.WorkspaceStateUnknown,
-		Warnings:    []error{err},
-	}
+	return workspace.StatusResult{
+			WorkspaceID: workspaceID,
+			Warnings:    []error{err},
+		}, workspace.WorkspaceState{
+			WorkspaceID: workspaceID,
+			Kind:        workspace.WorkspaceStateUnknown,
+			Warnings:    []error{err},
+		}
 }
 
 func classifyWorkspaceRemoval(ctx context.Context, rootDir string, entries []workspace.Entry) ([]ui.WorkspaceChoice, []ui.BlockedChoice) {
 	var removable []ui.WorkspaceChoice
 	for _, entry := range entries {
-		state := loadWorkspaceStateForRemoval(ctx, rootDir, entry.WorkspaceID)
-		choice := buildWorkspaceChoice(ctx, entry)
+		status, state := loadWorkspaceStatusForRemoval(ctx, rootDir, entry.WorkspaceID)
+		choice := buildWorkspaceRemoveChoice(ctx, entry, status)
 		choice.Warning, choice.WarningStrong = workspaceRemoveWarningLabel(state)
 		removable = append(removable, choice)
 	}
 	return removable, nil
+}
+
+func buildWorkspaceRemoveChoice(ctx context.Context, entry workspace.Entry, status workspace.StatusResult) ui.WorkspaceChoice {
+	choice := ui.WorkspaceChoice{
+		ID:          entry.WorkspaceID,
+		Description: entry.Description,
+	}
+	for _, repo := range status.Repos {
+		name := strings.TrimSpace(repo.Alias)
+		if name == "" {
+			name = filepath.Base(repo.WorktreePath)
+		}
+		label := formatRepoLabel(name, repo.Branch)
+		choice.Repos = append(choice.Repos, ui.PromptChoice{
+			Label:   label,
+			Value:   name,
+			Details: buildRepoStatusDetails(ctx, repo),
+		})
+	}
+	return choice
+}
+
+func buildRepoStatusDetails(ctx context.Context, repo workspace.RepoStatus) []string {
+	if !repoNeedsStatusDetails(repo) {
+		return nil
+	}
+	if repo.Error != nil {
+		return []string{fmt.Sprintf("status error: %s", compactError(repo.Error))}
+	}
+	out, err := gitcmd.StatusShortBranch(ctx, repo.WorktreePath)
+	if err != nil {
+		return []string{fmt.Sprintf("status error: %s", compactError(err))}
+	}
+	return splitNonEmptyLines(out)
+}
+
+func repoNeedsStatusDetails(repo workspace.RepoStatus) bool {
+	if repo.Error != nil {
+		return true
+	}
+	if repo.Dirty {
+		return true
+	}
+	if repo.Detached || repo.HeadMissing {
+		return true
+	}
+	if strings.TrimSpace(repo.Upstream) == "" {
+		return true
+	}
+	if repo.AheadCount > 0 {
+		return true
+	}
+	return false
+}
+
+func splitNonEmptyLines(text string) []string {
+	var out []string
+	for _, line := range strings.Split(strings.ReplaceAll(text, "\r\n", "\n"), "\n") {
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
+		out = append(out, line)
+	}
+	return out
 }
 
 func buildWorkspaceRemoveReason(state workspace.WorkspaceState) string {
@@ -3706,7 +3773,7 @@ func runWorkspaceRemove(ctx context.Context, rootDir string, args []string) erro
 	defer output.SetStepLogger(nil)
 
 	if len(selected) == 1 {
-		state := loadWorkspaceStateForRemoval(ctx, rootDir, workspaceID)
+		_, state := loadWorkspaceStatusForRemoval(ctx, rootDir, workspaceID)
 		if !selectedFromPrompt && state.Kind != workspace.WorkspaceStateClean {
 			label := removeConfirmLabel(state)
 			confirm, err := ui.PromptConfirmInline(label, theme, useColor)
@@ -3737,7 +3804,7 @@ func runWorkspaceRemove(ctx context.Context, rootDir string, args []string) erro
 	requiresStrongConfirm := false
 	states := make(map[string]workspace.WorkspaceState, len(selected))
 	for _, selectedID := range selected {
-		state := loadWorkspaceStateForRemoval(ctx, rootDir, selectedID)
+		_, state := loadWorkspaceStatusForRemoval(ctx, rootDir, selectedID)
 		states[selectedID] = state
 		if state.Kind != workspace.WorkspaceStateClean {
 			requiresConfirm = true
@@ -3848,7 +3915,7 @@ func writeWorkspaceListText(ctx context.Context, rootDir string, entries []works
 			repoWarnings = append(repoWarnings, fmt.Sprintf("%s: %s", entry.WorkspaceID, compactError(err)))
 		}
 		repoWarnings = appendWarningLines(repoWarnings, entry.WorkspaceID, warnings)
-		state := loadWorkspaceStateForRemoval(ctx, rootDir, entry.WorkspaceID)
+		_, state := loadWorkspaceStatusForRemoval(ctx, rootDir, entry.WorkspaceID)
 		items = append(items, workspaceListEntry{entry: entry, repos: repos, state: state})
 	}
 	repoWarnings = appendWarningLines(repoWarnings, "", warnings)

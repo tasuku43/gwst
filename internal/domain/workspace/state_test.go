@@ -50,10 +50,40 @@ func TestStateFromStatus(t *testing.T) {
 			in: StatusResult{
 				WorkspaceID: "ws-diverged",
 				Repos: []RepoStatus{
-					{Alias: "app", Upstream: "origin/main", BehindCount: 1},
+					{Alias: "app", Upstream: "origin/main", AheadCount: 1, BehindCount: 1},
 				},
 			},
 			want: WorkspaceStateDiverged,
+		},
+		{
+			name: "behind_only_is_clean",
+			in: StatusResult{
+				WorkspaceID: "ws-behind",
+				Repos: []RepoStatus{
+					{Alias: "app", Upstream: "origin/main", BehindCount: 2},
+				},
+			},
+			want: WorkspaceStateClean,
+		},
+		{
+			name: "upstream_missing_is_unknown",
+			in: StatusResult{
+				WorkspaceID: "ws-upstream-missing",
+				Repos: []RepoStatus{
+					{Alias: "app"},
+				},
+			},
+			want: WorkspaceStateUnknown,
+		},
+		{
+			name: "detached_is_unknown",
+			in: StatusResult{
+				WorkspaceID: "ws-detached",
+				Repos: []RepoStatus{
+					{Alias: "app", Detached: true},
+				},
+			},
+			want: WorkspaceStateUnknown,
 		},
 		{
 			name: "unknown",
@@ -96,8 +126,8 @@ func TestRequiresRemoveConfirmation(t *testing.T) {
 	if RequiresRemoveConfirmation(WorkspaceStateClean) {
 		t.Fatalf("WorkspaceStateClean should not require confirmation")
 	}
-	if RequiresRemoveConfirmation(WorkspaceStateDirty) {
-		t.Fatalf("WorkspaceStateDirty should not require confirmation")
+	if !RequiresRemoveConfirmation(WorkspaceStateDirty) {
+		t.Fatalf("WorkspaceStateDirty should require confirmation")
 	}
 	for _, kind := range []WorkspaceStateKind{WorkspaceStateUnpushed, WorkspaceStateDiverged, WorkspaceStateUnknown} {
 		if !RequiresRemoveConfirmation(kind) {

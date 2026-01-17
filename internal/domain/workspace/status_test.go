@@ -4,7 +4,7 @@ import "testing"
 
 func TestParseStatusPorcelainV2Counts(t *testing.T) {
 	out := "# branch.oid 94a67ef\n# branch.head main\n# branch.upstream origin/main\n# branch.ab +2 -1\n1 .M N... 100644 100644 100644 abcdef0 abcdef0 file.txt\n? new.txt\nu UU N... 100644 100644 100644 abcdef0 abcdef0 abcdef0 conflict.txt\n"
-	branch, upstream, head, dirty, untracked, staged, unstaged, unmerged, ahead, behind := parseStatusPorcelainV2(out, "fallback")
+	branch, upstream, head, detached, headMissing, dirty, untracked, staged, unstaged, unmerged, ahead, behind := parseStatusPorcelainV2(out, "fallback")
 
 	if branch != "main" {
 		t.Fatalf("branch = %q, want main", branch)
@@ -14,6 +14,12 @@ func TestParseStatusPorcelainV2Counts(t *testing.T) {
 	}
 	if head != "94a67ef" {
 		t.Fatalf("head = %q, want 94a67ef", head)
+	}
+	if detached {
+		t.Fatalf("detached = true, want false")
+	}
+	if headMissing {
+		t.Fatalf("headMissing = true, want false")
 	}
 	if !dirty {
 		t.Fatalf("dirty = false, want true")
