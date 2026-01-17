@@ -26,9 +26,10 @@ builds:
 
 archives:
   - id: gws
-    builds:
+    ids:
       - gws
-    format: tar.gz
+    formats:
+      - tar.gz
     name_template: >-
       {{ .ProjectName }}_{{ .Tag }}_
       {{- if eq .Os "darwin" -}}macos{{- else -}}{{ .Os }}{{- end -}}_
@@ -46,4 +47,3 @@ release:
 
     ## Compatibility policy
     - docs/spec/core/COMPATIBILITY.md: https://github.com/tasuku43/gws/blob/{{ .Tag }}/docs/spec/core/COMPATIBILITY.md
-
