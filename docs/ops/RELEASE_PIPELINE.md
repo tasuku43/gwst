@@ -68,4 +68,4 @@ sequenceDiagram
 
 - `gws version` correctness is guaranteed for **GitHub Releases binaries** by `-ldflags` injected by GoReleaser.
 - Homebrew formula is updated via a PR after each release tag; installation via `brew` depends on merging that PR.
-
+- Homebrew formula updates are performed for **stable tags only** (tags without a `-...` prerelease suffix).

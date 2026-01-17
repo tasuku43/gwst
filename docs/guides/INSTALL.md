@@ -26,6 +26,10 @@ Install:
 - `brew tap tasuku43/gws`
 - `brew install gws`
 
+Notes:
+- Homebrew is intended for installing the latest stable release.
+- For version pinning, prefer `mise` (see below).
+
 ## Install via mise
 
 `mise` can install tools from GitHub Releases.

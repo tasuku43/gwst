@@ -13,6 +13,7 @@ For the pipeline architecture and sequence, see `docs/ops/RELEASE_PIPELINE.md`.
 
 - **GitHub Releases** is the source of truth for distributed binaries.
 - `go install` is **not** a supported install method for end users.
+- Pre-release tags (e.g. `v0.1.0-rc.1`) do not update Homebrew automatically.
 
 ## Release goals (Epic 1)
 
@@ -46,7 +47,7 @@ For the pipeline architecture and sequence, see `docs/ops/RELEASE_PIPELINE.md`.
    - macOS + Linux archives for amd64/arm64
    - `checksums.txt`
    - release note links to INSTALL and COMPATIBILITY
-6. Merge the auto-created PR that updates `Formula/gws.rb` for the new tag.
+6. For stable tags (no `-rc` / no prerelease suffix), confirm the Homebrew update PR was created (or auto-merged once enabled).
 6. Smoke test by downloading a release artifact and running:
    - `./gws version`
    - `./gws --version`

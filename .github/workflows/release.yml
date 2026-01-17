@@ -35,12 +35,25 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Determine release channel (stable only)
+        id: channel
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          if [[ "${tag}" == *-* ]]; then
+            echo "stable=false" >>"${GITHUB_OUTPUT}"
+            exit 0
+          fi
+          echo "stable=true" >>"${GITHUB_OUTPUT}"
+
       - name: Update Homebrew formula (working tree)
+        if: steps.channel.outputs.stable == 'true'
         run: |
           ./.github/scripts/update-homebrew-formula.sh "${GITHUB_REF_NAME}" "dist/checksums.txt"
 
       - name: Create PR for Homebrew formula update
+        if: steps.channel.outputs.stable == 'true'
         uses: peter-evans/create-pull-request@v7
+        id: cpr
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: "Update Homebrew formula for ${{ github.ref_name }}"
@@ -49,3 +62,11 @@ jobs:
             Updates `Formula/gws.rb` to point to GitHub Releases artifacts for `${{ github.ref_name }}`.
           branch: "chore/homebrew-formula-${{ github.ref_name }}"
           delete-branch: true
+
+      - name: Enable auto-merge for Homebrew formula PR
+        if: steps.channel.outputs.stable == 'true' && steps.cpr.outputs.pull-request-number != ''
+        uses: peter-evans/enable-pull-request-automerge@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          pull-request-number: ${{ steps.cpr.outputs.pull-request-number }}
+          merge-method: squash
