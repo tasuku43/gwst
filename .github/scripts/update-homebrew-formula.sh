@@ -16,6 +16,7 @@ fi
 
 version="${tag#v}"
 formula_path="Formula/gws.rb"
+formula_dir="$(dirname "${formula_path}")"
 
 sha_for() {
   local asset="$1"
@@ -26,6 +27,8 @@ macos_arm64_sha="$(sha_for "gws_${tag}_macos_arm64.tar.gz")"
 macos_x64_sha="$(sha_for "gws_${tag}_macos_x64.tar.gz")"
 linux_arm64_sha="$(sha_for "gws_${tag}_linux_arm64.tar.gz")"
 linux_x64_sha="$(sha_for "gws_${tag}_linux_x64.tar.gz")"
+
+mkdir -p "${formula_dir}"
 
 cat >"${formula_path}" <<EOF
 class Gws < Formula
@@ -66,4 +69,3 @@ end
 EOF
 
 echo "updated ${formula_path} for ${tag}"
-
