@@ -2262,12 +2262,48 @@ func mutedToken(theme Theme, useColor bool, token string) string {
 	return token
 }
 
+type windowSizeModel struct {
+	inner tea.Model
+}
+
+func (m windowSizeModel) Init() tea.Cmd {
+	return m.inner.Init()
+}
+
+func (m windowSizeModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if size, ok := msg.(tea.WindowSizeMsg); ok {
+		setWrapWidth(size.Width)
+	}
+	next, cmd := m.inner.Update(msg)
+	m.inner = next
+	return m, cmd
+}
+
+func (m windowSizeModel) View() string {
+	return m.inner.View()
+}
+
+func unwrapWindowSizeModel(model tea.Model) tea.Model {
+	if wrapped, ok := model.(windowSizeModel); ok {
+		return wrapped.inner
+	}
+	return model
+}
+
 func runProgram(model tea.Model) (tea.Model, error) {
-	return tea.NewProgram(model).Run()
+	out, err := tea.NewProgram(windowSizeModel{inner: model}).Run()
+	if err != nil {
+		return out, err
+	}
+	return unwrapWindowSizeModel(out), nil
 }
 
 func runProgramWithOutput(model tea.Model, out io.Writer) (tea.Model, error) {
-	return tea.NewProgram(model, tea.WithOutput(out)).Run()
+	final, err := tea.NewProgram(windowSizeModel{inner: model}, tea.WithOutput(out)).Run()
+	if err != nil {
+		return final, err
+	}
+	return unwrapWindowSizeModel(final), nil
 }
 
 func collectLines(render func(*strings.Builder)) []string {

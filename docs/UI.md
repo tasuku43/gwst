@@ -38,6 +38,7 @@ Rules:
 - Section order is fixed: Inputs → Info → Steps → Result → Suggestion
 - Result lines are bullets (use the same prefix as Steps)
 - No success banner; success is implied in Result section
+- Long lines should wrap to the terminal width; continuation lines keep the same text indent (prefix width)
 
 ## Prefix & Indentation
 - Default prefix token: `•` (can be changed later)

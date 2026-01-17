@@ -6,21 +6,24 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/tasuku43/gws/internal/core/debuglog"
 	"github.com/tasuku43/gws/internal/core/output"
 )
 
 type Renderer struct {
-	out      io.Writer
-	theme    Theme
-	useColor bool
+	out       io.Writer
+	theme     Theme
+	useColor  bool
+	wrapWidth int
 }
 
 func NewRenderer(out io.Writer, theme Theme, useColor bool) *Renderer {
 	return &Renderer{
-		out:      out,
-		theme:    theme,
-		useColor: useColor,
+		out:       out,
+		theme:     theme,
+		useColor:  useColor,
+		wrapWidth: currentWrapWidth(),
 	}
 }
 
@@ -53,11 +56,11 @@ func (r *Renderer) Step(text string) {
 }
 
 func (r *Renderer) StepLog(text string) {
-	r.writeLine(output.Indent + output.Indent + output.LogConnector + " " + r.style(text, r.theme.Muted))
+	r.writeWithPrefix(output.Indent+output.Indent+output.LogConnector+" ", r.style(text, r.theme.Muted))
 }
 
 func (r *Renderer) StepLogOutput(text string) {
-	r.writeLine(output.LogOutputPrefix() + r.style(text, r.theme.Muted))
+	r.writeWithPrefix(output.LogOutputPrefix(), r.style(text, r.theme.Muted))
 }
 
 func (r *Renderer) Result(text string) {
@@ -73,7 +76,7 @@ func (r *Renderer) Prompt(text string) {
 	if r.useColor {
 		prefix = r.theme.Accent.Render(output.StepPrefix) + " "
 	}
-	r.writeLine(output.Indent + prefix + text)
+	r.writeWithPrefix(output.Indent+prefix, text)
 }
 
 func (r *Renderer) BulletWithDescription(id, description, suffix string) {
@@ -97,7 +100,7 @@ func (r *Renderer) BulletWithDescription(id, description, suffix string) {
 		}
 		line += value
 	}
-	r.writeLine(output.Indent + prefix + line)
+	r.writeWithPrefix(output.Indent+prefix, line)
 }
 
 func (r *Renderer) BulletError(text string) {
@@ -106,19 +109,19 @@ func (r *Renderer) BulletError(text string) {
 		prefix = r.theme.Error.Render(prefix)
 		text = r.theme.Error.Render(text)
 	}
-	r.writeLine(output.Indent + prefix + text)
+	r.writeWithPrefix(output.Indent+prefix, text)
 }
 
 func (r *Renderer) Warn(text string) {
-	r.writeLine(output.Indent + r.style(text, r.theme.Warn))
+	r.writeWithPrefix(output.Indent, r.style(text, r.theme.Warn))
 }
 
 func (r *Renderer) TreeLine(prefix, name string) {
-	r.writeLine(output.Indent + prefix + name)
+	r.writeWithPrefix(output.Indent+prefix, name)
 }
 
 func (r *Renderer) TreeLineBranch(prefix, name, branch string) {
-	line := output.Indent + prefix + name
+	line := name
 	if strings.TrimSpace(branch) != "" {
 		suffix := fmt.Sprintf(" (branch: %s)", branch)
 		if r.useColor {
@@ -126,34 +129,40 @@ func (r *Renderer) TreeLineBranch(prefix, name, branch string) {
 		}
 		line += suffix
 	}
-	r.writeLine(line)
+	r.writeWithPrefix(output.Indent+prefix, line)
 }
 
 func (r *Renderer) TreeLineBranchMuted(prefix, name, branch string) {
-	line := output.Indent + prefix + name
+	line := name
 	if strings.TrimSpace(branch) != "" {
 		line += fmt.Sprintf(" (branch: %s)", branch)
 	}
+	fullPrefix := output.Indent + prefix
 	if r.useColor {
+		fullPrefix = r.style(fullPrefix, r.theme.Muted)
 		line = r.style(line, r.theme.Muted)
 	}
-	r.writeLine(line)
+	r.writeWithPrefix(fullPrefix, line)
 }
 
 func (r *Renderer) TreeLineWarn(prefix, text string) {
-	line := output.Indent + prefix + text
+	line := text
+	fullPrefix := output.Indent + prefix
 	if r.useColor {
+		fullPrefix = r.style(fullPrefix, r.theme.Warn)
 		line = r.style(line, r.theme.Warn)
 	}
-	r.writeLine(line)
+	r.writeWithPrefix(fullPrefix, line)
 }
 
 func (r *Renderer) TreeLineError(prefix, text string) {
-	line := output.Indent + prefix + text
+	line := text
+	fullPrefix := output.Indent + prefix
 	if r.useColor {
+		fullPrefix = r.style(fullPrefix, r.theme.Error)
 		line = r.style(line, r.theme.Error)
 	}
-	r.writeLine(line)
+	r.writeWithPrefix(fullPrefix, line)
 }
 
 func (r *Renderer) style(text string, style lipgloss.Style) string {
@@ -168,7 +177,33 @@ func (r *Renderer) bullet(text string) {
 	if r.useColor {
 		prefix = r.theme.Muted.Render(prefix)
 	}
-	r.writeLine(output.Indent + prefix + text)
+	r.writeWithPrefix(output.Indent+prefix, text)
+}
+
+func (r *Renderer) writeWithPrefix(prefix, text string) {
+	if r.wrapWidth <= 0 {
+		r.writeLine(prefix + text)
+		return
+	}
+	prefixWidth := lipgloss.Width(prefix)
+	available := r.wrapWidth - prefixWidth
+	if available <= 0 {
+		r.writeLine(prefix + text)
+		return
+	}
+	wrapped := ansi.Wrap(text, available, "")
+	lines := strings.Split(wrapped, "\n")
+	if len(lines) == 0 {
+		return
+	}
+	r.writeLine(prefix + lines[0])
+	if len(lines) == 1 {
+		return
+	}
+	padding := strings.Repeat(" ", prefixWidth)
+	for _, line := range lines[1:] {
+		r.writeLine(padding + line)
+	}
 }
 
 func (r *Renderer) writeLine(text string) {
@@ -176,7 +211,12 @@ func (r *Renderer) writeLine(text string) {
 }
 
 func (r *Renderer) LineRaw(text string) {
-	r.writeLine(text)
+	prefix, rest, ok := splitRawLinePrefix(text)
+	if ok {
+		r.writeWithPrefix(prefix, rest)
+		return
+	}
+	r.writeWithPrefix("", text)
 }
 
 func (r *Renderer) Log(text string) {
@@ -185,4 +225,33 @@ func (r *Renderer) Log(text string) {
 
 func (r *Renderer) LogOutput(text string) {
 	r.StepLogOutput(text)
+}
+
+func splitRawLinePrefix(line string) (string, string, bool) {
+	plain := ansi.Strip(line)
+	if strings.TrimSpace(plain) == "" {
+		return "", "", false
+	}
+	runes := []rune(plain)
+	for i := 1; i < len(runes)-1; i++ {
+		if runes[i] != ' ' {
+			continue
+		}
+		if runes[i-1] == ' ' || runes[i+1] == ' ' {
+			continue
+		}
+		prefixPlain := string(runes[:i+1])
+		prefixWidth := ansi.StringWidth(prefixPlain)
+		if prefixWidth <= 0 {
+			break
+		}
+		totalWidth := ansi.StringWidth(line)
+		if totalWidth <= prefixWidth {
+			break
+		}
+		prefix := ansi.Cut(line, 0, prefixWidth)
+		rest := ansi.Cut(line, prefixWidth, totalWidth)
+		return prefix, rest, true
+	}
+	return "", "", false
 }
