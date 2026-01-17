@@ -35,3 +35,17 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Update Homebrew formula (working tree)
+        run: |
+          ./scripts/update-homebrew-formula.sh "${GITHUB_REF_NAME}" "dist/checksums.txt"
+
+      - name: Create PR for Homebrew formula update
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "Update Homebrew formula for ${{ github.ref_name }}"
+          title: "Update Homebrew formula for ${{ github.ref_name }}"
+          body: |
+            Updates `Formula/gws.rb` to point to GitHub Releases artifacts for `${{ github.ref_name }}`.
+          branch: "chore/homebrew-formula-${{ github.ref_name }}"
+          delete-branch: true

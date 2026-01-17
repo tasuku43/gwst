@@ -22,10 +22,9 @@ For compatibility policy, see `docs/spec/core/COMPATIBILITY.md`.
 
 Homebrew support is part of Epic 1. This project uses GitHub Releases as the source of truth.
 
-Planned install command:
+Install:
+- `brew tap tasuku43/gws`
 - `brew install gws`
-
-If a tap is required, the release notes and this document will include the exact command.
 
 ## Install via mise
 
@@ -39,4 +38,3 @@ Example (track latest):
 
 Verify:
 - `gws version`
-

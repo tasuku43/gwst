@@ -44,6 +44,7 @@ This document describes how we ship gws as a “touchable OSS” with a reliable
    - macOS + Linux archives for amd64/arm64
    - `checksums.txt`
    - release note links to INSTALL and COMPATIBILITY
+6. Merge the auto-created PR that updates `Formula/gws.rb` for the new tag.
 6. Smoke test by downloading a release artifact and running:
    - `./gws version`
    - `./gws --version`
@@ -52,4 +53,3 @@ This document describes how we ship gws as a “touchable OSS” with a reliable
 
 - **Homebrew**: We publish an install path in `docs/guides/INSTALL.md`.
 - **mise**: We publish an install path in `docs/guides/INSTALL.md` (GitHub Releases backend).
-
