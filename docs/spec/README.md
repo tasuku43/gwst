@@ -3,7 +3,7 @@ title: "gws CLI specs"
 status: implemented
 ---
 
-This directory holds command-level specifications in English. Each file uses frontmatter metadata to track implementation status so we can evolve features intentionally.
+This directory holds gws specifications in English. Each file uses frontmatter metadata to track implementation status so we can evolve features intentionally.
 
 ## Metadata rules
 - Required: `title`, `status` (`implemented` or `planned`).
@@ -42,23 +42,8 @@ ts=2026-01-17T12:35:01.000-08:00 pid=12345 trace=exec:beef phase=prompt prompt=w
 ```
 
 ## Spec files
-Current command specs live in this folder:
-- `docs/specs/init.md`
-- `docs/specs/doctor.md`
-- `docs/specs/repo-get.md`
-- `docs/specs/repo-ls.md`
-- `docs/specs/template-ls.md`
-- `docs/specs/template-add.md`
-- `docs/specs/template-rm.md`
-- `docs/specs/template-validate.md`
-- `docs/specs/resume.md`
-- `docs/specs/create.md`
-- `docs/specs/add.md`
-- `docs/specs/ls.md`
-- `docs/specs/status.md`
-- `docs/specs/rm.md`
-- `docs/specs/open.md`
-- `docs/specs/path.md`
-- `docs/specs/version.md`
+- Command specs: `docs/spec/commands/`
+- Core specs: `docs/spec/core/`
+- UI specs: `docs/spec/ui/`
 
 Add new files in the same format when introducing new commands or options.

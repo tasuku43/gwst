@@ -1,3 +1,8 @@
+---
+title: "templates.yaml"
+status: implemented
+---
+
 # templates.yaml
 
 `templates.yaml` defines named groups of repositories that can be used to create a workspace in one command.
@@ -48,4 +53,3 @@ Add/remove templates without editing YAML directly:
 gws template add mytmpl --repo git@github.com:org/repo.git
 gws template rm mytmpl
 ```
-

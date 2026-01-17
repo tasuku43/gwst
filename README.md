@@ -180,10 +180,11 @@ gws rm MY-123
 
 ## Help and docs
 
-- `docs/specs/README.md` for command specs and status
-- `docs/TEMPLATES.md` for template format
-- `docs/DIRECTORY_LAYOUT.md` for the file layout
-- `docs/UI.md` for output conventions
+- `docs/README.md` for documentation index
+- `docs/spec/README.md` for specs index and status
+- `docs/spec/core/TEMPLATES.md` for template format
+- `docs/spec/core/DIRECTORY_LAYOUT.md` for the file layout
+- `docs/spec/ui/UI.md` for output conventions
 
 ## Maintainer
 

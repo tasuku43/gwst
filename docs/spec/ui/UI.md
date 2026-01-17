@@ -1,3 +1,8 @@
+---
+title: "UI Specification"
+status: implemented
+---
+
 # UI Specification (Bubble Tea + Bubbles + Lip Gloss)
 
 ## Goals

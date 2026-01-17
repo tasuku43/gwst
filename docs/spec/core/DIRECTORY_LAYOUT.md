@@ -1,3 +1,8 @@
+---
+title: "Directory layout under GWS_ROOT"
+status: implemented
+---
+
 # Directory layout under GWS_ROOT
 
 `gws` manages a single root directory (`GWS_ROOT`) that contains the bare repo store and workspaces.
@@ -32,4 +37,3 @@ GWS_ROOT/workspaces/<WORKSPACE_ID>/
 ```
 
 `gws open` runs a subshell with `GWS_WORKSPACE=<WORKSPACE_ID>` set for the child process.
-

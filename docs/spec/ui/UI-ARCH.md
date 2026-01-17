@@ -1,3 +1,8 @@
+---
+title: "UI Architecture"
+status: implemented
+---
+
 # UI Architecture
 
 This document describes the implementation structure (separation of concerns) that keeps the UI aligned with the UI.md contract.
