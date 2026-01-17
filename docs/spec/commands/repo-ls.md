@@ -1,10 +1,10 @@
 ---
-title: "gws repo ls"
+title: "gwst repo ls"
 status: implemented
 ---
 
 ## Synopsis
-`gws repo ls`
+`gwst repo ls`
 
 ## Intent
 List bare repo stores currently managed under the GWS root.

@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/tasuku43/gws/internal/core/gitcmd"
+	"github.com/tasuku43/gwst/internal/core/gitcmd"
 )
 
 type SelfResult struct {

@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/tasuku43/gws/internal/core/paths"
+	"github.com/tasuku43/gwst/internal/core/paths"
 )
 
 func TestCheckFindsIssues(t *testing.T) {

@@ -11,7 +11,7 @@ import (
 //
 // Example:
 //
-//	go build -ldflags "-X github.com/tasuku43/gws/internal/cli.version=v0.1.0 -X github.com/tasuku43/gws/internal/cli.commit=abc123 -X github.com/tasuku43/gws/internal/cli.date=2026-01-17"
+//	go build -ldflags "-X github.com/tasuku43/gwst/internal/cli.version=v0.1.0 -X github.com/tasuku43/gwst/internal/cli.commit=abc123 -X github.com/tasuku43/gwst/internal/cli.date=2026-01-17"
 var (
 	version = "dev"
 	commit  = ""
@@ -23,7 +23,7 @@ func versionLine() string {
 	if v == "" {
 		v = "dev"
 	}
-	parts := []string{fmt.Sprintf("gws %s", v)}
+	parts := []string{fmt.Sprintf("gwst %s", v)}
 	if c := strings.TrimSpace(commit); c != "" {
 		parts = append(parts, c)
 	}

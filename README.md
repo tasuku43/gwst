@@ -1,31 +1,33 @@
-# gws - Git Workspaces for Human + Agentic Development
+# gwst - Git Workspaces for Human + Agentic Development
 
-gws moves local development from "clone-directory centric" to "workspace centric"
+A workspace-first Git worktree manager for human+agentic development.
+
+gwst moves local development from "clone-directory centric" to "workspace centric"
 so humans and multiple AI agents can work in parallel without stepping on each other.
 
-## Why gws
+## Why gwst
 
 - In the era of AI agents, multiple actors edit in parallel and context collisions become common.
-- gws promotes directories into explicit workspaces and manages them safely with Git worktrees.
+- gwst promotes directories into explicit workspaces and manages them safely with Git worktrees.
 - It focuses on creating, listing, and safely cleaning up work environments.
 
-## What makes gws different
+## What makes gwst different
 
 ### 1) `create` is the center
 
 One command, four creation modes:
 
 ```bash
-gws create --repo git@github.com:org/repo.git
-gws create --template app PROJ-123
-gws create --review https://github.com/owner/repo/pull/123   # GitHub only
-gws create --issue https://github.com/owner/repo/issues/123  # GitHub only
+gwst create --repo git@github.com:org/repo.git
+gwst create --template app PROJ-123
+gwst create --review https://github.com/owner/repo/pull/123   # GitHub only
+gwst create --issue https://github.com/owner/repo/issues/123  # GitHub only
 ```
 
-If you omit options, gws switches to an interactive flow:
+If you omit options, gwst switches to an interactive flow:
 
 ```
-$ gws create
+$ gwst create
 Inputs
   • mode: s (type to filter)
     └─ repo - 1 repo only
@@ -37,9 +39,9 @@ Inputs
 Review/issue modes are also interactive (repo + multi-select):
 
 ```
-$ gws create --review
+$ gwst create --review
 Inputs
-  • repo: org/gws
+  • repo: org/gwst
   • pull request: s (type to filter)
 Info
   • selected
@@ -48,9 +50,9 @@ Info
 ```
 
 ```
-$ gws create --issue
+$ gwst create --issue
 Inputs
-  • repo: org/gws
+  • repo: org/gwst
   • issue: s (type to filter)
 Info
   • selected
@@ -73,53 +75,53 @@ templates:
 ```
 
 ```bash
-gws create --template app PROJ-123
+gwst create --template app PROJ-123
 ```
 
 ### 3) Guardrails on cleanup
 
-`gws rm` refuses or asks for confirmation when workspaces are dirty, unpushed, or unknown:
+`gwst rm` refuses or asks for confirmation when workspaces are dirty, unpushed, or unknown:
 
 ```bash
-gws rm PROJ-123
+gwst rm PROJ-123
 ```
 
 Omitting the workspace id prompts selection:
 
 ```
-$ gws rm
+$ gwst rm
 Inputs
   • workspace: s (type to filter)
     └─ PROJ-123 [clean] - sample project
-      └─ gws (branch: PROJ-123-backend)
+      └─ gwst (branch: PROJ-123-backend)
     └─ PROJ-124 [dirty changes] - wip
-      └─ gws (branch: PROJ-124-backend)
+      └─ gwst (branch: PROJ-124-backend)
 ```
 
 ## Requirements
 
 - Git
 - Go 1.24+ (build/run from source)
-- gh CLI (optional; required for `gws create --review` and `gws create --issue` — GitHub only)
+- gh CLI (optional; required for `gwst create --review` and `gwst create --issue` — GitHub only)
 
 ## Install
 
 Recommended:
 
 ```bash
-brew tap tasuku43/gws
-brew install gws
+brew tap tasuku43/gwst
+brew install gwst
 ```
 
 Version pinning (recommended):
 
 ```bash
-mise use -g github:tasuku43/gws@v0.1.0
+mise use -g github:tasuku43/gwst@v0.1.0
 ```
 
 Manual (GitHub Releases):
 - Download the archive for your OS/arch
-- Extract and place `gws` on your PATH
+- Extract and place `gwst` on your PATH
 
 For details and other options, see `docs/guides/INSTALL.md`.
 
@@ -128,20 +130,20 @@ For details and other options, see `docs/guides/INSTALL.md`.
 ### 1) Initialize the root
 
 ```bash
-gws init
+gwst init
 ```
 
-This creates `GWS_ROOT` with the standard layout and a starter `templates.yaml`.
+This creates `GWST_ROOT` with the standard layout and a starter `templates.yaml`.
 
 Root resolution order:
 1) `--root <path>`
-2) `GWS_ROOT` environment variable
-3) `~/gws` (default)
+2) `GWST_ROOT` environment variable
+3) `~/gwst` (default)
 
 Default layout example:
 
 ```
-~/gws/
+~/gwst/
   bare/        # bare repo store (shared Git objects)
   workspaces/  # task worktrees (one folder per workspace id)
   templates.yaml
@@ -150,40 +152,40 @@ Default layout example:
 ### 2) Fetch repos (bare store)
 
 ```bash
-gws repo get git@github.com:org/backend.git
+gwst repo get git@github.com:org/backend.git
 ```
 
 ### 3) Create a workspace
 
 ```bash
-gws create --repo git@github.com:org/backend.git
+gwst create --repo git@github.com:org/backend.git
 ```
 
 You'll be prompted for a workspace id (e.g. `PROJ-123`).
 
-Or run `gws create` with no args to pick a mode and fill inputs interactively.
+Or run `gwst create` with no args to pick a mode and fill inputs interactively.
 
 ### 4) Work and clean up
 
 List workspaces:
 
 ```bash
-gws ls
+gwst ls
 ```
 
 Open a workspace (prompts if omitted):
 
 ```bash
-gws open PROJ-123
+gwst open PROJ-123
 ```
 
 This launches an interactive subshell at the workspace root (parent cwd unchanged) and
-prefixes the prompt with `[gws:<WORKSPACE_ID>]`.
+prefixes the prompt with `[gwst:<WORKSPACE_ID>]`.
 
 Remove a workspace with guardrails (prompts if omitted):
 
 ```bash
-gws rm PROJ-123
+gwst rm PROJ-123
 ```
 
 ## Help and docs

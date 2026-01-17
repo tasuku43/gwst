@@ -10,24 +10,24 @@ func TestFormatInputsHeader(t *testing.T) {
 		want        string
 	}{
 		{
-			title: "gws create",
-			want:  "gws create",
+			title: "gwst create",
+			want:  "gwst create",
 		},
 		{
-			title:    "gws create",
+			title:    "gwst create",
 			template: "app",
-			want:     "gws create (template: app)",
+			want:     "gwst create (template: app)",
 		},
 		{
-			title:       "gws create",
+			title:       "gwst create",
 			workspaceID: "ABC-123",
-			want:        "gws create (workspace id: ABC-123)",
+			want:        "gwst create (workspace id: ABC-123)",
 		},
 		{
-			title:       "gws create",
+			title:       "gwst create",
 			template:    "app",
 			workspaceID: "ABC-123",
-			want:        "gws create (template: app, workspace id: ABC-123)",
+			want:        "gwst create (template: app, workspace id: ABC-123)",
 		},
 	}
 

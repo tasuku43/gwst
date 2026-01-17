@@ -1,10 +1,10 @@
 ---
-title: "gws repo get"
+title: "gwst repo get"
 status: implemented
 ---
 
 ## Synopsis
-`gws repo get <repo>`
+`gwst repo get <repo>`
 
 ## Intent
 Create or normalize a bare repo store for a remote Git repository.

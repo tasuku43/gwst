@@ -1,15 +1,15 @@
 version: 2
 
-project_name: gws
+project_name: gwst
 
 before:
   hooks:
     - go test ./...
 
 builds:
-  - id: gws
-    main: ./cmd/gws
-    binary: gws
+  - id: gwst
+    main: ./cmd/gwst
+    binary: gwst
     env:
       - CGO_ENABLED=0
     goos:
@@ -20,14 +20,14 @@ builds:
       - arm64
     ldflags:
       - -s -w
-      - -X github.com/tasuku43/gws/internal/cli.version={{ .Tag }}
-      - -X github.com/tasuku43/gws/internal/cli.commit={{ .ShortCommit }}
-      - -X github.com/tasuku43/gws/internal/cli.date={{ .Date }}
+      - -X github.com/tasuku43/gwst/internal/cli.version={{ .Tag }}
+      - -X github.com/tasuku43/gwst/internal/cli.commit={{ .ShortCommit }}
+      - -X github.com/tasuku43/gwst/internal/cli.date={{ .Date }}
 
 archives:
-  - id: gws
+  - id: gwst
     ids:
-      - gws
+      - gwst
     formats:
       - tar.gz
     name_template: >-
@@ -43,7 +43,7 @@ release:
   prerelease: auto
   footer: |
     ## Install
-    - docs/guides/INSTALL.md: https://github.com/tasuku43/gws/blob/{{ .Tag }}/docs/guides/INSTALL.md
+    - docs/guides/INSTALL.md: https://github.com/tasuku43/gwst/blob/{{ .Tag }}/docs/guides/INSTALL.md
 
     ## Compatibility policy
-    - docs/spec/core/COMPATIBILITY.md: https://github.com/tasuku43/gws/blob/{{ .Tag }}/docs/spec/core/COMPATIBILITY.md
+    - docs/spec/core/COMPATIBILITY.md: https://github.com/tasuku43/gwst/blob/{{ .Tag }}/docs/spec/core/COMPATIBILITY.md

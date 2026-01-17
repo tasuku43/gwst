@@ -1,10 +1,10 @@
 ---
-title: "gws rm"
+title: "gwst rm"
 status: implemented
 ---
 
 ## Synopsis
-`gws rm [<WORKSPACE_ID>]`
+`gwst rm [<WORKSPACE_ID>]`
 
 ## Intent
 Safely remove a workspace and all of its worktrees, warning/confirming for risky states.
@@ -29,7 +29,7 @@ Safely remove a workspace and all of its worktrees, warning/confirming for risky
 
 ## Behavior
 - With `WORKSPACE_ID` provided: targets that workspace.
-- Without it: scans workspaces and prompts the user to choose entries using the same add/remove loop as `gws create` issue Step 3. Fails if none exist.
+- Without it: scans workspaces and prompts the user to choose entries using the same add/remove loop as `gwst create` issue Step 3. Fails if none exist.
 - Multi-select UX:
   - Shows entries for selection (including any saved workspace descriptions), with warning indicators for risky states.
   - `<Enter>` adds the highlighted workspace to the selection list and removes it from candidates.

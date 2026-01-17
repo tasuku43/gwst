@@ -1,9 +1,9 @@
 ---
-title: "gws CLI specs"
+title: "gwst CLI specs"
 status: implemented
 ---
 
-This directory holds gws specifications in English. Each file uses frontmatter metadata to track implementation status so we can evolve features intentionally.
+This directory holds gwst specifications in English. Each file uses frontmatter metadata to track implementation status so we can evolve features intentionally.
 
 ## Metadata rules
 - Required: `title`, `status` (`implemented` or `planned`).
@@ -12,15 +12,15 @@ This directory holds gws specifications in English. Each file uses frontmatter m
 - Use YAML frontmatter at the top of each spec.
 
 ## Global CLI behavior
-- Command form: `gws <command> [flags] [args]`.
-- Root resolution precedence: `--root` flag > `GWS_ROOT` environment variable > default `~/gws`.
+- Command form: `gwst <command> [flags] [args]`.
+- Root resolution precedence: `--root` flag > `GWST_ROOT` environment variable > default `~/gwst`.
 - Common flags: `--root <path>`, `--no-prompt`, `--debug`, `--help`/`-h`.
-- Version: `gws --version` (or `gws version`) prints a single-line version and exits 0.
+- Version: `gwst --version` (or `gwst version`) prints a single-line version and exits 0.
 - Output: human-readable text only in the current MVP; JSON output is future work.
 
 ## Debug logging
 - `--debug` enables debug logging to a file (no on-screen debug output).
-- Output directory: `<GWS_ROOT>/logs/`.
+- Output directory: `<GWST_ROOT>/logs/`.
 - File naming: `debug-YYYYMMDD.log` using local date.
 - Append mode: always append to the day file (single file per day).
 - Format: one event per line, human-readable key/value pairs.

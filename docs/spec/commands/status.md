@@ -1,10 +1,10 @@
 ---
-title: "gws status"
+title: "gwst status"
 status: implemented
 ---
 
 ## Synopsis
-`gws status [<WORKSPACE_ID>]`
+`gwst status [<WORKSPACE_ID>]`
 
 ## Intent
 Summarize the git status of every repo within a workspace to help decide whether it is safe to remove or ship.

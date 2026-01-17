@@ -1,18 +1,18 @@
 ---
-title: "gws path"
+title: "gwst path"
 status: implemented
 ---
 
 ## Synopsis
-`gws path --workspace`
+`gwst path --workspace`
 
 ## Intent
-Return an absolute path to a selected workspace directory for shell usage (e.g., `cd "$(gws path --workspace)"`).
+Return an absolute path to a selected workspace directory for shell usage (e.g., `cd "$(gwst path --workspace)"`).
 
 ## Behavior
 - Requires `--workspace`.
 - Targets `<root>/workspaces`.
-- Provides a searchable, interactive picker (same UX pattern as `gws create --template` template selection).
+- Provides a searchable, interactive picker (same UX pattern as `gwst create --template` template selection).
 - Search targets: workspace ID and workspace description.
 - Prints the selected workspace path to stdout and nothing else.
 - Cancel behavior follows existing interactive commands.

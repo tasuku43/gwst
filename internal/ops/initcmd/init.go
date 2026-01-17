@@ -8,7 +8,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/tasuku43/gws/internal/core/paths"
+	"github.com/tasuku43/gwst/internal/core/paths"
 )
 
 type Result struct {

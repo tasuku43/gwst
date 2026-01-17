@@ -1,22 +1,22 @@
 ---
-title: "gws version"
+title: "gwst version"
 status: implemented
 ---
 
 ## Synopsis
-`gws version`
+`gwst version`
 
 Also available as a global flag:
-`gws --version`
+`gwst --version`
 
 ## Intent
-Print the gws version in a single line for support/debugging.
+Print the gwst version in a single line for support/debugging.
 
 ## Behavior
-- `gws --version` prints the version and exits 0, without resolving `GWS_ROOT` or running any subcommand.
-- `gws version` prints the same output and exits 0.
+- `gwst --version` prints the version and exits 0, without resolving `GWST_ROOT` or running any subcommand.
+- `gwst version` prints the same output and exits 0.
 - Output format is a single line:
-  - `gws <version> [<commit>] [<date>] (<go version> <os>/<arch>)`
+  - `gwst <version> [<commit>] [<date>] (<go version> <os>/<arch>)`
 - Default build values:
   - When not set via `-ldflags`, `<version>` defaults to `dev`.
   - `<commit>` and `<date>` are omitted when empty.

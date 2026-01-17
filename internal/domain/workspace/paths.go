@@ -3,7 +3,7 @@ package workspace
 import (
 	"path/filepath"
 
-	"github.com/tasuku43/gws/internal/core/paths"
+	"github.com/tasuku43/gwst/internal/core/paths"
 )
 
 // WorkspacesRoot returns the path to the workspaces root directory.
