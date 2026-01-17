@@ -46,12 +46,22 @@ jobs:
           fi
           echo "stable=true" >>"${GITHUB_OUTPUT}"
 
+      - name: Create GitHub App token for Homebrew tap
+        if: steps.channel.outputs.stable == 'true'
+        id: homebrew-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.HOMEBREW_APP_ID }}
+          private-key: ${{ secrets.HOMEBREW_APP_KEY }}
+          owner: tasuku43
+          repositories: homebrew-gws
+
       - name: Checkout Homebrew tap
         if: steps.channel.outputs.stable == 'true'
         uses: actions/checkout@v4
         with:
           repository: tasuku43/homebrew-gws
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.homebrew-token.outputs.token }}
           path: homebrew-tap
 
       - name: Update Homebrew formula (working tree)
@@ -65,7 +75,7 @@ jobs:
         uses: peter-evans/create-pull-request@v7
         id: cpr
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.homebrew-token.outputs.token }}
           path: homebrew-tap
           commit-message: "Update Homebrew formula for ${{ github.ref_name }}"
           title: "Update Homebrew formula for ${{ github.ref_name }}"
