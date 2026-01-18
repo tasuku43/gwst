@@ -11,6 +11,22 @@ so humans and multiple AI agents can work in parallel without stepping on each o
 - gwst promotes directories into explicit workspaces and manages them safely with Git worktrees.
 - It focuses on creating, listing, and safely cleaning up work environments.
 
+## Who it's for
+
+- People or teams managing work via GitHub Issues → batch-create with `gwst create --issue`.
+- People or teams with frequent reviews → spin up review workspaces in bulk via `gwst create --review`.
+- People or teams changing multiple repos per task → templates create a task-level workspace (pseudo-monorepo).
+- People or teams overwhelmed by many worktrees and risky cleanup → guardrails in `gwst rm`.
+
+## Quick demo (30 seconds)
+
+```bash
+gwst init
+gwst create --review   # or --issue / --repo / --template
+gwst open              # drops into a subshell at the workspace root
+gwst rm                # guardrails against accidental deletion
+```
+
 ## What makes gwst different
 
 ### 1) `create` is the center
@@ -101,7 +117,6 @@ Inputs
 ## Requirements
 
 - Git
-- Go 1.24+ (build/run from source)
 - gh CLI (optional; required for `gwst create --review` and `gwst create --issue` — GitHub only)
 
 ## Install
@@ -122,6 +137,7 @@ mise use -g github:tasuku43/gwst@v0.1.0
 Manual (GitHub Releases):
 - Download the archive for your OS/arch
 - Extract and place `gwst` on your PATH
+- Building from source requires Go 1.24+
 
 For details and other options, see `docs/guides/INSTALL.md`.
 
@@ -144,9 +160,9 @@ Default layout example:
 
 ```
 ~/gwst/
-  bare/        # bare repo store (shared Git objects)
-  workspaces/  # task worktrees (one folder per workspace id)
-  templates.yaml
+├── bare/           # bare repo store (shared Git objects)
+├── workspaces/     # task worktrees (one folder per workspace id)
+└── templates.yaml
 ```
 
 ### 2) Fetch repos (bare store)
@@ -155,13 +171,16 @@ Default layout example:
 gwst repo get git@github.com:org/backend.git
 ```
 
+This stores the repository in the bare store (no working tree is created yet).
+This step is required before creating a workspace.
+
 ### 3) Create a workspace
 
 ```bash
 gwst create --repo git@github.com:org/backend.git
 ```
 
-You'll be prompted for a workspace id (e.g. `PROJ-123`).
+You'll be prompted for a workspace id (e.g. `PROJ-123`, typically a Jira or ticket id).
 
 Or run `gwst create` with no args to pick a mode and fill inputs interactively.
 
