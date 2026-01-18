@@ -119,11 +119,12 @@ brew tap tasuku43/gwst
 brew install gwst
 ```
 
-Version pinning (recommended):
+Version pinning (optional):
 
 ```bash
-mise use -g github:tasuku43/gwst@v0.1.0
+mise use -g github:tasuku43/gwst
 ```
+If you want to pin a specific version, use `mise use -g github:tasuku43/gwst@<version>`.
 
 Manual (GitHub Releases):
 - Download the archive for your OS/arch
