@@ -1,0 +1,268 @@
+package ui
+
+import (
+	"io"
+	"strings"
+
+	"github.com/tasuku43/gwst/internal/core/debuglog"
+)
+
+func PromptNewWorkspaceInputs(title string, templates []string, templateName string, workspaceID string, theme Theme, useColor bool) (string, string, error) {
+	debuglog.SetPrompt("workspace-inputs")
+	defer debuglog.ClearPrompt()
+	model := newInputsModel(title, templates, templateName, workspaceID, theme, useColor)
+	out, err := runProgram(model)
+	if err != nil {
+		return "", "", err
+	}
+	final := out.(inputsModel)
+	if final.err != nil {
+		return "", "", final.err
+	}
+	return strings.TrimSpace(final.template), strings.TrimSpace(final.workspaceID), nil
+}
+
+func PromptWorkspaceAndRepo(title string, workspaces []WorkspaceChoice, repos []PromptChoice, workspaceID, repoSpec string, theme Theme, useColor bool) (string, string, error) {
+	debuglog.SetPrompt("workspace-and-repo")
+	defer debuglog.ClearPrompt()
+	model := newAddInputsModel(title, workspaces, repos, workspaceID, repoSpec, theme, useColor)
+	out, err := runProgram(model)
+	if err != nil {
+		return "", "", err
+	}
+	final := out.(addInputsModel)
+	if final.err != nil {
+		return "", "", final.err
+	}
+	return strings.TrimSpace(final.workspaceID), strings.TrimSpace(final.repoSpec), nil
+}
+
+func PromptWorkspace(title string, workspaces []WorkspaceChoice, theme Theme, useColor bool) (string, error) {
+	debuglog.SetPrompt("workspace")
+	defer debuglog.ClearPrompt()
+	model := newWorkspaceSelectModel(title, workspaces, theme, useColor)
+	out, err := runProgram(model)
+	if err != nil {
+		return "", err
+	}
+	final := out.(workspaceSelectModel)
+	if final.err != nil {
+		return "", final.err
+	}
+	return strings.TrimSpace(final.workspaceID), nil
+}
+
+func PromptWorkspaceWithBlocked(title string, workspaces []WorkspaceChoice, blocked []BlockedChoice, theme Theme, useColor bool) (string, error) {
+	debuglog.SetPrompt("workspace")
+	defer debuglog.ClearPrompt()
+	model := newWorkspaceSelectModelWithBlocked(title, workspaces, blocked, theme, useColor)
+	out, err := runProgram(model)
+	if err != nil {
+		return "", err
+	}
+	final := out.(workspaceSelectModel)
+	if final.err != nil {
+		return "", final.err
+	}
+	return strings.TrimSpace(final.workspaceID), nil
+}
+
+func PromptWorkspaceMultiSelectWithBlocked(title string, workspaces []WorkspaceChoice, blocked []BlockedChoice, theme Theme, useColor bool) ([]string, error) {
+	debuglog.SetPrompt("workspace")
+	defer debuglog.ClearPrompt()
+	model := newWorkspaceMultiSelectModel(title, workspaces, blocked, theme, useColor)
+	out, err := runProgram(model)
+	if err != nil {
+		return nil, err
+	}
+	final := out.(workspaceMultiSelectModel)
+	if final.err != nil {
+		return nil, final.err
+	}
+	if final.canceled {
+		return nil, nil
+	}
+	return append([]string(nil), final.selectedIDs...), nil
+}
+
+func PromptConfirmInline(label string, theme Theme, useColor bool) (bool, error) {
+	debuglog.SetPrompt(label)
+	defer debuglog.ClearPrompt()
+	model := newConfirmInlineModel(label, theme, useColor, false, nil, nil)
+	out, err := runProgram(model)
+	if err != nil {
+		return false, err
+	}
+	final := out.(confirmInlineModel)
+	if final.err != nil {
+		return false, final.err
+	}
+	return final.value, nil
+}
+
+func PromptConfirmInlineInfo(label string, theme Theme, useColor bool) (bool, error) {
+	debuglog.SetPrompt(label)
+	defer debuglog.ClearPrompt()
+	model := newConfirmInlineModel(label, theme, useColor, true, nil, nil)
+	out, err := runProgram(model)
+	if err != nil {
+		return false, err
+	}
+	final := out.(confirmInlineModel)
+	if final.err != nil {
+		return false, final.err
+	}
+	return final.value, nil
+}
+
+func PromptLabel(label string, theme Theme, useColor bool) string {
+	return promptLabel(theme, useColor, label)
+}
+
+// PromptInputInline collects a single inline value with an optional default and validation.
+// Empty input accepts the default. Validation errors are shown inline and reprompted.
+func PromptInputInline(label, defaultValue string, validate func(string) error, theme Theme, useColor bool) (string, error) {
+	debuglog.SetPrompt(label)
+	defer debuglog.ClearPrompt()
+	model := newInputInlineModel(label, defaultValue, validate, theme, useColor)
+	out, err := runProgram(model)
+	if err != nil {
+		return "", err
+	}
+	final := out.(inputInlineModel)
+	if final.err != nil {
+		return "", final.err
+	}
+	return strings.TrimSpace(final.value), nil
+}
+
+// PromptTemplateRepos lets users pick one or more repos from a list with filtering.
+// It can also collect a template name when not provided.
+func PromptTemplateRepos(title string, templateName string, choices []PromptChoice, theme Theme, useColor bool) (string, []string, error) {
+	debuglog.SetPrompt("template-repos")
+	defer debuglog.ClearPrompt()
+	model := newTemplateRepoSelectModel(title, templateName, choices, theme, useColor)
+	out, err := runProgram(model)
+	if err != nil {
+		return "", nil, err
+	}
+	final := out.(templateRepoSelectModel)
+	if final.err != nil {
+		return "", nil, final.err
+	}
+	return strings.TrimSpace(final.templateName), append([]string(nil), final.selected...), nil
+}
+
+// PromptTemplateName asks for a template name via text input.
+func PromptTemplateName(title string, defaultValue string, theme Theme, useColor bool) (string, error) {
+	debuglog.SetPrompt("template-name")
+	defer debuglog.ClearPrompt()
+	model := newTemplateNameModel(title, defaultValue, theme, useColor)
+	out, err := runProgram(model)
+	if err != nil {
+		return "", err
+	}
+	final := out.(templateNameModel)
+	if final.err != nil {
+		return "", final.err
+	}
+	return strings.TrimSpace(final.value), nil
+}
+
+// PromptChoiceSelect lets users pick a single choice from a list with filtering.
+func PromptChoiceSelect(title, label string, choices []PromptChoice, theme Theme, useColor bool) (string, error) {
+	debuglog.SetPrompt(label)
+	defer debuglog.ClearPrompt()
+	model := newChoiceSelectModel(title, label, choices, theme, useColor)
+	out, err := runProgram(model)
+	if err != nil {
+		return "", err
+	}
+	final := out.(choiceSelectModel)
+	if final.err != nil {
+		return "", final.err
+	}
+	return strings.TrimSpace(final.value), nil
+}
+
+// PromptChoiceSelectWithOutput lets users pick a single choice from a list with filtering.
+// It renders the prompt to the provided writer.
+func PromptChoiceSelectWithOutput(title, label string, choices []PromptChoice, theme Theme, useColor bool, out io.Writer) (string, error) {
+	debuglog.SetPrompt(label)
+	defer debuglog.ClearPrompt()
+	model := newChoiceSelectModel(title, label, choices, theme, useColor)
+	finalModel, err := runProgramWithOutput(model, out)
+	if err != nil {
+		return "", err
+	}
+	final := finalModel.(choiceSelectModel)
+	if final.err != nil {
+		return "", final.err
+	}
+	return strings.TrimSpace(final.value), nil
+}
+
+// PromptMultiSelect lets users pick one or more choices from a list with filtering.
+func PromptMultiSelect(title, label string, choices []PromptChoice, theme Theme, useColor bool) ([]string, error) {
+	debuglog.SetPrompt(label)
+	defer debuglog.ClearPrompt()
+	model := newMultiSelectModel(title, label, choices, theme, useColor)
+	out, err := runProgram(model)
+	if err != nil {
+		return nil, err
+	}
+	final := out.(multiSelectModel)
+	if final.err != nil {
+		return nil, final.err
+	}
+	return append([]string(nil), final.selectedValues...), nil
+}
+
+func PromptIssueSelectWithBranches(title, label string, choices []PromptChoice, validateBranch func(string) error, theme Theme, useColor bool) ([]IssueSelection, error) {
+	debuglog.SetPrompt(label)
+	defer debuglog.ClearPrompt()
+	model := newIssueBranchSelectModel(title, label, choices, validateBranch, theme, useColor)
+	out, err := runProgram(model)
+	if err != nil {
+		return nil, err
+	}
+	final := out.(issueBranchSelectModel)
+	if final.err != nil {
+		return nil, final.err
+	}
+	return append([]IssueSelection(nil), final.selectedIssues...), nil
+}
+
+func PromptCreateFlow(title string, startMode string, defaultWorkspaceID string, templateName string, templates []string, templateErr error, repoChoices []PromptChoice, repoErr error, reviewRepos []PromptChoice, issueRepos []PromptChoice, loadReview func(string) ([]PromptChoice, error), loadIssue func(string) ([]PromptChoice, error), loadTemplateRepos func(string) ([]string, error), onReposResolved func([]string), validateBranch func(string) error, theme Theme, useColor bool, selectedRepo string) (string, string, string, string, []string, string, []string, string, []IssueSelection, string, error) {
+	debuglog.SetPrompt("create-flow")
+	defer debuglog.ClearPrompt()
+	model := newCreateFlowModel(title, templates, templateErr, repoChoices, repoErr, defaultWorkspaceID, templateName, reviewRepos, issueRepos, loadReview, loadIssue, loadTemplateRepos, onReposResolved, validateBranch, theme, useColor, startMode, selectedRepo)
+	if model.err != nil {
+		return "", "", "", "", nil, "", nil, "", nil, "", model.err
+	}
+	out, err := runProgram(model)
+	if err != nil {
+		return "", "", "", "", nil, "", nil, "", nil, "", err
+	}
+	final := out.(createFlowModel)
+	if final.err != nil {
+		return "", "", "", "", nil, "", nil, "", nil, "", final.err
+	}
+	return final.mode, final.templateName(), final.workspaceID(), final.description, append([]string(nil), final.branches...), final.reviewRepo, append([]string(nil), final.reviewPRs...), final.issueRepo, append([]IssueSelection(nil), final.issueIssues...), final.repoSelected, nil
+}
+
+func WorkspaceChoiceLines(items []WorkspaceChoice, cursor int, useColor bool, theme Theme) []string {
+	var lines []string
+	builder := &strings.Builder{}
+	renderWorkspaceChoiceList(builder, items, cursor, listMaxLines(0, len(items), 0), useColor, theme)
+	lines = append(lines, splitLines(builder.String())...)
+	return lines
+}
+
+func WorkspaceChoiceConfirmLines(items []WorkspaceChoice, useColor bool, theme Theme) []string {
+	var lines []string
+	builder := &strings.Builder{}
+	renderWorkspaceChoiceConfirmList(builder, items, useColor, theme)
+	lines = append(lines, splitLines(builder.String())...)
+	return lines
+}
