@@ -47,3 +47,23 @@ ts=2026-01-17T12:35:01.000-08:00 pid=12345 trace=exec:beef phase=prompt prompt=w
 - UI specs: `docs/spec/ui/`
 
 Add new files in the same format when introducing new commands or options.
+
+## Command spec index
+- `docs/spec/commands/add.md`
+- `docs/spec/commands/create.md`
+- `docs/spec/commands/doctor.md`
+- `docs/spec/commands/init.md`
+- `docs/spec/commands/ls.md`
+- `docs/spec/commands/open.md`
+- `docs/spec/commands/path.md`
+- `docs/spec/commands/repo-get.md`
+- `docs/spec/commands/repo-ls.md`
+- `docs/spec/commands/repo-rm.md`
+- `docs/spec/commands/rm.md`
+- `docs/spec/commands/resume.md`
+- `docs/spec/commands/status.md`
+- `docs/spec/commands/template-add.md`
+- `docs/spec/commands/template-ls.md`
+- `docs/spec/commands/template-rm.md`
+- `docs/spec/commands/template-validate.md`
+- `docs/spec/commands/version.md`

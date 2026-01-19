@@ -32,7 +32,7 @@ func printGlobalHelp(w io.Writer) {
 	fmt.Fprintln(w, helpCommand(theme, useColor, "status [<WORKSPACE_ID>]", "check dirty/untracked status"))
 	fmt.Fprintln(w, helpCommand(theme, useColor, "rm [<WORKSPACE_ID>]", "remove workspace (confirms on warnings)"))
 	fmt.Fprintln(w, helpCommand(theme, useColor, "path --workspace", "print selected workspace path"))
-	fmt.Fprintln(w, helpCommand(theme, useColor, "repo <subcommand>", "repo commands (get/ls)"))
+	fmt.Fprintln(w, helpCommand(theme, useColor, "repo <subcommand>", "repo commands (get/ls/rm)"))
 	fmt.Fprintln(w, helpCommand(theme, useColor, "template <subcommand>", "template commands (ls/add/rm/validate)"))
 	fmt.Fprintln(w, helpCommand(theme, useColor, "doctor [--fix | --self]", "check workspace/repo health"))
 	fmt.Fprintln(w, helpCommand(theme, useColor, "version", "print gwst version"))
@@ -128,6 +128,7 @@ func printRepoHelp(w io.Writer) {
 	fmt.Fprintln(w, helpSectionTitle(theme, useColor, "Subcommands:"))
 	fmt.Fprintln(w, helpCommand(theme, useColor, "get <repo>", "fetch or update bare repo store"))
 	fmt.Fprintln(w, helpCommand(theme, useColor, "ls", "list known bare repo stores"))
+	fmt.Fprintln(w, helpCommand(theme, useColor, "rm [<repo> ...]", "remove bare repo stores"))
 }
 
 func printRepoGetHelp(w io.Writer) {
@@ -138,6 +139,10 @@ func printRepoGetHelp(w io.Writer) {
 
 func printRepoLsHelp(w io.Writer) {
 	fmt.Fprintln(w, "Usage: gwst repo ls")
+}
+
+func printRepoRmHelp(w io.Writer) {
+	fmt.Fprintln(w, "Usage: gwst repo rm [<repo> ...]")
 }
 
 func printTemplateHelp(w io.Writer) {
