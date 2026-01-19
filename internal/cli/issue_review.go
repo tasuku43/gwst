@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/mattn/go-isatty"
+	"github.com/tasuku43/gwst/internal/app/create"
 	"github.com/tasuku43/gwst/internal/domain/repo"
 	"github.com/tasuku43/gwst/internal/domain/workspace"
 	"github.com/tasuku43/gwst/internal/infra/debuglog"
@@ -131,17 +132,14 @@ func runCreateIssue(ctx context.Context, rootDir, issueURL, workspaceID, branch,
 	}
 
 	output.Step(formatStep("create workspace", workspaceID, relPath(rootDir, workspace.WorkspaceDir(rootDir, workspaceID))))
-	wsDir, err := workspace.New(ctx, rootDir, workspaceID)
-	if err != nil {
-		return err
-	}
-	if err := workspace.SaveMetadata(wsDir, workspace.Metadata{
+	wsDir, err := create.CreateWorkspace(ctx, rootDir, workspaceID, workspace.Metadata{
 		Description: description,
 		Mode:        workspace.MetadataModeIssue,
 		SourceURL:   issueURL,
-	}); err != nil {
+	})
+	if err != nil {
 		if rollbackErr := workspace.Remove(ctx, rootDir, workspaceID); rollbackErr != nil {
-			return fmt.Errorf("save workspace metadata failed: %w (rollback failed: %v)", err, rollbackErr)
+			return create.FailWorkspaceMetadata(err, rollbackErr)
 		}
 		return err
 	}
@@ -315,17 +313,14 @@ func runIssue(ctx context.Context, rootDir string, args []string, noPrompt bool)
 	}
 
 	output.Step(formatStep("create workspace", workspaceID, relPath(rootDir, workspace.WorkspaceDir(rootDir, workspaceID))))
-	wsDir, err := workspace.New(ctx, rootDir, workspaceID)
-	if err != nil {
-		return err
-	}
-	if err := workspace.SaveMetadata(wsDir, workspace.Metadata{
+	wsDir, err := create.CreateWorkspace(ctx, rootDir, workspaceID, workspace.Metadata{
 		Description: description,
 		Mode:        workspace.MetadataModeIssue,
 		SourceURL:   raw,
-	}); err != nil {
+	})
+	if err != nil {
 		if rollbackErr := workspace.Remove(ctx, rootDir, workspaceID); rollbackErr != nil {
-			return fmt.Errorf("save workspace metadata failed: %w (rollback failed: %v)", err, rollbackErr)
+			return create.FailWorkspaceMetadata(err, rollbackErr)
 		}
 		return err
 	}
@@ -532,20 +527,15 @@ func runCreateIssueSelected(ctx context.Context, rootDir string, noPrompt bool, 
 			break
 		}
 		output.Step(formatStep("create workspace", workspaceID, relPath(rootDir, workspace.WorkspaceDir(rootDir, workspaceID))))
-		wsDir, err := workspace.New(ctx, rootDir, workspaceID)
-		if err != nil {
-			failure = err
-			failureID = workspaceID
-			break
-		}
 		sourceURL := buildIssueURLFromParts(selectedRepo.Host, selectedRepo.Owner, selectedRepo.Repo, num)
-		if err := workspace.SaveMetadata(wsDir, workspace.Metadata{
+		wsDir, err := create.CreateWorkspace(ctx, rootDir, workspaceID, workspace.Metadata{
 			Description: description,
 			Mode:        workspace.MetadataModeIssue,
 			SourceURL:   sourceURL,
-		}); err != nil {
+		})
+		if err != nil {
 			if rollbackErr := workspace.Remove(ctx, rootDir, workspaceID); rollbackErr != nil {
-				failure = fmt.Errorf("save workspace metadata failed: %w (rollback failed: %v)", err, rollbackErr)
+				failure = create.FailWorkspaceMetadata(err, rollbackErr)
 			} else {
 				failure = err
 			}
@@ -905,17 +895,14 @@ func runCreateReview(ctx context.Context, rootDir, prURL string, noPrompt bool, 
 
 	workspaceID := formatReviewWorkspaceID(baseOwner, baseRepo, pr.Number)
 	output.Step(formatStep("create workspace", workspaceID, relPath(rootDir, workspace.WorkspaceDir(rootDir, workspaceID))))
-	wsDir, err := workspace.New(ctx, rootDir, workspaceID)
-	if err != nil {
-		return err
-	}
-	if err := workspace.SaveMetadata(wsDir, workspace.Metadata{
+	wsDir, err := create.CreateWorkspace(ctx, rootDir, workspaceID, workspace.Metadata{
 		Description: description,
 		Mode:        workspace.MetadataModeReview,
 		SourceURL:   prURL,
-	}); err != nil {
+	})
+	if err != nil {
 		if rollbackErr := workspace.Remove(ctx, rootDir, workspaceID); rollbackErr != nil {
-			return fmt.Errorf("save workspace metadata failed: %w (rollback failed: %v)", err, rollbackErr)
+			return create.FailWorkspaceMetadata(err, rollbackErr)
 		}
 		return err
 	}
@@ -1066,20 +1053,15 @@ func runCreateReviewSelected(ctx context.Context, rootDir string, noPrompt bool,
 		description := pr.Title
 		workspaceID := formatReviewWorkspaceID(selectedRepo.Owner, selectedRepo.Repo, pr.Number)
 		output.Step(formatStep("create workspace", workspaceID, relPath(rootDir, workspace.WorkspaceDir(rootDir, workspaceID))))
-		wsDir, err := workspace.New(ctx, rootDir, workspaceID)
-		if err != nil {
-			failure = err
-			failureID = workspaceID
-			break
-		}
 		sourceURL := buildPRURLFromParts(selectedRepo.Host, selectedRepo.Owner, selectedRepo.Repo, pr.Number)
-		if err := workspace.SaveMetadata(wsDir, workspace.Metadata{
+		wsDir, err := create.CreateWorkspace(ctx, rootDir, workspaceID, workspace.Metadata{
 			Description: description,
 			Mode:        workspace.MetadataModeReview,
 			SourceURL:   sourceURL,
-		}); err != nil {
+		})
+		if err != nil {
 			if rollbackErr := workspace.Remove(ctx, rootDir, workspaceID); rollbackErr != nil {
-				failure = fmt.Errorf("save workspace metadata failed: %w (rollback failed: %v)", err, rollbackErr)
+				failure = create.FailWorkspaceMetadata(err, rollbackErr)
 			} else {
 				failure = err
 			}
@@ -1531,17 +1513,14 @@ func runReview(ctx context.Context, rootDir string, args []string, noPrompt bool
 	}
 
 	output.Step(formatStep("create workspace", workspaceID, relPath(rootDir, workspace.WorkspaceDir(rootDir, workspaceID))))
-	wsDir, err := workspace.New(ctx, rootDir, workspaceID)
-	if err != nil {
-		return err
-	}
-	if err := workspace.SaveMetadata(wsDir, workspace.Metadata{
+	wsDir, err := create.CreateWorkspace(ctx, rootDir, workspaceID, workspace.Metadata{
 		Description: description,
 		Mode:        workspace.MetadataModeReview,
 		SourceURL:   raw,
-	}); err != nil {
+	})
+	if err != nil {
 		if rollbackErr := workspace.Remove(ctx, rootDir, workspaceID); rollbackErr != nil {
-			return fmt.Errorf("save workspace metadata failed: %w (rollback failed: %v)", err, rollbackErr)
+			return create.FailWorkspaceMetadata(err, rollbackErr)
 		}
 		return err
 	}

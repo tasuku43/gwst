@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/mattn/go-isatty"
+	"github.com/tasuku43/gwst/internal/app/create"
 	"github.com/tasuku43/gwst/internal/domain/repo"
 	"github.com/tasuku43/gwst/internal/domain/template"
 	"github.com/tasuku43/gwst/internal/domain/workspace"
@@ -490,17 +491,14 @@ func runCreateTemplateWithInputs(ctx context.Context, rootDir string, inputs cre
 	}
 
 	output.Step(formatStep("create workspace", workspaceID, relPath(rootDir, workspace.WorkspaceDir(rootDir, workspaceID))))
-	wsDir, err := workspace.New(ctx, rootDir, workspaceID)
-	if err != nil {
-		return err
-	}
-	if err := workspace.SaveMetadata(wsDir, workspace.Metadata{
+	wsDir, err := create.CreateWorkspace(ctx, rootDir, workspaceID, workspace.Metadata{
 		Description:  description,
 		Mode:         workspace.MetadataModeTemplate,
 		TemplateName: templateName,
-	}); err != nil {
+	})
+	if err != nil {
 		if rollbackErr := workspace.Remove(ctx, rootDir, workspaceID); rollbackErr != nil {
-			return fmt.Errorf("save workspace metadata failed: %w (rollback failed: %v)", err, rollbackErr)
+			return create.FailWorkspaceMetadata(err, rollbackErr)
 		}
 		return err
 	}
@@ -511,7 +509,9 @@ func runCreateTemplateWithInputs(ctx context.Context, rootDir string, inputs cre
 		}
 		return err
 	}
-	if err := applyTemplate(ctx, rootDir, workspaceID, tmpl, branches); err != nil {
+	if err := create.ApplyTemplate(ctx, rootDir, workspaceID, tmpl, branches, func(repoSpec string, index, total int) {
+		output.Step(formatStepWithIndex("worktree add", displayRepoName(repoSpec), worktreeDest(rootDir, workspaceID, repoSpec), index+1, total))
+	}); err != nil {
 		if rollbackErr := workspace.Remove(ctx, rootDir, workspaceID); rollbackErr != nil {
 			return fmt.Errorf("apply template failed: %w (rollback failed: %v)", err, rollbackErr)
 		}
@@ -614,16 +614,13 @@ func runCreateRepoWithInputs(ctx context.Context, rootDir string, inputs createR
 	}
 
 	output.Step(formatStep("create workspace", workspaceID, relPath(rootDir, workspace.WorkspaceDir(rootDir, workspaceID))))
-	wsDir, err := workspace.New(ctx, rootDir, workspaceID)
-	if err != nil {
-		return err
-	}
-	if err := workspace.SaveMetadata(wsDir, workspace.Metadata{
+	wsDir, err := create.CreateWorkspace(ctx, rootDir, workspaceID, workspace.Metadata{
 		Description: description,
 		Mode:        workspace.MetadataModeRepo,
-	}); err != nil {
+	})
+	if err != nil {
 		if rollbackErr := workspace.Remove(ctx, rootDir, workspaceID); rollbackErr != nil {
-			return fmt.Errorf("save workspace metadata failed: %w (rollback failed: %v)", err, rollbackErr)
+			return create.FailWorkspaceMetadata(err, rollbackErr)
 		}
 		return err
 	}
@@ -634,7 +631,9 @@ func runCreateRepoWithInputs(ctx context.Context, rootDir string, inputs createR
 		}
 		return err
 	}
-	if err := applyTemplate(ctx, rootDir, workspaceID, tmpl, branches); err != nil {
+	if err := create.ApplyTemplate(ctx, rootDir, workspaceID, tmpl, branches, func(repoSpec string, index, total int) {
+		output.Step(formatStepWithIndex("worktree add", displayRepoName(repoSpec), worktreeDest(rootDir, workspaceID, repoSpec), index+1, total))
+	}); err != nil {
 		if rollbackErr := workspace.Remove(ctx, rootDir, workspaceID); rollbackErr != nil {
 			return fmt.Errorf("apply repo selection failed: %w (rollback failed: %v)", err, rollbackErr)
 		}
@@ -752,19 +751,4 @@ func preflightTemplateRepos(ctx context.Context, rootDir string, tmpl template.T
 		}
 	}
 	return missing, nil
-}
-
-func applyTemplate(ctx context.Context, rootDir, workspaceID string, tmpl template.Template, branches []string) error {
-	total := len(tmpl.Repos)
-	for i, repoSpec := range tmpl.Repos {
-		branch := workspaceID
-		if len(branches) == len(tmpl.Repos) && i < len(branches) && strings.TrimSpace(branches[i]) != "" {
-			branch = branches[i]
-		}
-		output.Step(formatStepWithIndex("worktree add", displayRepoName(repoSpec), worktreeDest(rootDir, workspaceID, repoSpec), i+1, total))
-		if _, err := workspace.AddWithBranch(ctx, rootDir, workspaceID, repoSpec, "", branch, "", false); err != nil {
-			return err
-		}
-	}
-	return nil
 }
