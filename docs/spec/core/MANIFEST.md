@@ -76,11 +76,3 @@ When reconciling, gwst computes a plan with three categories:
 - **update**: present in both but differing repo/branch/alias definitions.
 
 Removals are treated as destructive and require explicit confirmation.
-
-## Application layer reuse
-
-Import logic should live in a shared application layer so it can be invoked by:
-- explicit `gwst import`
-- implicit rebuilds after `create`/`rm`/`add`/`resume`
-
-CLI commands should only handle argument parsing and presentation, delegating the actual rebuild to the shared layer.
