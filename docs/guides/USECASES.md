@@ -11,13 +11,13 @@ Rating legend:
 - Missing: Not supported
 
 ## Setup / Preparation
-- **Initialize root** — `gwst init` creates bare/workspaces and `templates.yaml` in one shot. Once per environment. Rating: Excellent
-- **Define / check templates** — Edit `templates.yaml` directly, confirm names with `gwst template ls`, validate with `gwst template validate`. Rating: Good
+- **Initialize root** — `gwst init` creates bare/workspaces and `gwst.yaml` in one shot. Once per environment. Rating: Excellent
+- **Define / check presets** — Edit `gwst.yaml` directly, confirm names with `gwst preset ls`, validate with `gwst preset validate`. Rating: Good
 - **Fetch repositories** — `gwst repo get <repo>` creates bare store; `gwst repo ls` lists fetched repos. Rating: Good (does not fetch when bare already exists, so not ideal for updating)
 - **Switch roots** — Use `--root` or `GWST_ROOT` to separate environments. Rating: Excellent
 
 ## Start / During a Task
-- **Create workspace from template** — `gwst create --template <name> [<id>]`; prompts if omitted. `workspace_id` becomes the branch name for all repos. Rating: Excellent (interactive repo-get prompt appears when a template repo is missing)
+- **Create workspace from preset** — `gwst create --preset <name> [<id>]`; prompts if omitted. `workspace_id` becomes the branch name for all repos. Rating: Excellent (interactive repo-get prompt appears when a preset repo is missing)
 - **Add a repo mid-task** — `gwst add <id> <repo>`; branch name = workspace_id, base = origin/HEAD. Rating: Excellent
 - **List workspaces** — `gwst ls` enumerates workspaces; `gwst ls --details` shows git status lines for warning repos. Rating: Good
 - **Jump to a path** — `gwst path --workspace` prints a selected path for `cd`. Rating: Good

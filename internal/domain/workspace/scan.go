@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/tasuku43/gwst/internal/core/gitcmd"
 	"github.com/tasuku43/gwst/internal/domain/repo"
+	"github.com/tasuku43/gwst/internal/infra/gitcmd"
 )
 
 func ScanRepos(ctx context.Context, wsDir string) ([]Repo, []error, error) {

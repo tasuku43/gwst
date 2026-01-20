@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/tasuku43/gwst/internal/core/gitcmd"
-	"github.com/tasuku43/gwst/internal/core/paths"
+	"github.com/tasuku43/gwst/internal/infra/gitcmd"
+	"github.com/tasuku43/gwst/internal/infra/paths"
 )
 
 type Store struct {

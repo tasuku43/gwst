@@ -12,9 +12,9 @@ import (
 	"strings"
 
 	"github.com/mattn/go-isatty"
-	"github.com/tasuku43/gwst/internal/core/debuglog"
-	"github.com/tasuku43/gwst/internal/core/output"
 	"github.com/tasuku43/gwst/internal/domain/workspace"
+	"github.com/tasuku43/gwst/internal/infra/debuglog"
+	"github.com/tasuku43/gwst/internal/infra/output"
 	"github.com/tasuku43/gwst/internal/ui"
 )
 

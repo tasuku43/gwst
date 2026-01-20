@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/tasuku43/gwst/internal/core/gitcmd"
-	"github.com/tasuku43/gwst/internal/core/paths"
 	"github.com/tasuku43/gwst/internal/domain/repo"
+	"github.com/tasuku43/gwst/internal/infra/gitcmd"
+	"github.com/tasuku43/gwst/internal/infra/paths"
 )
 
 func Add(ctx context.Context, rootDir, workspaceID, repoSpec, alias string, fetch bool) (Repo, error) {
@@ -37,12 +37,16 @@ func AddWithBranch(ctx context.Context, rootDir, workspaceID, repoSpec, alias, b
 
 	if branchExists {
 		gitcmd.Logf("git worktree add %s %s", prep.worktreePath, branch)
-		if err := gitcmd.WorktreeAddExistingBranch(ctx, prep.store.StorePath, prep.worktreePath, branch); err != nil {
+		if err := worktreeAddWithRetry(ctx, prep.store.StorePath, func() error {
+			return gitcmd.WorktreeAddExistingBranch(ctx, prep.store.StorePath, prep.worktreePath, branch)
+		}); err != nil {
 			return Repo{}, err
 		}
 	} else {
 		gitcmd.Logf("git worktree add -b %s %s %s", branch, prep.worktreePath, baseRef)
-		if err := gitcmd.WorktreeAddNewBranch(ctx, prep.store.StorePath, branch, prep.worktreePath, baseRef); err != nil {
+		if err := worktreeAddWithRetry(ctx, prep.store.StorePath, func() error {
+			return gitcmd.WorktreeAddNewBranch(ctx, prep.store.StorePath, branch, prep.worktreePath, baseRef)
+		}); err != nil {
 			return Repo{}, err
 		}
 	}
@@ -84,7 +88,9 @@ func AddWithTrackingBranch(ctx context.Context, rootDir, workspaceID, repoSpec, 
 	}
 
 	gitcmd.Logf("git worktree add -b %s --track %s %s", branch, prep.worktreePath, remoteName)
-	if err := gitcmd.WorktreeAddTrackingBranch(ctx, prep.store.StorePath, branch, prep.worktreePath, remoteName); err != nil {
+	if err := worktreeAddWithRetry(ctx, prep.store.StorePath, func() error {
+		return gitcmd.WorktreeAddTrackingBranch(ctx, prep.store.StorePath, branch, prep.worktreePath, remoteName)
+	}); err != nil {
 		return Repo{}, err
 	}
 
@@ -207,6 +213,27 @@ func resolveBaseRef(ctx context.Context, storePath string) (string, error) {
 		return "", localErr
 	}
 	return "", fmt.Errorf("cannot detect default base ref")
+}
+
+func worktreeAddWithRetry(ctx context.Context, storePath string, add func() error) error {
+	err := add()
+	if err == nil {
+		return nil
+	}
+	if !isStaleWorktreeError(err) {
+		return err
+	}
+	if pruneErr := gitcmd.WorktreePrune(ctx, storePath); pruneErr != nil {
+		return err
+	}
+	return add()
+}
+
+func isStaleWorktreeError(err error) bool {
+	if err == nil {
+		return false
+	}
+	return strings.Contains(err.Error(), "already registered worktree")
 }
 
 func detectLocalHeadRef(ctx context.Context, storePath string) (string, error) {

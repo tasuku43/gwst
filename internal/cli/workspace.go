@@ -10,10 +10,11 @@ import (
 	"strings"
 
 	"github.com/mattn/go-isatty"
-	"github.com/tasuku43/gwst/internal/core/gitcmd"
-	"github.com/tasuku43/gwst/internal/core/output"
+	"github.com/tasuku43/gwst/internal/app/rm"
 	"github.com/tasuku43/gwst/internal/domain/repo"
 	"github.com/tasuku43/gwst/internal/domain/workspace"
+	"github.com/tasuku43/gwst/internal/infra/gitcmd"
+	"github.com/tasuku43/gwst/internal/infra/output"
 	"github.com/tasuku43/gwst/internal/ui"
 )
 
@@ -78,6 +79,9 @@ func runWorkspaceAdd(ctx context.Context, rootDir string, args []string) error {
 	output.Step(formatStep("worktree add", displayRepoName(repoSpec), worktreeDest(rootDir, workspaceID, repoSpec)))
 
 	if _, err := workspace.Add(ctx, rootDir, workspaceID, repoSpec, "", false); err != nil {
+		return err
+	}
+	if err := rebuildManifest(ctx, rootDir); err != nil {
 		return err
 	}
 	wsDir := workspace.WorkspaceDir(rootDir, workspaceID)
@@ -232,10 +236,10 @@ func runWorkspaceRemove(ctx context.Context, rootDir string, args []string) erro
 		renderer.Section("Steps")
 		output.Step(formatStep("remove workspace", workspaceID, relPath(rootDir, workspace.WorkspaceDir(rootDir, workspaceID))))
 
-		if err := workspace.RemoveWithOptions(ctx, rootDir, workspaceID, workspace.RemoveOptions{
-			AllowStatusError: true,
-			AllowDirty:       state.Kind == workspace.WorkspaceStateDirty,
-		}); err != nil {
+		if err := rm.Remove(ctx, rootDir, workspaceID, state.Kind == workspace.WorkspaceStateDirty); err != nil {
+			return err
+		}
+		if err := rebuildManifest(ctx, rootDir); err != nil {
 			return err
 		}
 
@@ -278,12 +282,12 @@ func runWorkspaceRemove(ctx context.Context, rootDir string, args []string) erro
 	for i, selectedID := range selected {
 		output.Step(formatStepWithIndex("remove workspace", selectedID, relPath(rootDir, workspace.WorkspaceDir(rootDir, selectedID)), i+1, len(selected)))
 		state := states[selectedID]
-		if err := workspace.RemoveWithOptions(ctx, rootDir, selectedID, workspace.RemoveOptions{
-			AllowStatusError: true,
-			AllowDirty:       state.Kind == workspace.WorkspaceStateDirty,
-		}); err != nil {
+		if err := rm.Remove(ctx, rootDir, selectedID, state.Kind == workspace.WorkspaceStateDirty); err != nil {
 			return err
 		}
+	}
+	if err := rebuildManifest(ctx, rootDir); err != nil {
+		return err
 	}
 
 	renderer.Blank()

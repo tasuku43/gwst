@@ -12,8 +12,8 @@ Return an absolute path to a selected workspace directory for shell usage (e.g.,
 ## Behavior
 - Requires `--workspace`.
 - Targets `<root>/workspaces`.
-- Provides a searchable, interactive picker (same UX pattern as `gwst create --template` template selection).
-- Search targets: workspace ID and workspace description.
+- Provides a searchable, interactive picker (same UX pattern as `gwst create --preset` preset selection).
+- Search targets: workspace ID and workspace description from `gwst.yaml`.
 - Prints the selected workspace path to stdout and nothing else.
 - Cancel behavior follows existing interactive commands.
 - `--no-prompt` is not supported (returns an error).

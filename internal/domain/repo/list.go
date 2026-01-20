@@ -4,7 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/tasuku43/gwst/internal/core/paths"
+	"github.com/tasuku43/gwst/internal/infra/paths"
 )
 
 type Entry struct {

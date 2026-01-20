@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/tasuku43/gwst/internal/core/output"
 	"github.com/tasuku43/gwst/internal/domain/repo"
 	"github.com/tasuku43/gwst/internal/domain/workspace"
+	"github.com/tasuku43/gwst/internal/infra/output"
 	"github.com/tasuku43/gwst/internal/ui"
 )
 
@@ -18,12 +18,12 @@ func displayRepoKey(repoKey string) string {
 	return display
 }
 
-func displayTemplateRepo(repoSpec string) string {
+func displayPresetRepo(repoSpec string) string {
 	return repo.DisplaySpec(repoSpec)
 }
 
 func displayRepoSpec(repoSpec string) string {
-	return displayTemplateRepo(repoSpec)
+	return displayPresetRepo(repoSpec)
 }
 
 func displayRepoName(repoSpec string) string {

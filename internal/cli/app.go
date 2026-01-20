@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/tasuku43/gwst/internal/core/debuglog"
-	"github.com/tasuku43/gwst/internal/core/paths"
+	"github.com/tasuku43/gwst/internal/infra/debuglog"
+	"github.com/tasuku43/gwst/internal/infra/paths"
 )
 
 // Run is a placeholder for the CLI entrypoint.
@@ -82,8 +82,8 @@ func Run() error {
 		return runDoctor(ctx, rootDir, args[1:])
 	case "repo":
 		return runRepo(ctx, rootDir, args[1:])
-	case "template":
-		return runTemplate(ctx, rootDir, args[1:], noPrompt)
+	case "preset":
+		return runPreset(ctx, rootDir, args[1:], noPrompt)
 	case "create":
 		return runCreate(ctx, rootDir, args[1:], noPrompt)
 	case "add":
@@ -98,6 +98,12 @@ func Run() error {
 		return runWorkspaceOpen(ctx, rootDir, args[1:], noPrompt)
 	case "path":
 		return runPath(rootDir, args[1:], noPrompt)
+	case "plan":
+		return runPlan(ctx, rootDir, args[1:])
+	case "import":
+		return runImport(ctx, rootDir, args[1:], noPrompt)
+	case "apply":
+		return runApply(ctx, rootDir, args[1:], noPrompt)
 	default:
 		return fmt.Errorf("unknown command: %s", args[0])
 	}

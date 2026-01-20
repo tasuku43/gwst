@@ -17,7 +17,7 @@ func TestListIncludesDescription(t *testing.T) {
 	if err := os.MkdirAll(ws1, 0o755); err != nil {
 		t.Fatalf("create WS-1 dir: %v", err)
 	}
-	if err := SaveMetadata(ws1, Metadata{Description: "test description"}); err != nil {
+	if err := SaveMetadata(ws1, Metadata{Description: "test description", Mode: MetadataModeRepo}); err != nil {
 		t.Fatalf("save metadata: %v", err)
 	}
 

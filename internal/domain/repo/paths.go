@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/tasuku43/gwst/internal/core/paths"
 	"github.com/tasuku43/gwst/internal/domain/repospec"
+	"github.com/tasuku43/gwst/internal/infra/paths"
 )
 
 // Spec is the normalized repo specification.
@@ -55,4 +55,17 @@ func normalizeForDisplay(input string) (repospec.Spec, bool) {
 		return repospec.Spec{}, false
 	}
 	return spec, true
+}
+
+// SpecFromKey converts a repo key (host/owner/repo.git) into a cloneable spec.
+func SpecFromKey(repoKey string) string {
+	trimmed := strings.TrimSuffix(strings.TrimSpace(repoKey), ".git")
+	parts := strings.Split(trimmed, "/")
+	if len(parts) < 3 {
+		return strings.TrimSpace(repoKey)
+	}
+	host := parts[0]
+	owner := parts[1]
+	repoName := parts[2]
+	return fmt.Sprintf("git@%s:%s/%s.git", host, owner, repoName)
 }

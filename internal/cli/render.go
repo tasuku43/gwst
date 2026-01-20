@@ -8,12 +8,15 @@ import (
 	"strings"
 
 	"github.com/mattn/go-isatty"
-	"github.com/tasuku43/gwst/internal/core/output"
+	"github.com/pmezard/go-difflib/difflib"
+	"github.com/tasuku43/gwst/internal/app/doctor"
+	"github.com/tasuku43/gwst/internal/app/initcmd"
+	"github.com/tasuku43/gwst/internal/app/manifestplan"
+	"github.com/tasuku43/gwst/internal/domain/manifest"
+	"github.com/tasuku43/gwst/internal/domain/preset"
 	"github.com/tasuku43/gwst/internal/domain/repo"
-	"github.com/tasuku43/gwst/internal/domain/template"
 	"github.com/tasuku43/gwst/internal/domain/workspace"
-	"github.com/tasuku43/gwst/internal/ops/doctor"
-	"github.com/tasuku43/gwst/internal/ops/initcmd"
+	"github.com/tasuku43/gwst/internal/infra/output"
 	"github.com/tasuku43/gwst/internal/ui"
 )
 
@@ -28,6 +31,8 @@ const (
 	treeLineNormal treeLineStyle = iota
 	treeLineWarn
 	treeLineError
+	treeLineSuccess
+	treeLineAccent
 )
 
 func renderWorkspaceRepos(r *ui.Renderer, repos []workspace.Repo, extraIndent string) {
@@ -94,13 +99,13 @@ func issueDetails(issue doctor.Issue) []string {
 	return details
 }
 
-func templateIssueDetails(issue template.ValidationIssue, path string) []string {
+func presetIssueDetails(issue preset.ValidationIssue, path string) []string {
 	var details []string
-	if strings.TrimSpace(path) != "" && (issue.Kind == template.IssueKindFile || issue.Kind == template.IssueKindInvalidYAML) {
+	if strings.TrimSpace(path) != "" && (issue.Kind == preset.IssueKindFile || issue.Kind == preset.IssueKindInvalidYAML) {
 		details = append(details, fmt.Sprintf("path: %s", path))
 	}
-	if strings.TrimSpace(issue.Template) != "" {
-		details = append(details, fmt.Sprintf("template: %s", issue.Template))
+	if strings.TrimSpace(issue.Preset) != "" {
+		details = append(details, fmt.Sprintf("preset: %s", issue.Preset))
 	}
 	if strings.TrimSpace(issue.Repo) != "" {
 		details = append(details, fmt.Sprintf("repo: %s", issue.Repo))
@@ -122,9 +127,112 @@ func renderTreeLines(r *ui.Renderer, lines []string, style treeLineStyle) {
 			r.TreeLineWarn(output.Indent+prefix, line)
 		case treeLineError:
 			r.TreeLineError(output.Indent+prefix, line)
+		case treeLineSuccess:
+			r.TreeLineSuccess(output.Indent+prefix, line)
+		case treeLineAccent:
+			r.TreeLineAccent(output.Indent+prefix, line)
 		default:
 			r.TreeLine(output.Indent+prefix, line)
 		}
+	}
+}
+
+func buildUnifiedDiffLines(current, next []byte) ([]string, error) {
+	diff := difflib.UnifiedDiff{
+		A:        difflib.SplitLines(string(current)),
+		B:        difflib.SplitLines(string(next)),
+		FromFile: "gwst.yaml (current)",
+		ToFile:   "gwst.yaml (target)",
+		Context:  3,
+	}
+	text, err := difflib.GetUnifiedDiffString(diff)
+	if err != nil {
+		return nil, err
+	}
+	lines := difflib.SplitLines(text)
+	for i := range lines {
+		lines[i] = strings.TrimRight(lines[i], "\n")
+	}
+	return lines, nil
+}
+
+func renderDiffLines(renderer *ui.Renderer, lines []string) {
+	if renderer == nil || len(lines) == 0 {
+		return
+	}
+	for _, line := range lines {
+		switch {
+		case strings.HasPrefix(line, "+++"), strings.HasPrefix(line, "---"), strings.HasPrefix(line, "@@"):
+			renderer.TreeLineAccent("", line)
+		case strings.HasPrefix(line, "+"):
+			renderer.TreeLineSuccess("", line)
+		case strings.HasPrefix(line, "-"):
+			renderer.TreeLineError("", line)
+		default:
+			renderer.TreeLine("", line)
+		}
+	}
+}
+
+func renderPlanChanges(renderer *ui.Renderer, changes []manifestplan.WorkspaceChange) {
+	if renderer == nil {
+		return
+	}
+	for _, change := range changes {
+		switch change.Kind {
+		case manifestplan.WorkspaceAdd:
+			renderer.BulletSuccess(fmt.Sprintf("+ add workspace %s", change.WorkspaceID))
+			renderPlanRepoChanges(renderer, change.Repos)
+		case manifestplan.WorkspaceRemove:
+			renderer.BulletError(fmt.Sprintf("- remove workspace %s", change.WorkspaceID))
+		case manifestplan.WorkspaceUpdate:
+			renderer.BulletAccent(fmt.Sprintf("~ update workspace %s", change.WorkspaceID))
+			renderPlanRepoChanges(renderer, change.Repos)
+		}
+	}
+}
+
+func renderPlanRepoChanges(renderer *ui.Renderer, changes []manifestplan.RepoChange) {
+	if renderer == nil || len(changes) == 0 {
+		return
+	}
+	var lines []string
+	var styles []treeLineStyle
+	for _, change := range changes {
+		switch change.Kind {
+		case manifestplan.RepoAdd:
+			lines = append(lines, fmt.Sprintf("+ add repo %s (%s) branch %s", change.Alias, change.ToRepo, change.ToBranch))
+			styles = append(styles, treeLineSuccess)
+		case manifestplan.RepoRemove:
+			lines = append(lines, fmt.Sprintf("- remove repo %s (%s) branch %s", change.Alias, change.FromRepo, change.FromBranch))
+			styles = append(styles, treeLineError)
+		case manifestplan.RepoUpdate:
+			lines = append(lines, formatPlanRepoUpdate(change))
+			styles = append(styles, treeLineAccent)
+		}
+	}
+	for i, line := range lines {
+		style := treeLineNormal
+		if i < len(styles) {
+			style = styles[i]
+		}
+		renderTreeLines(renderer, []string{line}, style)
+	}
+}
+
+func formatPlanRepoUpdate(change manifestplan.RepoChange) string {
+	fromRepo := strings.TrimSpace(change.FromRepo)
+	toRepo := strings.TrimSpace(change.ToRepo)
+	fromBranch := strings.TrimSpace(change.FromBranch)
+	toBranch := strings.TrimSpace(change.ToBranch)
+
+	switch {
+	case fromRepo == toRepo && fromBranch != toBranch:
+		return fmt.Sprintf("~ update repo %s: branch %s -> %s", change.Alias, fromBranch, toBranch)
+	case fromRepo != toRepo && fromBranch == toBranch:
+		return fmt.Sprintf("~ update repo %s: repo %s -> %s", change.Alias, fromRepo, toRepo)
+	default:
+		return fmt.Sprintf("~ update repo %s: %s (%s) -> %s (%s)", change.Alias, fromRepo, fromBranch, toRepo, toBranch)
 	}
 }
 
@@ -273,29 +381,29 @@ func writeRepoListText(entries []repo.Entry, warnings []error) {
 	}
 }
 
-func writeTemplateListText(file template.File, names []string) {
+func writePresetListText(file preset.File, names []string) {
 	theme := ui.DefaultTheme()
 	useColor := isatty.IsTerminal(os.Stdout.Fd())
 	renderer := ui.NewRenderer(os.Stdout, theme, useColor)
 
 	renderer.Section("Result")
 	if len(names) == 0 {
-		renderer.Bullet("no templates found")
+		renderer.Bullet("no presets found")
 		renderSuggestions(renderer, useColor, []string{
-			"gwst create --template",
-			"gwst create --template <name>",
+			"gwst create --preset",
+			"gwst create --preset <name>",
 		})
 		return
 	}
 	for _, name := range names {
 		renderer.Bullet(name)
-		tmpl, ok := file.Templates[name]
+		presetEntry, ok := file.Presets[name]
 		if !ok {
 			continue
 		}
 		var repos []string
-		for _, repoSpec := range tmpl.Repos {
-			display := displayTemplateRepo(repoSpec)
+		for _, repoSpec := range presetEntry.Repos {
+			display := displayPresetRepo(repoSpec)
 			if strings.TrimSpace(display) == "" {
 				continue
 			}
@@ -304,20 +412,20 @@ func writeTemplateListText(file template.File, names []string) {
 		renderTreeLines(renderer, repos, treeLineNormal)
 	}
 	renderSuggestions(renderer, useColor, []string{
-		"gwst create --template",
-		"gwst create --template <name>",
+		"gwst create --preset",
+		"gwst create --preset <name>",
 	})
 }
 
-func writeTemplateShowText(name string, tmpl template.Template) {
+func writePresetShowText(name string, presetEntry preset.Preset) {
 	theme := ui.DefaultTheme()
 	useColor := isatty.IsTerminal(os.Stdout.Fd())
 	renderer := ui.NewRenderer(os.Stdout, theme, useColor)
 
 	renderer.Section("Result")
 	renderer.Bullet(name)
-	if len(tmpl.Repos) > 0 {
-		renderTreeLines(renderer, tmpl.Repos, treeLineNormal)
+	if len(presetEntry.Repos) > 0 {
+		renderTreeLines(renderer, presetEntry.Repos, treeLineNormal)
 	}
 }
 
@@ -357,9 +465,9 @@ func writeInitText(result initcmd.Result) {
 	renderer.Bullet(fmt.Sprintf("root: %s", result.RootDir))
 
 	renderSuggestions(renderer, useColor, []string{
-		"gwst template ls",
+		"gwst preset ls",
 		"gwst repo get <repo>",
-		fmt.Sprintf("Edit templates.yaml: %s", filepath.Join(result.RootDir, "templates.yaml")),
+		fmt.Sprintf("Edit gwst.yaml: %s", filepath.Join(result.RootDir, manifest.FileName)),
 	})
 }
 

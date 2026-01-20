@@ -91,10 +91,10 @@ Steps
 
 ## Examples
 
-### gwst create --template (interactive)
+### gwst create --preset (interactive)
 ```
 Inputs
-  • template: hel
+  • preset: hel
     └─ helmfiles
   • workspace id: PROJ-123
 
@@ -116,10 +116,10 @@ Inputs
     └─ repo - 1 repo only
     └─ issue - From an issue (multi-select, GitHub only)
     └─ review - From a review request (multi-select, GitHub only)
-    └─ template - From template
+    └─ preset - From preset
 ```
 
-### gwst create --template (non-interactive)
+### gwst create --preset (non-interactive)
 ```
 Steps
   • repo get git@github.com:org/repo.git
@@ -157,5 +157,5 @@ Result
 - Suggestion section is optional and shown only on TTY with colors enabled (e.g. `cd <path>`).
 
 ## Implementation contract
-- CLI output must use `ui.Renderer` (or `internal/core/output` helpers) and must not write directly to stdout via `fmt.Fprintf/Printf/Println` in UI paths.
+- CLI output must use `ui.Renderer` (or `internal/infra/output` helpers) and must not write directly to stdout via `fmt.Fprintf/Printf/Println` in UI paths.
 - Result lines must be rendered using `Bullet()` to enforce consistent prefixing.

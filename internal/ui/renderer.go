@@ -7,8 +7,8 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
-	"github.com/tasuku43/gwst/internal/core/debuglog"
-	"github.com/tasuku43/gwst/internal/core/output"
+	"github.com/tasuku43/gwst/internal/infra/debuglog"
+	"github.com/tasuku43/gwst/internal/infra/output"
 )
 
 type Renderer struct {
@@ -112,6 +112,24 @@ func (r *Renderer) BulletError(text string) {
 	r.writeWithPrefix(output.Indent+prefix, text)
 }
 
+func (r *Renderer) BulletSuccess(text string) {
+	prefix := output.StepPrefix + " "
+	if r.useColor {
+		prefix = r.theme.Success.Render(prefix)
+		text = r.theme.Success.Render(text)
+	}
+	r.writeWithPrefix(output.Indent+prefix, text)
+}
+
+func (r *Renderer) BulletAccent(text string) {
+	prefix := output.StepPrefix + " "
+	if r.useColor {
+		prefix = r.theme.Accent.Render(prefix)
+		text = r.theme.Accent.Render(text)
+	}
+	r.writeWithPrefix(output.Indent+prefix, text)
+}
+
 func (r *Renderer) Warn(text string) {
 	r.writeWithPrefix(output.Indent, r.style(text, r.theme.Warn))
 }
@@ -151,6 +169,26 @@ func (r *Renderer) TreeLineWarn(prefix, text string) {
 	if r.useColor {
 		fullPrefix = r.style(fullPrefix, r.theme.Warn)
 		line = r.style(line, r.theme.Warn)
+	}
+	r.writeWithPrefix(fullPrefix, line)
+}
+
+func (r *Renderer) TreeLineSuccess(prefix, text string) {
+	line := text
+	fullPrefix := output.Indent + prefix
+	if r.useColor {
+		fullPrefix = r.style(fullPrefix, r.theme.Success)
+		line = r.style(line, r.theme.Success)
+	}
+	r.writeWithPrefix(fullPrefix, line)
+}
+
+func (r *Renderer) TreeLineAccent(prefix, text string) {
+	line := text
+	fullPrefix := output.Indent + prefix
+	if r.useColor {
+		fullPrefix = r.style(fullPrefix, r.theme.Accent)
+		line = r.style(line, r.theme.Accent)
 	}
 	r.writeWithPrefix(fullPrefix, line)
 }

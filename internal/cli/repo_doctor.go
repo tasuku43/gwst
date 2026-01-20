@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/mattn/go-isatty"
-	"github.com/tasuku43/gwst/internal/core/output"
+	"github.com/tasuku43/gwst/internal/app/doctor"
 	"github.com/tasuku43/gwst/internal/domain/repo"
-	"github.com/tasuku43/gwst/internal/ops/doctor"
+	"github.com/tasuku43/gwst/internal/infra/output"
 	"github.com/tasuku43/gwst/internal/ui"
 )
 
