@@ -400,7 +400,7 @@ func formatRiskLine(r *ui.Renderer, repo workspace.RepoStatus) string {
 	case treeLineError:
 		style = r.ErrorText
 	case treeLineSuccess:
-		style = r.SuccessText
+		style = r.AccentText
 	case treeLineNormal:
 		style = func(s string) string { return s }
 	}
