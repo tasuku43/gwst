@@ -26,27 +26,26 @@ func TestRunCreatesAndSkips(t *testing.T) {
 			t.Fatalf("missing dir %s: %v", dir, err)
 		}
 	}
-	templatesPath := filepath.Join(rootDir, "templates.yaml")
-	if _, err := os.Stat(templatesPath); err != nil {
-		t.Fatalf("missing file templates.yaml: %v", err)
+	configPath := filepath.Join(rootDir, "gwst.yaml")
+	if _, err := os.Stat(configPath); err != nil {
+		t.Fatalf("missing file gwst.yaml: %v", err)
 	}
-	manifestPath := filepath.Join(rootDir, "manifest.yaml")
-	if _, err := os.Stat(manifestPath); err != nil {
-		t.Fatalf("missing file manifest.yaml: %v", err)
-	}
-	data, err := os.ReadFile(templatesPath)
+	data, err := os.ReadFile(configPath)
 	if err != nil {
-		t.Fatalf("read templates.yaml: %v", err)
+		t.Fatalf("read gwst.yaml: %v", err)
 	}
 	content := string(data)
+	if !strings.Contains(content, "presets:") {
+		t.Fatalf("expected presets in gwst.yaml")
+	}
 	if !strings.Contains(content, "example:") {
-		t.Fatalf("expected example template in templates.yaml")
+		t.Fatalf("expected example preset in gwst.yaml")
 	}
 	if !strings.Contains(content, "git@github.com:octocat/Hello-World.git") {
-		t.Fatalf("expected octocat/Hello-World repo in templates.yaml")
+		t.Fatalf("expected octocat/Hello-World repo in gwst.yaml")
 	}
 	if !strings.Contains(content, "git@github.com:octocat/Spoon-Knife.git") {
-		t.Fatalf("expected octocat/Spoon-Knife repo in templates.yaml")
+		t.Fatalf("expected octocat/Spoon-Knife repo in gwst.yaml")
 	}
 
 	second, err := Run(rootDir)

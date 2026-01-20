@@ -18,12 +18,12 @@ func displayRepoKey(repoKey string) string {
 	return display
 }
 
-func displayTemplateRepo(repoSpec string) string {
+func displayPresetRepo(repoSpec string) string {
 	return repo.DisplaySpec(repoSpec)
 }
 
 func displayRepoSpec(repoSpec string) string {
-	return displayTemplateRepo(repoSpec)
+	return displayPresetRepo(repoSpec)
 }
 
 func displayRepoName(repoSpec string) string {

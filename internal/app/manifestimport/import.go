@@ -47,6 +47,9 @@ func Build(ctx context.Context, rootDir string) (manifest.File, []error, error) 
 		Version:    1,
 		Workspaces: map[string]manifest.Workspace{},
 	}
+	if existing, err := manifest.Load(rootDir); err == nil {
+		file.Presets = existing.Presets
+	}
 	var warnings []error
 
 	var workspaceIDs []string
@@ -95,11 +98,11 @@ func Build(ctx context.Context, rootDir string) (manifest.File, []error, error) 
 		}
 
 		wsEntry := manifest.Workspace{
-			Description:  strings.TrimSpace(meta.Description),
-			Mode:         mode,
-			TemplateName: strings.TrimSpace(meta.TemplateName),
-			SourceURL:    strings.TrimSpace(meta.SourceURL),
-			Repos:        repoEntries,
+			Description: strings.TrimSpace(meta.Description),
+			Mode:        mode,
+			PresetName:  strings.TrimSpace(meta.PresetName),
+			SourceURL:   strings.TrimSpace(meta.SourceURL),
+			Repos:       repoEntries,
 		}
 		file.Workspaces[wsID] = wsEntry
 	}

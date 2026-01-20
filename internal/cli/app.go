@@ -82,8 +82,8 @@ func Run() error {
 		return runDoctor(ctx, rootDir, args[1:])
 	case "repo":
 		return runRepo(ctx, rootDir, args[1:])
-	case "template":
-		return runTemplate(ctx, rootDir, args[1:], noPrompt)
+	case "preset":
+		return runPreset(ctx, rootDir, args[1:], noPrompt)
 	case "create":
 		return runCreate(ctx, rootDir, args[1:], noPrompt)
 	case "add":

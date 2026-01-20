@@ -25,7 +25,7 @@ func printGlobalHelp(w io.Writer) {
 	fmt.Fprintln(w, "")
 	fmt.Fprintln(w, helpSectionTitle(theme, useColor, "Commands:"))
 	fmt.Fprintln(w, helpCommand(theme, useColor, "init", "initialize gwst root layout"))
-	fmt.Fprintln(w, helpCommand(theme, useColor, "create [mode flags] [args]", "create workspace (template/review/issue/repo)"))
+	fmt.Fprintln(w, helpCommand(theme, useColor, "create [mode flags] [args]", "create workspace (preset/review/issue/repo)"))
 	fmt.Fprintln(w, helpCommand(theme, useColor, "open [<WORKSPACE_ID>] [--shell]", "open workspace in subshell"))
 	fmt.Fprintln(w, helpCommand(theme, useColor, "add [<WORKSPACE_ID>] [<repo>]", "add repo worktree to workspace"))
 	fmt.Fprintln(w, helpCommand(theme, useColor, "ls [--details]", "list workspaces (with repos/status details)"))
@@ -33,11 +33,11 @@ func printGlobalHelp(w io.Writer) {
 	fmt.Fprintln(w, helpCommand(theme, useColor, "rm [<WORKSPACE_ID>]", "remove workspace (confirms on warnings)"))
 	fmt.Fprintln(w, helpCommand(theme, useColor, "path --workspace", "print selected workspace path"))
 	fmt.Fprintln(w, helpCommand(theme, useColor, "repo <subcommand>", "repo commands (get/ls)"))
-	fmt.Fprintln(w, helpCommand(theme, useColor, "template <subcommand>", "template commands (ls/add/rm/validate)"))
+	fmt.Fprintln(w, helpCommand(theme, useColor, "preset <subcommand>", "preset commands (ls/add/rm/validate)"))
 	fmt.Fprintln(w, helpCommand(theme, useColor, "doctor [--fix | --self]", "check workspace/repo health"))
-	fmt.Fprintln(w, helpCommand(theme, useColor, "plan", "show manifest diff (no changes)"))
-	fmt.Fprintln(w, helpCommand(theme, useColor, "import", "rebuild manifest from filesystem"))
-	fmt.Fprintln(w, helpCommand(theme, useColor, "apply", "apply manifest to filesystem"))
+	fmt.Fprintln(w, helpCommand(theme, useColor, "plan", "show gwst.yaml diff (no changes)"))
+	fmt.Fprintln(w, helpCommand(theme, useColor, "import", "rebuild gwst.yaml from filesystem"))
+	fmt.Fprintln(w, helpCommand(theme, useColor, "apply", "apply gwst.yaml to filesystem"))
 	fmt.Fprintln(w, helpCommand(theme, useColor, "version", "print gwst version"))
 	fmt.Fprintln(w, helpCommand(theme, useColor, "help [command]", "show help for a command"))
 	fmt.Fprintln(w, "")
@@ -67,8 +67,8 @@ func printCommandHelp(cmd string, w io.Writer) bool {
 		printPathHelp(w)
 	case "repo":
 		printRepoHelp(w)
-	case "template":
-		printTemplateHelp(w)
+	case "preset":
+		printPresetHelp(w)
 	case "doctor":
 		printDoctorHelp(w)
 	case "plan":
@@ -89,8 +89,8 @@ func printCommandHelp(cmd string, w io.Writer) bool {
 
 func printCreateHelp(w io.Writer) {
 	theme, useColor := helpTheme(w)
-	fmt.Fprintln(w, "Usage: gwst create [--template <name> | --review [<PR URL>] | --issue [<ISSUE_URL>] | --repo [<repo>]] [<WORKSPACE_ID>] [--workspace-id <id>] [--branch <name>] [--base <ref>] [--no-prompt]")
-	fmt.Fprintln(w, helpFlag(theme, useColor, "--template <name>", "template name"))
+	fmt.Fprintln(w, "Usage: gwst create [--preset <name> | --review [<PR URL>] | --issue [<ISSUE_URL>] | --repo [<repo>]] [<WORKSPACE_ID>] [--workspace-id <id>] [--branch <name>] [--base <ref>] [--no-prompt]")
+	fmt.Fprintln(w, helpFlag(theme, useColor, "--preset <name>", "preset name"))
 	fmt.Fprintln(w, helpFlag(theme, useColor, "--review [<PR URL>]", "create review workspace from PR"))
 	fmt.Fprintln(w, helpFlag(theme, useColor, "--issue [<ISSUE_URL>]", "create issue workspace from issue"))
 	fmt.Fprintln(w, helpFlag(theme, useColor, "--repo [<repo>]", "create workspace from a repo (optional interactive selection)"))
@@ -149,34 +149,34 @@ func printRepoLsHelp(w io.Writer) {
 	fmt.Fprintln(w, "Usage: gwst repo ls")
 }
 
-func printTemplateHelp(w io.Writer) {
+func printPresetHelp(w io.Writer) {
 	theme, useColor := helpTheme(w)
-	fmt.Fprintln(w, "Usage: gwst template <subcommand>")
+	fmt.Fprintln(w, "Usage: gwst preset <subcommand>")
 	fmt.Fprintln(w, "")
 	fmt.Fprintln(w, helpSectionTitle(theme, useColor, "Subcommands:"))
-	fmt.Fprintln(w, helpCommand(theme, useColor, "ls", "list templates"))
-	fmt.Fprintln(w, helpCommand(theme, useColor, "add [<name>]", "add a template"))
-	fmt.Fprintln(w, helpCommand(theme, useColor, "rm [<name>]", "remove templates"))
-	fmt.Fprintln(w, helpCommand(theme, useColor, "validate", "validate templates.yaml"))
+	fmt.Fprintln(w, helpCommand(theme, useColor, "ls", "list presets"))
+	fmt.Fprintln(w, helpCommand(theme, useColor, "add [<name>]", "add a preset"))
+	fmt.Fprintln(w, helpCommand(theme, useColor, "rm [<name>]", "remove presets"))
+	fmt.Fprintln(w, helpCommand(theme, useColor, "validate", "validate gwst.yaml"))
 }
 
-func printTemplateLsHelp(w io.Writer) {
-	fmt.Fprintln(w, "Usage: gwst template ls")
+func printPresetLsHelp(w io.Writer) {
+	fmt.Fprintln(w, "Usage: gwst preset ls")
 }
 
-func printTemplateAddHelp(w io.Writer) {
+func printPresetAddHelp(w io.Writer) {
 	theme, useColor := helpTheme(w)
-	fmt.Fprintln(w, "Usage: gwst template add [<name>] [--repo <repo> ...]")
+	fmt.Fprintln(w, "Usage: gwst preset add [<name>] [--repo <repo> ...]")
 	fmt.Fprintln(w, helpFlag(theme, useColor, "--repo <repo>", "repo spec (repeatable)"))
 }
 
-func printTemplateRmHelp(w io.Writer) {
-	fmt.Fprintln(w, "Usage: gwst template rm [<name> ...]")
+func printPresetRmHelp(w io.Writer) {
+	fmt.Fprintln(w, "Usage: gwst preset rm [<name> ...]")
 }
 
-func printTemplateValidateHelp(w io.Writer) {
-	fmt.Fprintln(w, "Usage: gwst template validate")
-	fmt.Fprintln(w, "  Validate templates.yaml")
+func printPresetValidateHelp(w io.Writer) {
+	fmt.Fprintln(w, "Usage: gwst preset validate")
+	fmt.Fprintln(w, "  Validate gwst.yaml")
 }
 
 func printDoctorHelp(w io.Writer) {

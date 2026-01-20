@@ -1,24 +1,28 @@
-package template
+package preset
 
 import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/tasuku43/gwst/internal/domain/manifest"
 )
 
-func TestValidateTemplatesOK(t *testing.T) {
+func TestValidatePresetsOK(t *testing.T) {
 	rootDir := t.TempDir()
-	data := []byte(`templates:
+	data := []byte(`version: 1
+presets:
   app:
     repos:
       - git@github.com:org/app.git
   legacy:
     repos:
       - repo: git@github.com:org/legacy.git
+workspaces: {}
 `)
-	path := filepath.Join(rootDir, FileName)
+	path := filepath.Join(rootDir, manifest.FileName)
 	if err := os.WriteFile(path, data, 0o644); err != nil {
-		t.Fatalf("write templates: %v", err)
+		t.Fatalf("write gwst.yaml: %v", err)
 	}
 	result, err := Validate(rootDir)
 	if err != nil {
@@ -29,38 +33,42 @@ func TestValidateTemplatesOK(t *testing.T) {
 	}
 }
 
-func TestValidateTemplatesDuplicate(t *testing.T) {
+func TestValidatePresetsDuplicate(t *testing.T) {
 	rootDir := t.TempDir()
-	data := []byte(`templates:
+	data := []byte(`version: 1
+presets:
   app:
     repos:
       - git@github.com:org/app.git
   app:
     repos:
       - git@github.com:org/other.git
+workspaces: {}
 `)
-	path := filepath.Join(rootDir, FileName)
+	path := filepath.Join(rootDir, manifest.FileName)
 	if err := os.WriteFile(path, data, 0o644); err != nil {
-		t.Fatalf("write templates: %v", err)
+		t.Fatalf("write gwst.yaml: %v", err)
 	}
 	result, err := Validate(rootDir)
 	if err != nil {
 		t.Fatalf("validate: %v", err)
 	}
-	if !hasIssueKind(result.Issues, IssueKindDuplicateTemplate) {
-		t.Fatalf("expected duplicate template issue")
+	if !hasIssueKind(result.Issues, IssueKindDuplicatePreset) {
+		t.Fatalf("expected duplicate preset issue")
 	}
 }
 
-func TestValidateTemplatesMissingRepos(t *testing.T) {
+func TestValidatePresetsMissingRepos(t *testing.T) {
 	rootDir := t.TempDir()
-	data := []byte(`templates:
+	data := []byte(`version: 1
+presets:
   app:
     description: test
+workspaces: {}
 `)
-	path := filepath.Join(rootDir, FileName)
+	path := filepath.Join(rootDir, manifest.FileName)
 	if err := os.WriteFile(path, data, 0o644); err != nil {
-		t.Fatalf("write templates: %v", err)
+		t.Fatalf("write gwst.yaml: %v", err)
 	}
 	result, err := Validate(rootDir)
 	if err != nil {
@@ -71,16 +79,18 @@ func TestValidateTemplatesMissingRepos(t *testing.T) {
 	}
 }
 
-func TestValidateTemplatesInvalidRepo(t *testing.T) {
+func TestValidatePresetsInvalidRepo(t *testing.T) {
 	rootDir := t.TempDir()
-	data := []byte(`templates:
+	data := []byte(`version: 1
+presets:
   app:
     repos:
       - github.com/org/app
+workspaces: {}
 `)
-	path := filepath.Join(rootDir, FileName)
+	path := filepath.Join(rootDir, manifest.FileName)
 	if err := os.WriteFile(path, data, 0o644); err != nil {
-		t.Fatalf("write templates: %v", err)
+		t.Fatalf("write gwst.yaml: %v", err)
 	}
 	result, err := Validate(rootDir)
 	if err != nil {
@@ -91,12 +101,12 @@ func TestValidateTemplatesInvalidRepo(t *testing.T) {
 	}
 }
 
-func TestValidateTemplatesInvalidYAML(t *testing.T) {
+func TestValidatePresetsInvalidYAML(t *testing.T) {
 	rootDir := t.TempDir()
-	data := []byte("templates: [")
-	path := filepath.Join(rootDir, FileName)
+	data := []byte("presets: [")
+	path := filepath.Join(rootDir, manifest.FileName)
 	if err := os.WriteFile(path, data, 0o644); err != nil {
-		t.Fatalf("write templates: %v", err)
+		t.Fatalf("write gwst.yaml: %v", err)
 	}
 	result, err := Validate(rootDir)
 	if err != nil {
@@ -107,23 +117,25 @@ func TestValidateTemplatesInvalidYAML(t *testing.T) {
 	}
 }
 
-func TestValidateTemplatesInvalidName(t *testing.T) {
+func TestValidatePresetsInvalidName(t *testing.T) {
 	rootDir := t.TempDir()
-	data := []byte(`templates:
+	data := []byte(`version: 1
+presets:
   bad name:
     repos:
       - git@github.com:org/app.git
+workspaces: {}
 `)
-	path := filepath.Join(rootDir, FileName)
+	path := filepath.Join(rootDir, manifest.FileName)
 	if err := os.WriteFile(path, data, 0o644); err != nil {
-		t.Fatalf("write templates: %v", err)
+		t.Fatalf("write gwst.yaml: %v", err)
 	}
 	result, err := Validate(rootDir)
 	if err != nil {
 		t.Fatalf("validate: %v", err)
 	}
-	if !hasIssueKind(result.Issues, IssueKindInvalidTemplateName) {
-		t.Fatalf("expected invalid template name issue")
+	if !hasIssueKind(result.Issues, IssueKindInvalidPresetName) {
+		t.Fatalf("expected invalid preset name issue")
 	}
 }
 

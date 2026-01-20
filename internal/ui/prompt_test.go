@@ -5,7 +5,7 @@ import "testing"
 func TestFormatInputsHeader(t *testing.T) {
 	cases := []struct {
 		title       string
-		template    string
+		preset      string
 		workspaceID string
 		want        string
 	}{
@@ -14,9 +14,9 @@ func TestFormatInputsHeader(t *testing.T) {
 			want:  "gwst create",
 		},
 		{
-			title:    "gwst create",
-			template: "app",
-			want:     "gwst create (template: app)",
+			title:  "gwst create",
+			preset: "app",
+			want:   "gwst create (preset: app)",
 		},
 		{
 			title:       "gwst create",
@@ -25,15 +25,15 @@ func TestFormatInputsHeader(t *testing.T) {
 		},
 		{
 			title:       "gwst create",
-			template:    "app",
+			preset:      "app",
 			workspaceID: "ABC-123",
-			want:        "gwst create (template: app, workspace id: ABC-123)",
+			want:        "gwst create (preset: app, workspace id: ABC-123)",
 		},
 	}
 
 	for _, tc := range cases {
-		if got := formatInputsHeader(tc.title, tc.template, tc.workspaceID); got != tc.want {
-			t.Fatalf("formatInputsHeader(%q, %q, %q) = %q, want %q", tc.title, tc.template, tc.workspaceID, got, tc.want)
+		if got := formatInputsHeader(tc.title, tc.preset, tc.workspaceID); got != tc.want {
+			t.Fatalf("formatInputsHeader(%q, %q, %q) = %q, want %q", tc.title, tc.preset, tc.workspaceID, got, tc.want)
 		}
 	}
 }

@@ -91,10 +91,10 @@ Steps
 
 ## Examples
 
-### gwst create --template (interactive)
+### gwst create --preset (interactive)
 ```
 Inputs
-  • template: hel
+  • preset: hel
     └─ helmfiles
   • workspace id: PROJ-123
 
@@ -116,10 +116,10 @@ Inputs
     └─ repo - 1 repo only
     └─ issue - From an issue (multi-select, GitHub only)
     └─ review - From a review request (multi-select, GitHub only)
-    └─ template - From template
+    └─ preset - From preset
 ```
 
-### gwst create --template (non-interactive)
+### gwst create --preset (non-interactive)
 ```
 Steps
   • repo get git@github.com:org/repo.git

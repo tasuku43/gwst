@@ -12,7 +12,7 @@ List workspaces under `<root>/workspaces` and show a quick view of the repos att
 ## Behavior
 - Scans `<root>/workspaces` for directories; ignores non-directories.
 - For each workspace, scans its contents to discover repo worktrees (alias, repo key, branch, path) and renders them in a tree view.
-- If a workspace description is available in `manifest.yaml`, show it alongside the workspace ID.
+- If a workspace description is available in `gwst.yaml`, show it alongside the workspace ID.
 - If a workspace has status warnings (dirty, unpushed, diverged, unknown), show an inline tag next to the workspace ID (same labels as `gwst rm`).
 - Collects and reports non-fatal warnings from scanning workspaces or repos.
 - `--details`: include repo-level git status details (same output as `gwst rm` confirmation: `git status --short --branch` for repos that need warnings).

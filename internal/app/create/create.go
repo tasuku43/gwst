@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/tasuku43/gwst/internal/domain/template"
+	"github.com/tasuku43/gwst/internal/domain/preset"
 	"github.com/tasuku43/gwst/internal/domain/workspace"
 )
 
-type TemplateStepFunc func(repoSpec string, index, total int)
+type PresetStepFunc func(repoSpec string, index, total int)
 
 func CreateWorkspace(ctx context.Context, rootDir, workspaceID string, meta workspace.Metadata) (string, error) {
 	wsDir, err := workspace.New(ctx, rootDir, workspaceID)
@@ -22,11 +22,11 @@ func CreateWorkspace(ctx context.Context, rootDir, workspaceID string, meta work
 	return wsDir, nil
 }
 
-func ApplyTemplate(ctx context.Context, rootDir, workspaceID string, tmpl template.Template, branches []string, step TemplateStepFunc) error {
-	total := len(tmpl.Repos)
-	for i, repoSpec := range tmpl.Repos {
+func ApplyPreset(ctx context.Context, rootDir, workspaceID string, preset preset.Preset, branches []string, step PresetStepFunc) error {
+	total := len(preset.Repos)
+	for i, repoSpec := range preset.Repos {
 		branch := workspaceID
-		if len(branches) == len(tmpl.Repos) && i < len(branches) && strings.TrimSpace(branches[i]) != "" {
+		if len(branches) == len(preset.Repos) && i < len(branches) && strings.TrimSpace(branches[i]) != "" {
 			branch = branches[i]
 		}
 		if step != nil {

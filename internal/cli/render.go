@@ -12,8 +12,9 @@ import (
 	"github.com/tasuku43/gwst/internal/app/doctor"
 	"github.com/tasuku43/gwst/internal/app/initcmd"
 	"github.com/tasuku43/gwst/internal/app/manifestplan"
+	"github.com/tasuku43/gwst/internal/domain/manifest"
+	"github.com/tasuku43/gwst/internal/domain/preset"
 	"github.com/tasuku43/gwst/internal/domain/repo"
-	"github.com/tasuku43/gwst/internal/domain/template"
 	"github.com/tasuku43/gwst/internal/domain/workspace"
 	"github.com/tasuku43/gwst/internal/infra/output"
 	"github.com/tasuku43/gwst/internal/ui"
@@ -98,13 +99,13 @@ func issueDetails(issue doctor.Issue) []string {
 	return details
 }
 
-func templateIssueDetails(issue template.ValidationIssue, path string) []string {
+func presetIssueDetails(issue preset.ValidationIssue, path string) []string {
 	var details []string
-	if strings.TrimSpace(path) != "" && (issue.Kind == template.IssueKindFile || issue.Kind == template.IssueKindInvalidYAML) {
+	if strings.TrimSpace(path) != "" && (issue.Kind == preset.IssueKindFile || issue.Kind == preset.IssueKindInvalidYAML) {
 		details = append(details, fmt.Sprintf("path: %s", path))
 	}
-	if strings.TrimSpace(issue.Template) != "" {
-		details = append(details, fmt.Sprintf("template: %s", issue.Template))
+	if strings.TrimSpace(issue.Preset) != "" {
+		details = append(details, fmt.Sprintf("preset: %s", issue.Preset))
 	}
 	if strings.TrimSpace(issue.Repo) != "" {
 		details = append(details, fmt.Sprintf("repo: %s", issue.Repo))
@@ -140,8 +141,8 @@ func buildUnifiedDiffLines(current, next []byte) ([]string, error) {
 	diff := difflib.UnifiedDiff{
 		A:        difflib.SplitLines(string(current)),
 		B:        difflib.SplitLines(string(next)),
-		FromFile: "manifest.yaml (current)",
-		ToFile:   "manifest.yaml (target)",
+		FromFile: "gwst.yaml (current)",
+		ToFile:   "gwst.yaml (target)",
 		Context:  3,
 	}
 	text, err := difflib.GetUnifiedDiffString(diff)
@@ -380,29 +381,29 @@ func writeRepoListText(entries []repo.Entry, warnings []error) {
 	}
 }
 
-func writeTemplateListText(file template.File, names []string) {
+func writePresetListText(file preset.File, names []string) {
 	theme := ui.DefaultTheme()
 	useColor := isatty.IsTerminal(os.Stdout.Fd())
 	renderer := ui.NewRenderer(os.Stdout, theme, useColor)
 
 	renderer.Section("Result")
 	if len(names) == 0 {
-		renderer.Bullet("no templates found")
+		renderer.Bullet("no presets found")
 		renderSuggestions(renderer, useColor, []string{
-			"gwst create --template",
-			"gwst create --template <name>",
+			"gwst create --preset",
+			"gwst create --preset <name>",
 		})
 		return
 	}
 	for _, name := range names {
 		renderer.Bullet(name)
-		tmpl, ok := file.Templates[name]
+		presetEntry, ok := file.Presets[name]
 		if !ok {
 			continue
 		}
 		var repos []string
-		for _, repoSpec := range tmpl.Repos {
-			display := displayTemplateRepo(repoSpec)
+		for _, repoSpec := range presetEntry.Repos {
+			display := displayPresetRepo(repoSpec)
 			if strings.TrimSpace(display) == "" {
 				continue
 			}
@@ -411,20 +412,20 @@ func writeTemplateListText(file template.File, names []string) {
 		renderTreeLines(renderer, repos, treeLineNormal)
 	}
 	renderSuggestions(renderer, useColor, []string{
-		"gwst create --template",
-		"gwst create --template <name>",
+		"gwst create --preset",
+		"gwst create --preset <name>",
 	})
 }
 
-func writeTemplateShowText(name string, tmpl template.Template) {
+func writePresetShowText(name string, presetEntry preset.Preset) {
 	theme := ui.DefaultTheme()
 	useColor := isatty.IsTerminal(os.Stdout.Fd())
 	renderer := ui.NewRenderer(os.Stdout, theme, useColor)
 
 	renderer.Section("Result")
 	renderer.Bullet(name)
-	if len(tmpl.Repos) > 0 {
-		renderTreeLines(renderer, tmpl.Repos, treeLineNormal)
+	if len(presetEntry.Repos) > 0 {
+		renderTreeLines(renderer, presetEntry.Repos, treeLineNormal)
 	}
 }
 
@@ -464,9 +465,9 @@ func writeInitText(result initcmd.Result) {
 	renderer.Bullet(fmt.Sprintf("root: %s", result.RootDir))
 
 	renderSuggestions(renderer, useColor, []string{
-		"gwst template ls",
+		"gwst preset ls",
 		"gwst repo get <repo>",
-		fmt.Sprintf("Edit templates.yaml: %s", filepath.Join(result.RootDir, "templates.yaml")),
+		fmt.Sprintf("Edit gwst.yaml: %s", filepath.Join(result.RootDir, manifest.FileName)),
 	})
 }
 

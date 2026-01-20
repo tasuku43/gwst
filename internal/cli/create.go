@@ -11,8 +11,9 @@ import (
 
 	"github.com/mattn/go-isatty"
 	"github.com/tasuku43/gwst/internal/app/create"
+	"github.com/tasuku43/gwst/internal/domain/manifest"
+	"github.com/tasuku43/gwst/internal/domain/preset"
 	"github.com/tasuku43/gwst/internal/domain/repo"
-	"github.com/tasuku43/gwst/internal/domain/template"
 	"github.com/tasuku43/gwst/internal/domain/workspace"
 	"github.com/tasuku43/gwst/internal/infra/output"
 	"github.com/tasuku43/gwst/internal/infra/prefetcher"
@@ -21,7 +22,7 @@ import (
 
 func runCreate(ctx context.Context, rootDir string, args []string, noPrompt bool) error {
 	createFlags := flag.NewFlagSet("create", flag.ContinueOnError)
-	var templateName stringFlag
+	var presetName stringFlag
 	var reviewFlag boolFlag
 	var issueFlag boolFlag
 	var repoFlag stringFlag
@@ -29,7 +30,7 @@ func runCreate(ctx context.Context, rootDir string, args []string, noPrompt bool
 	var branch string
 	var baseRef string
 	var helpFlag bool
-	createFlags.Var(&templateName, "template", "template name")
+	createFlags.Var(&presetName, "preset", "preset name")
 	createFlags.Var(&reviewFlag, "review", "create review workspace from PR")
 	createFlags.Var(&issueFlag, "issue", "create issue workspace from issue")
 	createFlags.Var(&repoFlag, "repo", "create workspace from repos")
@@ -56,15 +57,15 @@ func runCreate(ctx context.Context, rootDir string, args []string, noPrompt bool
 	workspaceID = strings.TrimSpace(workspaceID)
 	branch = strings.TrimSpace(branch)
 	baseRef = strings.TrimSpace(baseRef)
-	templateName.value = strings.TrimSpace(templateName.value)
+	presetName.value = strings.TrimSpace(presetName.value)
 	prefetch := prefetcher.New(defaultPrefetchTimeout)
 
-	templateMode := templateName.set
+	presetMode := presetName.set
 	reviewMode := reviewFlag.value
 	issueMode := issueFlag.value
 	repoMode := repoFlag.set
 	modeCount := 0
-	if templateMode {
+	if presetMode {
 		modeCount++
 	}
 	if reviewMode {
@@ -77,7 +78,7 @@ func runCreate(ctx context.Context, rootDir string, args []string, noPrompt bool
 		modeCount++
 	}
 	if modeCount > 1 {
-		return fmt.Errorf("specify exactly one mode: --template, --review, --issue, or --repo")
+		return fmt.Errorf("specify exactly one mode: --preset, --review, --issue, or --repo")
 	}
 	if modeCount == 0 {
 		if noPrompt {
@@ -88,8 +89,8 @@ func runCreate(ctx context.Context, rootDir string, args []string, noPrompt bool
 		}
 		theme := ui.DefaultTheme()
 		useColor := isatty.IsTerminal(os.Stdout.Fd())
-		templateNames, tmplErr := loadTemplateNames(rootDir)
-		repoChoices, repoErr := buildTemplateRepoChoices(rootDir)
+		presetNames, tmplErr := loadPresetNames(rootDir)
+		repoChoices, repoErr := buildPresetRepoChoices(rootDir)
 		reviewChoices, reviewErr := buildReviewRepoChoices(rootDir)
 		issueChoices, issueErr := buildIssueRepoChoices(rootDir)
 		reviewPrompt, reviewByValue := toPromptChoices(reviewChoices)
@@ -133,14 +134,14 @@ func runCreate(ctx context.Context, rootDir string, args []string, noPrompt bool
 			}
 			return buildIssueChoices(issues), nil
 		}
-		loadTemplateRepos := func(name string) ([]string, error) {
-			file, err := template.Load(rootDir)
+		loadPresetRepos := func(name string) ([]string, error) {
+			file, err := preset.Load(rootDir)
 			if err != nil {
 				return nil, err
 			}
-			tmpl, ok := file.Templates[name]
+			tmpl, ok := file.Presets[name]
 			if !ok {
-				return nil, fmt.Errorf("template not found: %s", name)
+				return nil, fmt.Errorf("preset not found: %s", name)
 			}
 			return append([]string(nil), tmpl.Repos...), nil
 		}
@@ -152,20 +153,20 @@ func runCreate(ctx context.Context, rootDir string, args []string, noPrompt bool
 				_, _ = prefetch.Start(ctx, rootDir, repoSpec)
 			}
 		}
-		mode, tmplName, tmplWorkspaceID, tmplDesc, tmplBranches, reviewRepo, reviewPRs, issueRepo, issueSelections, repoSelected, err := ui.PromptCreateFlow("gwst create", "", "", "", templateNames, tmplErr, repoChoices, repoErr, reviewPrompt, issuePrompt, loadReview, loadIssue, loadTemplateRepos, onReposResolved, validateBranch, theme, useColor, "")
+		mode, tmplName, tmplWorkspaceID, tmplDesc, tmplBranches, reviewRepo, reviewPRs, issueRepo, issueSelections, repoSelected, err := ui.PromptCreateFlow("gwst create", "", "", "", presetNames, tmplErr, repoChoices, repoErr, reviewPrompt, issuePrompt, loadReview, loadIssue, loadPresetRepos, onReposResolved, validateBranch, theme, useColor, "")
 		if err != nil {
 			return err
 		}
 		switch mode {
-		case "template":
-			inputs := createTemplateInputs{
-				templateName: tmplName,
-				workspaceID:  tmplWorkspaceID,
-				description:  tmplDesc,
-				branches:     tmplBranches,
-				fromFlow:     true,
+		case "preset":
+			inputs := createPresetInputs{
+				presetName:  tmplName,
+				workspaceID: tmplWorkspaceID,
+				description: tmplDesc,
+				branches:    tmplBranches,
+				fromFlow:    true,
 			}
-			return runCreateTemplateWithInputs(ctx, rootDir, inputs, noPrompt, prefetch)
+			return runCreatePresetWithInputs(ctx, rootDir, inputs, noPrompt, prefetch)
 		case "review":
 			if err := runCreateReviewSelected(ctx, rootDir, noPrompt, reviewRepo, reviewPRs, prefetch); err != nil {
 				return err
@@ -191,9 +192,9 @@ func runCreate(ctx context.Context, rootDir string, args []string, noPrompt bool
 	}
 
 	remaining := createFlags.Args()
-	if templateMode {
+	if presetMode {
 		if len(remaining) > 1 {
-			return fmt.Errorf("usage: gwst create --template <name> [<WORKSPACE_ID>]")
+			return fmt.Errorf("usage: gwst create --preset <name> [<WORKSPACE_ID>]")
 		}
 		if len(remaining) == 1 {
 			if workspaceID != "" && workspaceID != remaining[0] {
@@ -201,7 +202,7 @@ func runCreate(ctx context.Context, rootDir string, args []string, noPrompt bool
 			}
 			workspaceID = remaining[0]
 		}
-		return runCreateTemplate(ctx, rootDir, templateName.value, workspaceID, noPrompt, prefetch)
+		return runCreatePreset(ctx, rootDir, presetName.value, workspaceID, noPrompt, prefetch)
 	}
 	if reviewMode {
 		if len(remaining) > 1 {
@@ -249,7 +250,7 @@ func runCreate(ctx context.Context, rootDir string, args []string, noPrompt bool
 			}
 			theme := ui.DefaultTheme()
 			useColor := isatty.IsTerminal(os.Stdout.Fd())
-			repoChoices, repoErr := buildTemplateRepoChoices(rootDir)
+			repoChoices, repoErr := buildPresetRepoChoices(rootDir)
 			onReposResolved := func(repos []string) {
 				for _, repoSpec := range repos {
 					_, _ = prefetch.Start(ctx, rootDir, repoSpec)
@@ -322,7 +323,7 @@ func normalizeCreateArgs(args []string) []string {
 	out := make([]string, 0, len(args))
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
-		if arg == "--template" || arg == "-template" {
+		if arg == "--preset" || arg == "-preset" {
 			if i+1 >= len(args) || strings.HasPrefix(args[i+1], "-") {
 				out = append(out, arg+"=")
 				continue
@@ -341,9 +342,9 @@ func normalizeCreateArgs(args []string) []string {
 
 func runWorkspaceNew(ctx context.Context, rootDir string, args []string, noPrompt bool) error {
 	newFlags := flag.NewFlagSet("new", flag.ContinueOnError)
-	var templateName string
+	var presetName string
 	var helpFlag bool
-	newFlags.StringVar(&templateName, "template", "", "template name")
+	newFlags.StringVar(&presetName, "preset", "", "preset name")
 	newFlags.BoolVar(&helpFlag, "help", false, "show help")
 	newFlags.BoolVar(&helpFlag, "h", false, "show help")
 	newFlags.SetOutput(os.Stdout)
@@ -361,7 +362,7 @@ func runWorkspaceNew(ctx context.Context, rootDir string, args []string, noPromp
 		return nil
 	}
 	if newFlags.NArg() > 1 {
-		return fmt.Errorf("usage: gwst create --template <name> [<WORKSPACE_ID>]")
+		return fmt.Errorf("usage: gwst create --preset <name> [<WORKSPACE_ID>]")
 	}
 
 	workspaceID := ""
@@ -370,15 +371,15 @@ func runWorkspaceNew(ctx context.Context, rootDir string, args []string, noPromp
 	}
 
 	prefetch := prefetcher.New(defaultPrefetchTimeout)
-	return runCreateTemplate(ctx, rootDir, templateName, workspaceID, noPrompt, prefetch)
+	return runCreatePreset(ctx, rootDir, presetName, workspaceID, noPrompt, prefetch)
 }
 
-type createTemplateInputs struct {
-	templateName string
-	workspaceID  string
-	description  string
-	branches     []string
-	fromFlow     bool
+type createPresetInputs struct {
+	presetName  string
+	workspaceID string
+	description string
+	branches    []string
+	fromFlow    bool
 }
 
 type createRepoInputs struct {
@@ -389,17 +390,17 @@ type createRepoInputs struct {
 	fromFlow    bool
 }
 
-func runCreateTemplate(ctx context.Context, rootDir, templateName, workspaceID string, noPrompt bool, prefetch *prefetcher.Prefetcher) error {
-	inputs := createTemplateInputs{
-		templateName: templateName,
-		workspaceID:  workspaceID,
+func runCreatePreset(ctx context.Context, rootDir, presetName, workspaceID string, noPrompt bool, prefetch *prefetcher.Prefetcher) error {
+	inputs := createPresetInputs{
+		presetName:  presetName,
+		workspaceID: workspaceID,
 	}
-	return runCreateTemplateWithInputs(ctx, rootDir, inputs, noPrompt, prefetch)
+	return runCreatePresetWithInputs(ctx, rootDir, inputs, noPrompt, prefetch)
 }
 
-func runCreateTemplateWithInputs(ctx context.Context, rootDir string, inputs createTemplateInputs, noPrompt bool, prefetch *prefetcher.Prefetcher) error {
+func runCreatePresetWithInputs(ctx context.Context, rootDir string, inputs createPresetInputs, noPrompt bool, prefetch *prefetcher.Prefetcher) error {
 	prefetch = prefetcher.Ensure(prefetch, defaultPrefetchTimeout)
-	templateName := strings.TrimSpace(inputs.templateName)
+	presetName := strings.TrimSpace(inputs.presetName)
 	workspaceID := strings.TrimSpace(inputs.workspaceID)
 
 	theme := ui.DefaultTheme()
@@ -409,15 +410,15 @@ func runCreateTemplateWithInputs(ctx context.Context, rootDir string, inputs cre
 	fromFlow := inputs.fromFlow
 
 	if !noPrompt && !fromFlow {
-		templateNames, tmplErr := loadTemplateNames(rootDir)
-		loadTemplateRepos := func(name string) ([]string, error) {
-			file, err := template.Load(rootDir)
+		presetNames, tmplErr := loadPresetNames(rootDir)
+		loadPresetRepos := func(name string) ([]string, error) {
+			file, err := preset.Load(rootDir)
 			if err != nil {
 				return nil, err
 			}
-			tmpl, ok := file.Templates[name]
+			tmpl, ok := file.Presets[name]
 			if !ok {
-				return nil, fmt.Errorf("template not found: %s", name)
+				return nil, fmt.Errorf("preset not found: %s", name)
 			}
 			return append([]string(nil), tmpl.Repos...), nil
 		}
@@ -429,25 +430,25 @@ func runCreateTemplateWithInputs(ctx context.Context, rootDir string, inputs cre
 				_, _ = prefetch.Start(ctx, rootDir, repoSpec)
 			}
 		}
-		mode, tmplName, tmplWorkspaceID, tmplDesc, tmplBranches, _, _, _, _, _, err := ui.PromptCreateFlow("gwst create", "template", workspaceID, templateName, templateNames, tmplErr, nil, nil, nil, nil, nil, nil, loadTemplateRepos, onReposResolved, validateBranch, theme, useColor, "")
+		mode, tmplName, tmplWorkspaceID, tmplDesc, tmplBranches, _, _, _, _, _, err := ui.PromptCreateFlow("gwst create", "preset", workspaceID, presetName, presetNames, tmplErr, nil, nil, nil, nil, nil, nil, loadPresetRepos, onReposResolved, validateBranch, theme, useColor, "")
 		if err != nil {
 			return err
 		}
-		if mode != "template" {
+		if mode != "preset" {
 			return fmt.Errorf("unknown mode: %s", mode)
 		}
-		templateName = tmplName
+		presetName = tmplName
 		workspaceID = tmplWorkspaceID
 		description = tmplDesc
 		branches = tmplBranches
 		fromFlow = true
 	}
 
-	if templateName == "" || workspaceID == "" {
+	if presetName == "" || workspaceID == "" {
 		if noPrompt {
-			return fmt.Errorf("template name and workspace id are required without prompt")
+			return fmt.Errorf("preset name and workspace id are required without prompt")
 		}
-		return fmt.Errorf("template name and workspace id are required")
+		return fmt.Errorf("preset name and workspace id are required")
 	}
 	if !noPrompt && !fromFlow {
 		value, err := ui.PromptInputInline("description", "", nil, theme, useColor)
@@ -457,15 +458,15 @@ func runCreateTemplateWithInputs(ctx context.Context, rootDir string, inputs cre
 		description = strings.TrimSpace(value)
 	}
 
-	file, err := template.Load(rootDir)
+	file, err := preset.Load(rootDir)
 	if err != nil {
 		return err
 	}
-	tmpl, ok := file.Templates[templateName]
+	tmpl, ok := file.Presets[presetName]
 	if !ok {
-		return fmt.Errorf("template not found: %s", templateName)
+		return fmt.Errorf("preset not found: %s", presetName)
 	}
-	missing, err := preflightTemplateRepos(ctx, rootDir, tmpl)
+	missing, err := preflightPresetRepos(ctx, rootDir, tmpl)
 	if err != nil {
 		return err
 	}
@@ -477,7 +478,7 @@ func runCreateTemplateWithInputs(ctx context.Context, rootDir string, inputs cre
 	defer output.SetStepLogger(nil)
 
 	if !noPrompt && !fromFlow {
-		branches, err = promptTemplateBranches(ctx, tmpl, workspaceID, theme, useColor)
+		branches, err = promptPresetBranches(ctx, tmpl, workspaceID, theme, useColor)
 		if err != nil {
 			return err
 		}
@@ -493,9 +494,9 @@ func runCreateTemplateWithInputs(ctx context.Context, rootDir string, inputs cre
 
 	output.Step(formatStep("create workspace", workspaceID, relPath(rootDir, workspace.WorkspaceDir(rootDir, workspaceID))))
 	wsDir, err := create.CreateWorkspace(ctx, rootDir, workspaceID, workspace.Metadata{
-		Description:  description,
-		Mode:         workspace.MetadataModeTemplate,
-		TemplateName: templateName,
+		Description: description,
+		Mode:        workspace.MetadataModePreset,
+		PresetName:  presetName,
 	})
 	if err != nil {
 		if rollbackErr := workspace.Remove(ctx, rootDir, workspaceID); rollbackErr != nil {
@@ -510,11 +511,11 @@ func runCreateTemplateWithInputs(ctx context.Context, rootDir string, inputs cre
 		}
 		return err
 	}
-	if err := create.ApplyTemplate(ctx, rootDir, workspaceID, tmpl, branches, func(repoSpec string, index, total int) {
+	if err := create.ApplyPreset(ctx, rootDir, workspaceID, tmpl, branches, func(repoSpec string, index, total int) {
 		output.Step(formatStepWithIndex("worktree add", displayRepoName(repoSpec), worktreeDest(rootDir, workspaceID, repoSpec), index+1, total))
 	}); err != nil {
 		if rollbackErr := workspace.Remove(ctx, rootDir, workspaceID); rollbackErr != nil {
-			return fmt.Errorf("apply template failed: %w (rollback failed: %v)", err, rollbackErr)
+			return fmt.Errorf("apply preset failed: %w (rollback failed: %v)", err, rollbackErr)
 		}
 		return err
 	}
@@ -534,7 +535,7 @@ func runCreateTemplateWithInputs(ctx context.Context, rootDir string, inputs cre
 
 func runCreateRepoWithInputs(ctx context.Context, rootDir string, inputs createRepoInputs, noPrompt bool, prefetch *prefetcher.Prefetcher) error {
 	prefetch = prefetcher.Ensure(prefetch, defaultPrefetchTimeout)
-	repoSpecs := template.NormalizeRepos(inputs.repos)
+	repoSpecs := preset.NormalizeRepos(inputs.repos)
 	workspaceID := strings.TrimSpace(inputs.workspaceID)
 
 	theme := ui.DefaultTheme()
@@ -545,7 +546,7 @@ func runCreateRepoWithInputs(ctx context.Context, rootDir string, inputs createR
 		if noPrompt {
 			return fmt.Errorf("repos are required without prompt")
 		}
-		choices, err := buildTemplateRepoChoices(rootDir)
+		choices, err := buildPresetRepoChoices(rootDir)
 		if err != nil {
 			return err
 		}
@@ -556,7 +557,7 @@ func runCreateRepoWithInputs(ctx context.Context, rootDir string, inputs createR
 		if err != nil {
 			return err
 		}
-		repoSpecs = template.NormalizeRepos([]string{selected})
+		repoSpecs = preset.NormalizeRepos([]string{selected})
 	}
 	if len(repoSpecs) != 1 {
 		return fmt.Errorf("exactly one repo is required")
@@ -589,8 +590,8 @@ func runCreateRepoWithInputs(ctx context.Context, rootDir string, inputs createR
 		description = strings.TrimSpace(value)
 	}
 
-	tmpl := template.Template{Repos: repoSpecs}
-	missing, err := preflightTemplateRepos(ctx, rootDir, tmpl)
+	tmpl := preset.Preset{Repos: repoSpecs}
+	missing, err := preflightPresetRepos(ctx, rootDir, tmpl)
 	if err != nil {
 		return err
 	}
@@ -600,7 +601,7 @@ func runCreateRepoWithInputs(ctx context.Context, rootDir string, inputs createR
 
 	branches := inputs.branches
 	if !noPrompt && !inputs.fromFlow {
-		branches, err = promptTemplateBranches(ctx, tmpl, workspaceID, theme, useColor)
+		branches, err = promptPresetBranches(ctx, tmpl, workspaceID, theme, useColor)
 		if err != nil {
 			return err
 		}
@@ -632,7 +633,7 @@ func runCreateRepoWithInputs(ctx context.Context, rootDir string, inputs createR
 		}
 		return err
 	}
-	if err := create.ApplyTemplate(ctx, rootDir, workspaceID, tmpl, branches, func(repoSpec string, index, total int) {
+	if err := create.ApplyPreset(ctx, rootDir, workspaceID, tmpl, branches, func(repoSpec string, index, total int) {
 		output.Step(formatStepWithIndex("worktree add", displayRepoName(repoSpec), worktreeDest(rootDir, workspaceID, repoSpec), index+1, total))
 	}); err != nil {
 		if rollbackErr := workspace.Remove(ctx, rootDir, workspaceID); rollbackErr != nil {
@@ -654,20 +655,20 @@ func runCreateRepoWithInputs(ctx context.Context, rootDir string, inputs createR
 	return nil
 }
 
-func promptTemplateAndID(rootDir, title, templateName, workspaceID string, theme ui.Theme, useColor bool) (string, string, error) {
-	file, err := template.Load(rootDir)
+func promptPresetAndID(rootDir, title, presetName, workspaceID string, theme ui.Theme, useColor bool) (string, string, error) {
+	file, err := preset.Load(rootDir)
 	if err != nil {
 		return "", "", err
 	}
-	names := template.Names(file)
+	names := preset.Names(file)
 	if len(names) == 0 {
-		return "", "", fmt.Errorf("no templates found in %s", filepath.Join(rootDir, template.FileName))
+		return "", "", fmt.Errorf("no presets found in %s", filepath.Join(rootDir, manifest.FileName))
 	}
-	templateName, workspaceID, err = ui.PromptNewWorkspaceInputs(title, names, templateName, workspaceID, theme, useColor)
+	presetName, workspaceID, err = ui.PromptNewWorkspaceInputs(title, names, presetName, workspaceID, theme, useColor)
 	if err != nil {
 		return "", "", err
 	}
-	return templateName, workspaceID, nil
+	return presetName, workspaceID, nil
 }
 
 func promptCreateMode(theme ui.Theme, useColor bool) (string, error) {
@@ -675,24 +676,24 @@ func promptCreateMode(theme ui.Theme, useColor bool) (string, error) {
 		{Label: "repo", Value: "repo", Description: "1 repo only"},
 		{Label: "issue", Value: "issue", Description: "From an issue (multi-select, GitHub only)"},
 		{Label: "review", Value: "review", Description: "From a review request (multi-select, GitHub only)"},
-		{Label: "template", Value: "template", Description: "From template"},
+		{Label: "preset", Value: "preset", Description: "From preset"},
 	}
 	return ui.PromptChoiceSelect("gwst create", "mode", choices, theme, useColor)
 }
 
-func loadTemplateNames(rootDir string) ([]string, error) {
-	file, err := template.Load(rootDir)
+func loadPresetNames(rootDir string) ([]string, error) {
+	file, err := preset.Load(rootDir)
 	if err != nil {
 		return nil, err
 	}
-	names := template.Names(file)
+	names := preset.Names(file)
 	if len(names) == 0 {
-		return nil, fmt.Errorf("no templates found in %s", filepath.Join(rootDir, template.FileName))
+		return nil, fmt.Errorf("no presets found in %s", filepath.Join(rootDir, manifest.FileName))
 	}
 	return names, nil
 }
 
-func promptTemplateBranches(ctx context.Context, tmpl template.Template, workspaceID string, theme ui.Theme, useColor bool) ([]string, error) {
+func promptPresetBranches(ctx context.Context, tmpl preset.Preset, workspaceID string, theme ui.Theme, useColor bool) ([]string, error) {
 	if len(tmpl.Repos) == 0 {
 		return nil, nil
 	}
@@ -737,11 +738,11 @@ func promptTemplateBranches(ctx context.Context, tmpl template.Template, workspa
 	return branches, nil
 }
 
-func preflightTemplateRepos(ctx context.Context, rootDir string, tmpl template.Template) ([]string, error) {
+func preflightPresetRepos(ctx context.Context, rootDir string, tmpl preset.Preset) ([]string, error) {
 	var missing []string
 	for _, repoSpec := range tmpl.Repos {
 		if strings.TrimSpace(repoSpec) == "" {
-			return nil, fmt.Errorf("template repo is empty")
+			return nil, fmt.Errorf("preset repo is empty")
 		}
 		_, exists, err := repo.Exists(rootDir, repoSpec)
 		if err != nil {

@@ -74,10 +74,10 @@ func applyWorkspaceAdd(ctx context.Context, rootDir string, desired manifest.Fil
 	}
 	logStep(step, fmt.Sprintf("create workspace %s", change.WorkspaceID))
 	_, err := create.CreateWorkspace(ctx, rootDir, change.WorkspaceID, workspace.Metadata{
-		Description:  ws.Description,
-		Mode:         ws.Mode,
-		TemplateName: ws.TemplateName,
-		SourceURL:    ws.SourceURL,
+		Description: ws.Description,
+		Mode:        ws.Mode,
+		PresetName:  ws.PresetName,
+		SourceURL:   ws.SourceURL,
 	})
 	if err != nil {
 		return err

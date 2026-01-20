@@ -1,13 +1,11 @@
 package initcmd
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
 
-	"gopkg.in/yaml.v3"
-
+	"github.com/tasuku43/gwst/internal/domain/manifest"
 	"github.com/tasuku43/gwst/internal/infra/paths"
 )
 
@@ -43,44 +41,26 @@ func Run(rootDir string) (Result, error) {
 		result.CreatedDirs = append(result.CreatedDirs, dir)
 	}
 
-	templatesPath := filepath.Join(rootDir, "templates.yaml")
-	if exists, err := paths.FileExists(templatesPath); err != nil {
+	configPath := filepath.Join(rootDir, manifest.FileName)
+	if exists, err := paths.FileExists(configPath); err != nil {
 		return Result{}, err
 	} else if exists {
-		result.SkippedFiles = append(result.SkippedFiles, templatesPath)
+		result.SkippedFiles = append(result.SkippedFiles, configPath)
 	} else {
-		if err := writeTemplates(templatesPath); err != nil {
+		if err := writeManifest(configPath); err != nil {
 			return Result{}, err
 		}
-		result.CreatedFiles = append(result.CreatedFiles, templatesPath)
-	}
-
-	manifestPath := filepath.Join(rootDir, "manifest.yaml")
-	if exists, err := paths.FileExists(manifestPath); err != nil {
-		return Result{}, err
-	} else if exists {
-		result.SkippedFiles = append(result.SkippedFiles, manifestPath)
-	} else {
-		if err := writeManifest(manifestPath); err != nil {
-			return Result{}, err
-		}
-		result.CreatedFiles = append(result.CreatedFiles, manifestPath)
+		result.CreatedFiles = append(result.CreatedFiles, configPath)
 	}
 
 	return result, nil
 }
 
-type templatesFile struct {
-	Templates map[string]struct {
-		Repos []string `yaml:"repos"`
-	} `yaml:"templates"`
-}
-
-func writeTemplates(path string) error {
-	file := templatesFile{
-		Templates: map[string]struct {
-			Repos []string `yaml:"repos"`
-		}{
+func writeManifest(path string) error {
+	file := manifest.File{
+		Version:    1,
+		Workspaces: map[string]manifest.Workspace{},
+		Presets: map[string]manifest.Preset{
 			"example": {
 				Repos: []string{
 					"git@github.com:octocat/Hello-World.git",
@@ -89,44 +69,12 @@ func writeTemplates(path string) error {
 			},
 		},
 	}
-	var buf bytes.Buffer
-	enc := yaml.NewEncoder(&buf)
-	enc.SetIndent(2)
-	if err := enc.Encode(file); err != nil {
-		_ = enc.Close()
-		return fmt.Errorf("marshal templates: %w", err)
+	data, err := manifest.Marshal(file)
+	if err != nil {
+		return err
 	}
-	if err := enc.Close(); err != nil {
-		return fmt.Errorf("close templates encoder: %w", err)
-	}
-	if err := os.WriteFile(path, buf.Bytes(), 0o644); err != nil {
-		return fmt.Errorf("write templates: %w", err)
-	}
-	return nil
-}
-
-type manifestFile struct {
-	Version    int                    `yaml:"version"`
-	Workspaces map[string]interface{} `yaml:"workspaces"`
-}
-
-func writeManifest(path string) error {
-	file := manifestFile{
-		Version:    1,
-		Workspaces: map[string]interface{}{},
-	}
-	var buf bytes.Buffer
-	enc := yaml.NewEncoder(&buf)
-	enc.SetIndent(2)
-	if err := enc.Encode(file); err != nil {
-		_ = enc.Close()
-		return fmt.Errorf("marshal manifest: %w", err)
-	}
-	if err := enc.Close(); err != nil {
-		return fmt.Errorf("close manifest encoder: %w", err)
-	}
-	if err := os.WriteFile(path, buf.Bytes(), 0o644); err != nil {
-		return fmt.Errorf("write manifest: %w", err)
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		return fmt.Errorf("write gwst.yaml: %w", err)
 	}
 	return nil
 }

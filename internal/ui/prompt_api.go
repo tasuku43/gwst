@@ -7,10 +7,10 @@ import (
 	"github.com/tasuku43/gwst/internal/infra/debuglog"
 )
 
-func PromptNewWorkspaceInputs(title string, templates []string, templateName string, workspaceID string, theme Theme, useColor bool) (string, string, error) {
+func PromptNewWorkspaceInputs(title string, presets []string, presetName string, workspaceID string, theme Theme, useColor bool) (string, string, error) {
 	debuglog.SetPrompt("workspace-inputs")
 	defer debuglog.ClearPrompt()
-	model := newInputsModel(title, templates, templateName, workspaceID, theme, useColor)
+	model := newInputsModel(title, presets, presetName, workspaceID, theme, useColor)
 	out, err := runProgram(model)
 	if err != nil {
 		return "", "", err
@@ -19,7 +19,7 @@ func PromptNewWorkspaceInputs(title string, templates []string, templateName str
 	if final.err != nil {
 		return "", "", final.err
 	}
-	return strings.TrimSpace(final.template), strings.TrimSpace(final.workspaceID), nil
+	return strings.TrimSpace(final.preset), strings.TrimSpace(final.workspaceID), nil
 }
 
 func PromptWorkspaceAndRepo(title string, workspaces []WorkspaceChoice, repos []PromptChoice, workspaceID, repoSpec string, theme Theme, useColor bool) (string, string, error) {
@@ -151,33 +151,33 @@ func PromptInputInline(label, defaultValue string, validate func(string) error, 
 	return strings.TrimSpace(final.value), nil
 }
 
-// PromptTemplateRepos lets users pick one or more repos from a list with filtering.
-// It can also collect a template name when not provided.
-func PromptTemplateRepos(title string, templateName string, choices []PromptChoice, theme Theme, useColor bool) (string, []string, error) {
-	debuglog.SetPrompt("template-repos")
+// PromptPresetRepos lets users pick one or more repos from a list with filtering.
+// It can also collect a preset name when not provided.
+func PromptPresetRepos(title string, presetName string, choices []PromptChoice, theme Theme, useColor bool) (string, []string, error) {
+	debuglog.SetPrompt("preset-repos")
 	defer debuglog.ClearPrompt()
-	model := newTemplateRepoSelectModel(title, templateName, choices, theme, useColor)
+	model := newPresetRepoSelectModel(title, presetName, choices, theme, useColor)
 	out, err := runProgram(model)
 	if err != nil {
 		return "", nil, err
 	}
-	final := out.(templateRepoSelectModel)
+	final := out.(presetRepoSelectModel)
 	if final.err != nil {
 		return "", nil, final.err
 	}
-	return strings.TrimSpace(final.templateName), append([]string(nil), final.selected...), nil
+	return strings.TrimSpace(final.presetName), append([]string(nil), final.selected...), nil
 }
 
-// PromptTemplateName asks for a template name via text input.
-func PromptTemplateName(title string, defaultValue string, theme Theme, useColor bool) (string, error) {
-	debuglog.SetPrompt("template-name")
+// PromptPresetName asks for a preset name via text input.
+func PromptPresetName(title string, defaultValue string, theme Theme, useColor bool) (string, error) {
+	debuglog.SetPrompt("preset-name")
 	defer debuglog.ClearPrompt()
-	model := newTemplateNameModel(title, defaultValue, theme, useColor)
+	model := newPresetNameModel(title, defaultValue, theme, useColor)
 	out, err := runProgram(model)
 	if err != nil {
 		return "", err
 	}
-	final := out.(templateNameModel)
+	final := out.(presetNameModel)
 	if final.err != nil {
 		return "", final.err
 	}
@@ -248,10 +248,10 @@ func PromptIssueSelectWithBranches(title, label string, choices []PromptChoice, 
 	return append([]IssueSelection(nil), final.selectedIssues...), nil
 }
 
-func PromptCreateFlow(title string, startMode string, defaultWorkspaceID string, templateName string, templates []string, templateErr error, repoChoices []PromptChoice, repoErr error, reviewRepos []PromptChoice, issueRepos []PromptChoice, loadReview func(string) ([]PromptChoice, error), loadIssue func(string) ([]PromptChoice, error), loadTemplateRepos func(string) ([]string, error), onReposResolved func([]string), validateBranch func(string) error, theme Theme, useColor bool, selectedRepo string) (string, string, string, string, []string, string, []string, string, []IssueSelection, string, error) {
+func PromptCreateFlow(title string, startMode string, defaultWorkspaceID string, presetName string, presets []string, presetErr error, repoChoices []PromptChoice, repoErr error, reviewRepos []PromptChoice, issueRepos []PromptChoice, loadReview func(string) ([]PromptChoice, error), loadIssue func(string) ([]PromptChoice, error), loadPresetRepos func(string) ([]string, error), onReposResolved func([]string), validateBranch func(string) error, theme Theme, useColor bool, selectedRepo string) (string, string, string, string, []string, string, []string, string, []IssueSelection, string, error) {
 	debuglog.SetPrompt("create-flow")
 	defer debuglog.ClearPrompt()
-	model := newCreateFlowModel(title, templates, templateErr, repoChoices, repoErr, defaultWorkspaceID, templateName, reviewRepos, issueRepos, loadReview, loadIssue, loadTemplateRepos, onReposResolved, validateBranch, theme, useColor, startMode, selectedRepo)
+	model := newCreateFlowModel(title, presets, presetErr, repoChoices, repoErr, defaultWorkspaceID, presetName, reviewRepos, issueRepos, loadReview, loadIssue, loadPresetRepos, onReposResolved, validateBranch, theme, useColor, startMode, selectedRepo)
 	if model.err != nil {
 		return "", "", "", "", nil, "", nil, "", nil, "", model.err
 	}
@@ -263,7 +263,7 @@ func PromptCreateFlow(title string, startMode string, defaultWorkspaceID string,
 	if final.err != nil {
 		return "", "", "", "", nil, "", nil, "", nil, "", final.err
 	}
-	return final.mode, final.templateName(), final.workspaceID(), final.description, append([]string(nil), final.branches...), final.reviewRepo, append([]string(nil), final.reviewPRs...), final.issueRepo, append([]IssueSelection(nil), final.issueIssues...), final.repoSelected, nil
+	return final.mode, final.presetName(), final.workspaceID(), final.description, append([]string(nil), final.branches...), final.reviewRepo, append([]string(nil), final.reviewPRs...), final.issueRepo, append([]IssueSelection(nil), final.issueIssues...), final.repoSelected, nil
 }
 
 func WorkspaceChoiceLines(items []WorkspaceChoice, cursor int, useColor bool, theme Theme) []string {

@@ -31,7 +31,7 @@ Safely remove a workspace and all of its worktrees, warning/confirming for risky
 - With `WORKSPACE_ID` provided: targets that workspace.
 - Without it: scans workspaces and prompts the user to choose entries using the same add/remove loop as `gwst create` issue Step 3. Fails if none exist.
 - Multi-select UX:
-  - Shows entries for selection (including any saved workspace descriptions from `manifest.yaml`), with warning indicators for risky states.
+  - Shows entries for selection (including any saved workspace descriptions from `gwst.yaml`), with warning indicators for risky states.
   - `<Enter>` adds the highlighted workspace to the selection list and removes it from candidates.
   - Finish keys: `<Ctrl+D>` or typing `done` then `<Enter>`; minimum 1 selection required.
   - Empty input + `<Enter>` does nothing (stays in loop).

@@ -7,10 +7,10 @@ status: planned
 `gwst apply [--root <path>] [--no-prompt]`
 
 ## Intent
-Reconcile the filesystem to match `manifest.yaml` by computing a diff, showing a plan, and applying the changes after confirmation.
+Reconcile the filesystem to match `gwst.yaml` by computing a diff, showing a plan, and applying the changes after confirmation.
 
 ## Behavior
-- Loads `<root>/manifest.yaml`; errors if missing or invalid.
+- Loads `<root>/gwst.yaml`; errors if missing or invalid.
 - Scans `<root>/workspaces` to build the current state.
 - Computes a plan with `add`, `remove`, and `update` actions:
   - `add`: workspace or repo entry exists in manifest but not on filesystem.
@@ -21,14 +21,14 @@ Reconcile the filesystem to match `manifest.yaml` by computing a diff, showing a
   - `remove` actions are marked as destructive.
   - If only non-destructive adds are present, prompt can be skipped with `--no-prompt`.
 - If confirmed, applies actions in a stable order: removes, then updates, then adds.
-- Updates `manifest.yaml` by rewriting the full file after successful apply.
+- Updates `gwst.yaml` by rewriting the full file after successful apply.
 
 ## Flags
 - `--no-prompt`: skip confirmation (errors if any removals are present).
 
 ## Success Criteria
 - Filesystem state matches the manifest.
-- `manifest.yaml` is rewritten to a normalized form.
+- `gwst.yaml` is rewritten to a normalized form.
 
 ## Failure Modes
 - Manifest file missing or invalid.

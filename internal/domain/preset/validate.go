@@ -1,4 +1,4 @@
-package template
+package preset
 
 import (
 	"fmt"
@@ -6,15 +6,16 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/tasuku43/gwst/internal/domain/manifest"
 	"github.com/tasuku43/gwst/internal/domain/repo"
 	"gopkg.in/yaml.v3"
 )
 
 type ValidationIssue struct {
-	Kind     string
-	Template string
-	Repo     string
-	Message  string
+	Kind    string
+	Preset  string
+	Repo    string
+	Message string
 }
 
 type ValidationResult struct {
@@ -23,19 +24,19 @@ type ValidationResult struct {
 }
 
 const (
-	IssueKindFile                = "templates.yaml"
-	IssueKindInvalidYAML         = "invalid yaml"
-	IssueKindMissingRequired     = "missing required field"
-	IssueKindDuplicateTemplate   = "duplicate template name"
-	IssueKindInvalidTemplateName = "invalid template name"
-	IssueKindInvalidRepoSpec     = "invalid repo spec"
+	IssueKindFile              = "gwst.yaml"
+	IssueKindInvalidYAML       = "invalid yaml"
+	IssueKindMissingRequired   = "missing required field"
+	IssueKindDuplicatePreset   = "duplicate preset name"
+	IssueKindInvalidPresetName = "invalid preset name"
+	IssueKindInvalidRepoSpec   = "invalid repo spec"
 )
 
 func Validate(rootDir string) (ValidationResult, error) {
 	if strings.TrimSpace(rootDir) == "" {
 		return ValidationResult{}, fmt.Errorf("root directory is required")
 	}
-	path := filepath.Join(rootDir, FileName)
+	path := filepath.Join(rootDir, manifest.FileName)
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return ValidationResult{
@@ -53,7 +54,7 @@ func Validate(rootDir string) (ValidationResult, error) {
 	}
 
 	root := unwrapDocument(&doc)
-	issues := validateRootTemplates(root)
+	issues := validateRootPresets(root)
 	return ValidationResult{Path: path, Issues: issues}, nil
 }
 
@@ -67,30 +68,30 @@ func unwrapDocument(node *yaml.Node) *yaml.Node {
 	return node
 }
 
-func validateRootTemplates(root *yaml.Node) []ValidationIssue {
+func validateRootPresets(root *yaml.Node) []ValidationIssue {
 	if root == nil || root.Kind != yaml.MappingNode {
-		return []ValidationIssue{joinIssue(IssueKindMissingRequired, "", "", "templates")}
+		return []ValidationIssue{joinIssue(IssueKindMissingRequired, "", "", "presets")}
 	}
-	var templatesNode *yaml.Node
+	var presetsNode *yaml.Node
 	for i := 0; i+1 < len(root.Content); i += 2 {
 		key := root.Content[i]
 		value := root.Content[i+1]
-		if key != nil && key.Value == "templates" {
-			templatesNode = value
+		if key != nil && key.Value == "presets" {
+			presetsNode = value
 			break
 		}
 	}
-	if templatesNode == nil {
-		return []ValidationIssue{joinIssue(IssueKindMissingRequired, "", "", "templates")}
+	if presetsNode == nil {
+		return []ValidationIssue{joinIssue(IssueKindMissingRequired, "", "", "presets")}
 	}
-	if templatesNode.Kind != yaml.MappingNode {
-		return []ValidationIssue{joinIssue(IssueKindMissingRequired, "", "", "templates must be a mapping")}
+	if presetsNode.Kind != yaml.MappingNode {
+		return []ValidationIssue{joinIssue(IssueKindMissingRequired, "", "", "presets must be a mapping")}
 	}
 
-	return validateTemplatesMap(templatesNode)
+	return validatePresetsMap(presetsNode)
 }
 
-func validateTemplatesMap(node *yaml.Node) []ValidationIssue {
+func validatePresetsMap(node *yaml.Node) []ValidationIssue {
 	var issues []ValidationIssue
 	seen := make(map[string]struct{})
 
@@ -102,23 +103,23 @@ func validateTemplatesMap(node *yaml.Node) []ValidationIssue {
 			name = strings.TrimSpace(key.Value)
 		}
 		if err := ValidateName(name); err != nil {
-			issues = append(issues, joinIssue(IssueKindInvalidTemplateName, name, "", err.Error()))
+			issues = append(issues, joinIssue(IssueKindInvalidPresetName, name, "", err.Error()))
 		}
 		if name != "" {
 			if _, ok := seen[name]; ok {
-				issues = append(issues, joinIssue(IssueKindDuplicateTemplate, name, "", "duplicate template name"))
+				issues = append(issues, joinIssue(IssueKindDuplicatePreset, name, "", "duplicate preset name"))
 			} else {
 				seen[name] = struct{}{}
 			}
 		}
-		issues = append(issues, validateTemplateEntry(name, value)...)
+		issues = append(issues, validatePresetEntry(name, value)...)
 	}
 	return issues
 }
 
-func validateTemplateEntry(name string, node *yaml.Node) []ValidationIssue {
+func validatePresetEntry(name string, node *yaml.Node) []ValidationIssue {
 	if node == nil || node.Kind != yaml.MappingNode {
-		return []ValidationIssue{joinIssue(IssueKindMissingRequired, name, "", "template entry must be a mapping")}
+		return []ValidationIssue{joinIssue(IssueKindMissingRequired, name, "", "preset entry must be a mapping")}
 	}
 	var reposNode *yaml.Node
 	for i := 0; i+1 < len(node.Content); i += 2 {
@@ -188,11 +189,11 @@ func joinFileIssue(err error) ValidationIssue {
 	return joinIssue(IssueKindFile, "", "", message)
 }
 
-func joinIssue(kind, templateName, repoSpec, message string) ValidationIssue {
+func joinIssue(kind, presetName, repoSpec, message string) ValidationIssue {
 	return ValidationIssue{
-		Kind:     kind,
-		Template: strings.TrimSpace(templateName),
-		Repo:     strings.TrimSpace(repoSpec),
-		Message:  strings.TrimSpace(message),
+		Kind:    kind,
+		Preset:  strings.TrimSpace(presetName),
+		Repo:    strings.TrimSpace(repoSpec),
+		Message: strings.TrimSpace(message),
 	}
 }

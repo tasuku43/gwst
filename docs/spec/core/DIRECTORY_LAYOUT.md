@@ -21,8 +21,7 @@ status: implemented
 GWST_ROOT/
   bare/         # bare repo store (shared Git objects)
   workspaces/   # workspaces (task-scoped worktrees)
-  templates.yaml
-  manifest.yaml
+  gwst.yaml
   logs/         # created when --debug is used
 ```
 
@@ -34,7 +33,7 @@ Each workspace is a directory under `workspaces/` and contains one or more repo 
 GWST_ROOT/workspaces/<WORKSPACE_ID>/
   <alias1>/
   <alias2>/
-  .gwst/metadata.json   # workspace metadata (mode, description, source_url, template)
+  .gwst/metadata.json   # workspace metadata (mode, description, source_url, preset)
 ```
 
 `gwst open` runs a subshell with `GWST_WORKSPACE=<WORKSPACE_ID>` set for the child process.

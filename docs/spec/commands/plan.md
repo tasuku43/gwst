@@ -7,10 +7,10 @@ status: planned
 `gwst plan [--root <path>] [--no-prompt]`
 
 ## Intent
-Compute and display the diff between `manifest.yaml` and the filesystem without applying changes, so users can review intended actions.
+Compute and display the diff between `gwst.yaml` and the filesystem without applying changes, so users can review intended actions.
 
 ## Behavior
-- Loads `<root>/manifest.yaml`; errors if missing or invalid.
+- Loads `<root>/gwst.yaml`; errors if missing or invalid.
 - Scans `<root>/workspaces` to build the current state.
 - Computes a plan with `add`, `remove`, and `update` actions:
   - `add`: workspace or repo entry exists in manifest but not on filesystem.

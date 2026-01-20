@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/tasuku43/gwst/internal/domain/manifest"
 	"github.com/tasuku43/gwst/internal/domain/repo"
 	"github.com/tasuku43/gwst/internal/domain/workspace"
 	"github.com/tasuku43/gwst/internal/infra/paths"
@@ -117,7 +118,7 @@ func checkRootLayout(rootDir string) []Issue {
 		name string
 		path string
 	}{
-		{name: "templates.yaml", path: filepath.Join(rootDir, "templates.yaml")},
+		{name: manifest.FileName, path: filepath.Join(rootDir, manifest.FileName)},
 	}
 	for _, entry := range files {
 		name := entry.name

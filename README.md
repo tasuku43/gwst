@@ -19,7 +19,7 @@ https://github.com/user-attachments/assets/889e7f64-6222-4ad2-bc42-620dd1dd4139
 
 - People or teams managing work via GitHub Issues → batch-create with `gwst create --issue`.
 - People or teams with frequent reviews → spin up review workspaces in bulk via `gwst create --review`.
-- People or teams changing multiple repos per task → templates create a task-level workspace (pseudo-monorepo).
+- People or teams changing multiple repos per task → presets create a task-level workspace (pseudo-monorepo).
 - People or teams overwhelmed by many worktrees and risky cleanup → guardrails in `gwst rm`.
 
 ## What makes gwst different
@@ -30,7 +30,7 @@ One command, four creation modes:
 
 ```bash
 gwst create --repo git@github.com:org/repo.git
-gwst create --template app PROJ-123
+gwst create --preset app PROJ-123
 gwst create --review https://github.com/owner/repo/pull/123   # GitHub only
 gwst create --issue https://github.com/owner/repo/issues/123  # GitHub only
 ```
@@ -44,7 +44,7 @@ Inputs
     └─ repo - 1 repo only
     └─ issue - From an issue (multi-select, GitHub only)
     └─ review - From a review request (multi-select, GitHub only)
-    └─ template - From template
+    └─ preset - From preset
 ```
 
 Review/issue modes are also interactive (repo + multi-select):
@@ -67,16 +67,16 @@ Inputs
   • issue: s (type to filter)
 Info
   • selected
-    └─ #45 Improve template flow
+    └─ #45 Improve preset flow
     └─ #39 Add doctor checks
 ```
 
-### 2) Template = pseudo-monorepo workspace
+### 2) Preset = pseudo-monorepo workspace
 
 Define multiple repos as one task unit, then create them together:
 
 ```yaml
-templates:
+presets:
   app:
     repos:
       - git@github.com:org/backend.git
@@ -86,7 +86,7 @@ templates:
 ```
 
 ```bash
-gwst create --template app PROJ-123
+gwst create --preset app PROJ-123
 ```
 
 ### 3) Guardrails on cleanup
@@ -145,7 +145,7 @@ For details and other options, see `docs/guides/INSTALL.md`.
 gwst init
 ```
 
-This creates `GWST_ROOT` with the standard layout and a starter `templates.yaml`.
+This creates `GWST_ROOT` with the standard layout and a starter `gwst.yaml`.
 
 Root resolution order:
 1) `--root <path>`
@@ -158,7 +158,7 @@ Default layout example:
 ~/gwst/
 ├── bare/           # bare repo store (shared Git objects)
 ├── workspaces/     # task worktrees (one folder per workspace id)
-└── templates.yaml
+└── gwst.yaml
 ```
 
 ### 2) Fetch repos (bare store)
@@ -208,7 +208,8 @@ gwst rm PROJ-123
 - `docs/README.md` for documentation index
 - `docs/spec/README.md` for specs index and status
 - `docs/spec/commands/` for per-command specs (create/add/rm/etc.)
-- `docs/spec/core/TEMPLATES.md` for template format
+- `docs/spec/core/GWST.md` for gwst.yaml format
+- `docs/spec/core/PRESETS.md` for preset format
 - `docs/spec/core/DIRECTORY_LAYOUT.md` for the file layout
 - `docs/spec/ui/UI.md` for output conventions
 - `docs/concepts/CONCEPT.md` for the background and motivation
