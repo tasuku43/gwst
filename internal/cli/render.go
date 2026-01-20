@@ -257,7 +257,6 @@ func renderPlanWorkspaceAddRepos(renderer *ui.Renderer, changes []manifestplan.R
 	if renderer == nil || len(changes) == 0 {
 		return
 	}
-	detailPrefix := "   "
 	var adds []manifestplan.RepoChange
 	for _, change := range changes {
 		if change.Kind != manifestplan.RepoAdd {
@@ -273,14 +272,15 @@ func renderPlanWorkspaceAddRepos(renderer *ui.Renderer, changes []manifestplan.R
 		if i == len(adds)-1 {
 			prefix = "└─ "
 		}
+		detailPrefix := detailTreePrefix(i == len(adds)-1)
 		name := strings.TrimSpace(change.Alias)
 		if name == "" {
 			name = strings.TrimSpace(change.ToRepo)
 		}
 		renderer.TreeLineBranchMuted(prefix, name, change.ToBranch)
-		renderer.TreeLine(detailPrefix, renderer.MutedText("sync: pending (workspace not created)"))
+		renderer.TreeLine(renderer.MutedText(detailPrefix), renderer.MutedText("sync: pending (workspace not created)"))
 		if strings.TrimSpace(change.ToRepo) != "" {
-			renderer.TreeLine(detailPrefix, renderer.MutedText("repo: "+strings.TrimSpace(change.ToRepo)))
+			renderer.TreeLine(renderer.MutedText(detailPrefix), renderer.MutedText("repo: "+strings.TrimSpace(change.ToRepo)))
 		}
 	}
 }
@@ -299,7 +299,6 @@ func renderWorkspaceRiskDetails(renderer *ui.Renderer, status workspace.StatusRe
 	if renderer == nil {
 		return
 	}
-	detailPrefix := "   "
 	if len(status.Repos) == 0 {
 		for _, warn := range status.Warnings {
 			msg := strings.TrimSpace(compactError(warn))
@@ -322,12 +321,13 @@ func renderWorkspaceRiskDetails(renderer *ui.Renderer, status workspace.StatusRe
 		label := formatRepoLabel(name, repoEntry.Branch)
 		renderer.TreeLineBranchMuted(prefix, label, "")
 
+		detailPrefix := detailTreePrefix(i == len(status.Repos)-1)
 		lines := buildRepoRiskDetailLines(renderer, repoEntry)
 		for _, line := range lines {
 			if strings.TrimSpace(ansi.Strip(line)) == "" {
 				continue
 			}
-			renderer.TreeLine(detailPrefix, line)
+			renderer.TreeLine(renderer.MutedText(detailPrefix), line)
 		}
 	}
 	for _, warn := range status.Warnings {
@@ -337,6 +337,13 @@ func renderWorkspaceRiskDetails(renderer *ui.Renderer, status workspace.StatusRe
 		}
 		renderer.TreeLine(renderer.MutedText("└─ "), renderer.WarnText(fmt.Sprintf("warning: %s", msg)))
 	}
+}
+
+func detailTreePrefix(isLast bool) string {
+	if isLast {
+		return "   "
+	}
+	return "│  "
 }
 
 func buildRepoRiskDetailLines(r *ui.Renderer, repo workspace.RepoStatus) []string {
