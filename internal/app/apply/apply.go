@@ -3,6 +3,7 @@ package apply
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/tasuku43/gwst/internal/app/add"
@@ -13,6 +14,7 @@ import (
 	"github.com/tasuku43/gwst/internal/domain/manifest"
 	"github.com/tasuku43/gwst/internal/domain/repo"
 	"github.com/tasuku43/gwst/internal/domain/workspace"
+	"github.com/tasuku43/gwst/internal/infra/gitcmd"
 	"github.com/tasuku43/gwst/internal/infra/prefetcher"
 )
 
@@ -43,6 +45,9 @@ func Apply(ctx context.Context, rootDir string, plan manifestplan.Result, opts O
 			continue
 		}
 		if err := applyRepoRemovals(ctx, rootDir, change, opts); err != nil {
+			return err
+		}
+		if err := applyRepoBranchRenames(ctx, rootDir, change, opts.Step); err != nil {
 			return err
 		}
 	}
@@ -95,6 +100,9 @@ func applyRepoRemovals(ctx context.Context, rootDir string, change manifestplan.
 	for _, repoChange := range change.Repos {
 		switch repoChange.Kind {
 		case manifestplan.RepoRemove, manifestplan.RepoUpdate:
+			if canRenameRepoBranchInPlace(repoChange) {
+				continue
+			}
 			logStep(opts.Step, fmt.Sprintf("worktree remove %s", repoChange.Alias))
 			if err := remove_repo.RemoveRepo(ctx, rootDir, change.WorkspaceID, repoChange.Alias, remove_repo.Options{
 				AllowDirty:       opts.AllowDirty,
@@ -102,6 +110,29 @@ func applyRepoRemovals(ctx context.Context, rootDir string, change manifestplan.
 			}); err != nil {
 				return err
 			}
+		}
+	}
+	return nil
+}
+
+func applyRepoBranchRenames(ctx context.Context, rootDir string, change manifestplan.WorkspaceChange, step func(text string)) error {
+	for _, repoChange := range change.Repos {
+		if !canRenameRepoBranchInPlace(repoChange) {
+			continue
+		}
+		worktreePath := workspace.WorktreePath(rootDir, change.WorkspaceID, repoChange.Alias)
+
+		currentBranch, err := gitcmd.RevParse(ctx, worktreePath, "--abbrev-ref", "HEAD")
+		if err != nil {
+			return err
+		}
+		if strings.TrimSpace(currentBranch) != strings.TrimSpace(repoChange.FromBranch) {
+			return fmt.Errorf("cannot rename branch: repo %q is on %q, want %q", repoChange.Alias, currentBranch, repoChange.FromBranch)
+		}
+
+		logStep(step, fmt.Sprintf("branch rename %s", repoChange.Alias))
+		if err := gitcmd.BranchMove(ctx, worktreePath, repoChange.FromBranch, repoChange.ToBranch); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -116,6 +147,9 @@ func applyRepoAdds(ctx context.Context, rootDir string, change manifestplan.Work
 				return err
 			}
 		case manifestplan.RepoUpdate:
+			if canRenameRepoBranchInPlace(repoChange) {
+				continue
+			}
 			logStep(step, fmt.Sprintf("worktree add %s", repoChange.Alias))
 			if _, err := add.AddRepo(ctx, rootDir, change.WorkspaceID, repoChange.ToRepo, repoChange.Alias, repoChange.ToBranch); err != nil {
 				return err
@@ -123,6 +157,26 @@ func applyRepoAdds(ctx context.Context, rootDir string, change manifestplan.Work
 		}
 	}
 	return nil
+}
+
+func canRenameRepoBranchInPlace(change manifestplan.RepoChange) bool {
+	if change.Kind != manifestplan.RepoUpdate {
+		return false
+	}
+	fromRepo := strings.TrimSpace(change.FromRepo)
+	toRepo := strings.TrimSpace(change.ToRepo)
+	fromBranch := strings.TrimSpace(change.FromBranch)
+	toBranch := strings.TrimSpace(change.ToBranch)
+	if fromRepo == "" || toRepo == "" || fromBranch == "" || toBranch == "" {
+		return false
+	}
+	if fromRepo != toRepo {
+		return false
+	}
+	if fromBranch == toBranch {
+		return false
+	}
+	return true
 }
 
 func collectRepoSpecs(plan manifestplan.Result) []string {

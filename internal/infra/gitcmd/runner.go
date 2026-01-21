@@ -87,6 +87,7 @@ func isAllowedSubcommand(subcommand string) bool {
 }
 
 var allowedSubcommands = map[string]struct{}{
+	"branch":           {},
 	"check-ref-format": {},
 	"clone":            {},
 	"config":           {},

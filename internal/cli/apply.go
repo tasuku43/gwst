@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/mattn/go-isatty"
 	"github.com/tasuku43/gwst/internal/app/apply"
@@ -110,9 +111,30 @@ func planHasDestructiveChanges(plan manifestplan.Result) bool {
 func hasDestructiveRepoChange(changes []manifestplan.RepoChange) bool {
 	for _, change := range changes {
 		switch change.Kind {
-		case manifestplan.RepoRemove, manifestplan.RepoUpdate:
+		case manifestplan.RepoRemove:
+			return true
+		case manifestplan.RepoUpdate:
+			if isInPlaceBranchRename(change) {
+				continue
+			}
 			return true
 		}
 	}
 	return false
+}
+
+func isInPlaceBranchRename(change manifestplan.RepoChange) bool {
+	if change.Kind != manifestplan.RepoUpdate {
+		return false
+	}
+	if strings.TrimSpace(change.FromRepo) == "" || strings.TrimSpace(change.ToRepo) == "" {
+		return false
+	}
+	if strings.TrimSpace(change.FromBranch) == "" || strings.TrimSpace(change.ToBranch) == "" {
+		return false
+	}
+	if strings.TrimSpace(change.FromRepo) != strings.TrimSpace(change.ToRepo) {
+		return false
+	}
+	return strings.TrimSpace(change.FromBranch) != strings.TrimSpace(change.ToBranch)
 }

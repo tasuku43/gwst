@@ -22,6 +22,7 @@ Reconcile the filesystem to match `gwst.yaml` by computing a diff, showing a pla
   - If only non-destructive adds are present, prompt can be skipped with `--no-prompt`.
   - For destructive actions, the prompt does not repeat per-repo git status output; users should review the plan output above before confirming.
 - If confirmed, applies actions in a stable order: removes, then updates, then adds.
+  - When a repo update is a branch rename only (same repo key, different branch), gwst renames the branch in-place (no worktree remove/add) to match common local development workflows.
 - Updates `gwst.yaml` by rewriting the full file after successful apply.
 
 ## Flags
