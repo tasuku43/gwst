@@ -100,6 +100,23 @@ func PromptConfirmInline(label string, theme Theme, useColor bool) (bool, error)
 	return final.value, nil
 }
 
+// PromptConfirmInlinePlan renders a single inline confirm prompt line without section headers.
+// Intended for embedding inside an existing section (e.g. Plan) after the plan output.
+func PromptConfirmInlinePlan(label string, theme Theme, useColor bool) (bool, error) {
+	debuglog.SetPrompt(label)
+	defer debuglog.ClearPrompt()
+	model := newConfirmInlineLineModel(label, theme, useColor)
+	out, err := runProgram(model)
+	if err != nil {
+		return false, err
+	}
+	final := out.(confirmInlineLineModel)
+	if final.err != nil {
+		return false, final.err
+	}
+	return final.value, nil
+}
+
 func PromptConfirmInlineWithRaw(label string, inputsRaw []string, theme Theme, useColor bool) (bool, error) {
 	debuglog.SetPrompt(label)
 	defer debuglog.ClearPrompt()

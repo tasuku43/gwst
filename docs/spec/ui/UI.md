@@ -25,6 +25,10 @@ Inputs
 Info
   <warnings / skipped / blocked>
 
+Plan
+  <plan line>
+  <plan line>
+
 Steps
   <step line>
   <step line>
@@ -40,10 +44,17 @@ Suggestion
 Rules:
 - Indent: 2 spaces
 - 1 blank line between sections
-- Section order is fixed: Inputs → Info → Steps → Result → Suggestion
+- Section order is fixed: Inputs → Info → Plan → Steps → Result → Suggestion
 - Result lines are bullets (use the same prefix as Steps)
 - No success banner; success is implied in Result section
 - Long lines should wrap to the terminal width; continuation lines keep the same text indent (prefix width)
+
+Notes:
+- IaC-style commands use `Plan`/`Apply`:
+  - `gwst plan`: renders `Info` (optional) then `Plan` only.
+  - `gwst apply`: renders `Info` (optional) → `Plan` → `Apply` (execution steps + git logs) → `Result`.
+- `Apply` is semantically the same as `Steps`, but reserved for execution output in reconcile flows.
+- Prompts may appear inside a section when it improves flow readability (e.g. `gwst apply` renders the final y/n confirmation prompt at the end of `Plan` with a blank line before it).
 
 ## Prefix & Indentation
 - Default prefix token: `•` (can be changed later)

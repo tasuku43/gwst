@@ -890,6 +890,18 @@ type confirmInlineModel struct {
 	done         bool
 }
 
+// confirmInlineLineModel renders a single inline prompt line (no Frame/section headers).
+// Intended for embedding prompts inside an existing section (e.g. Plan).
+type confirmInlineLineModel struct {
+	label    string
+	theme    Theme
+	useColor bool
+	input    textinput.Model
+	value    bool
+	err      error
+	done     bool
+}
+
 func newConfirmInlineModel(label string, theme Theme, useColor bool, useInfo bool, inputsPrompt []string, inputsRaw []string) confirmInlineModel {
 	ti := textinput.New()
 	ti.Prompt = ""
@@ -907,6 +919,22 @@ func newConfirmInlineModel(label string, theme Theme, useColor bool, useInfo boo
 		inputsRaw:    append([]string(nil), inputsRaw...),
 		rawAfter:     false,
 		input:        ti,
+	}
+}
+
+func newConfirmInlineLineModel(label string, theme Theme, useColor bool) confirmInlineLineModel {
+	ti := textinput.New()
+	ti.Prompt = ""
+	ti.Placeholder = "y/n"
+	ti.Focus()
+	if useColor {
+		ti.PlaceholderStyle = theme.Muted
+	}
+	return confirmInlineLineModel{
+		label:    label,
+		theme:    theme,
+		useColor: useColor,
+		input:    ti,
 	}
 }
 
@@ -977,6 +1005,49 @@ func (m confirmInlineModel) View() string {
 		}
 	}
 	return frame.Render()
+}
+
+func (m confirmInlineLineModel) Init() tea.Cmd {
+	return textinput.Blink
+}
+
+func (m confirmInlineLineModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.Type {
+		case tea.KeyCtrlC, tea.KeyEsc:
+			m.err = ErrPromptCanceled
+			return m, tea.Quit
+		case tea.KeyEnter:
+			value := strings.ToLower(strings.TrimSpace(m.input.Value()))
+			switch value {
+			case "y", "yes":
+				m.value = true
+				m.done = true
+				return m, tea.Quit
+			case "n", "no":
+				m.value = false
+				m.done = true
+				return m, tea.Quit
+			default:
+				return m, nil
+			}
+		}
+	}
+	var cmd tea.Cmd
+	m.input, cmd = m.input.Update(msg)
+	return m, cmd
+}
+
+func (m confirmInlineLineModel) View() string {
+	label := promptLabel(m.theme, m.useColor, m.label)
+	line := fmt.Sprintf("%s (y/n): %s", label, m.input.View())
+
+	prefix := output.StepPrefix + " "
+	if m.useColor {
+		prefix = m.theme.Accent.Render(output.StepPrefix) + " "
+	}
+	return output.Indent + prefix + line + "\n"
 }
 
 type inputInlineModel struct {

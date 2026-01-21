@@ -41,6 +41,10 @@ func (r *Renderer) Section(title string) {
 		debuglog.SetPhase("inputs")
 	case "info":
 		debuglog.SetPhase("info")
+	case "plan":
+		debuglog.SetPhase("plan")
+	case "apply":
+		debuglog.SetPhase("steps")
 	case "steps":
 		debuglog.SetPhase("steps")
 	case "result":

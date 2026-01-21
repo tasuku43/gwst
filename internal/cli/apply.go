@@ -61,11 +61,7 @@ func runApply(ctx context.Context, rootDir string, args []string, noPrompt bool)
 		}
 		var confirm bool
 		var err error
-		if destructive {
-			confirm, err = ui.PromptConfirmInline(label, theme, useColor)
-		} else {
-			confirm, err = ui.PromptConfirmInline(label, theme, useColor)
-		}
+		confirm, err = ui.PromptConfirmInlinePlan(label, theme, useColor)
 		if err != nil {
 			return err
 		}
@@ -75,7 +71,7 @@ func runApply(ctx context.Context, rootDir string, args []string, noPrompt bool)
 	}
 
 	renderer.Blank()
-	renderer.Section("Steps")
+	renderer.Section("Apply")
 	if err := apply.Apply(ctx, rootDir, plan, apply.Options{
 		AllowDirty:       destructive,
 		AllowStatusError: destructive,
@@ -90,8 +86,24 @@ func runApply(ctx context.Context, rootDir string, args []string, noPrompt bool)
 
 	renderer.Blank()
 	renderer.Section("Result")
-	renderer.Bullet("applied")
+	adds, updates, removes := countWorkspaceChangeKinds(plan)
+	renderer.BulletSuccess(fmt.Sprintf("applied: add=%d update=%d remove=%d", adds, updates, removes))
+	renderer.Bullet("gwst.yaml rewritten")
 	return nil
+}
+
+func countWorkspaceChangeKinds(plan manifestplan.Result) (adds, updates, removes int) {
+	for _, change := range plan.Changes {
+		switch change.Kind {
+		case manifestplan.WorkspaceAdd:
+			adds++
+		case manifestplan.WorkspaceUpdate:
+			updates++
+		case manifestplan.WorkspaceRemove:
+			removes++
+		}
+	}
+	return adds, updates, removes
 }
 
 func planHasDestructiveChanges(plan manifestplan.Result) bool {
