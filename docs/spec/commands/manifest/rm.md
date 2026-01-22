@@ -61,14 +61,6 @@ Inputs
     └─ PROJ-123[clean] - fix login flow
 ```
 
-Optional (if we choose to show a single repo hint under the highlighted item):
-```
-Inputs
-  • workspace: s
-    └─ PROJ-123[clean] - fix login flow
-      └─ gwst (branch: PROJ-123)
-```
-
 ## Success Criteria
 - Selected workspace entries are removed from `gwst.yaml`.
 - When apply is run and confirmed, filesystem no longer contains removed workspaces.
