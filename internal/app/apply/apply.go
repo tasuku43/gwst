@@ -80,6 +80,7 @@ func applyWorkspaceAdd(ctx context.Context, rootDir string, desired manifest.Fil
 		return err
 	}
 	baseBranchToRecord := ""
+	baseBranchMixed := false
 	fetch := true
 	if opts.PrefetchOK {
 		fetch = false
@@ -96,9 +97,14 @@ func applyWorkspaceAdd(ctx context.Context, rootDir string, desired manifest.Fil
 		if err != nil {
 			return err
 		}
-		if createdBranch && baseBranchToRecord == "" && strings.TrimSpace(baseBranch) != "" {
-			baseBranchToRecord = baseBranch
+		if createdBranch {
+			baseBranchToRecord, baseBranchMixed = updateBaseBranchCandidate(baseBranchToRecord, baseBranchMixed, baseBranch)
 		}
+	}
+	if baseBranchMixed {
+		// Workspace-level base_branch can't represent multiple different bases across repos.
+		// Keep it empty so `gwst import` doesn't inject an incorrect base_ref into every repo.
+		baseBranchToRecord = ""
 	}
 	if err := recordBaseBranchIfMissing(rootDir, change.WorkspaceID, baseBranchToRecord); err != nil {
 		return err
@@ -189,6 +195,7 @@ func applyRepoBranchRenames(ctx context.Context, rootDir string, change manifest
 
 func applyRepoAdds(ctx context.Context, rootDir string, desired manifest.File, change manifestplan.WorkspaceChange, opts Options) error {
 	baseBranchToRecord := ""
+	baseBranchMixed := false
 	fetch := true
 	if opts.PrefetchOK {
 		fetch = false
@@ -202,8 +209,8 @@ func applyRepoAdds(ctx context.Context, rootDir string, desired manifest.File, c
 			if err != nil {
 				return err
 			}
-			if createdBranch && baseBranchToRecord == "" && strings.TrimSpace(baseBranch) != "" {
-				baseBranchToRecord = baseBranch
+			if createdBranch {
+				baseBranchToRecord, baseBranchMixed = updateBaseBranchCandidate(baseBranchToRecord, baseBranchMixed, baseBranch)
 			}
 		case manifestplan.RepoUpdate:
 			if canRenameRepoBranchInPlace(repoChange) {
@@ -215,15 +222,35 @@ func applyRepoAdds(ctx context.Context, rootDir string, desired manifest.File, c
 			if err != nil {
 				return err
 			}
-			if createdBranch && baseBranchToRecord == "" && strings.TrimSpace(baseBranch) != "" {
-				baseBranchToRecord = baseBranch
+			if createdBranch {
+				baseBranchToRecord, baseBranchMixed = updateBaseBranchCandidate(baseBranchToRecord, baseBranchMixed, baseBranch)
 			}
 		}
+	}
+	if baseBranchMixed {
+		baseBranchToRecord = ""
 	}
 	if err := recordBaseBranchIfMissing(rootDir, change.WorkspaceID, baseBranchToRecord); err != nil {
 		return err
 	}
 	return nil
+}
+
+func updateBaseBranchCandidate(candidate string, mixed bool, baseBranch string) (string, bool) {
+	if mixed {
+		return candidate, mixed
+	}
+	baseBranch = strings.TrimSpace(baseBranch)
+	if baseBranch == "" {
+		return candidate, mixed
+	}
+	if candidate == "" {
+		return baseBranch, mixed
+	}
+	if candidate != baseBranch {
+		return candidate, true
+	}
+	return candidate, mixed
 }
 
 func canRenameRepoBranchInPlace(change manifestplan.RepoChange) bool {
