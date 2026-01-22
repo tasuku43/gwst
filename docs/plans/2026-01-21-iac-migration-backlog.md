@@ -27,7 +27,7 @@ Policy:
 
 ### Specs / Docs (this branch)
 - [x] Finalize `gwst manifest add` details (no-prompt requirements, multi-select UX, error messages, output IA).
-- [ ] Decide `--base` scope for multi-repo (preset): apply to all repos vs per-repo base selection.
+- [x] Decide `--base` scope for multi-repo (preset): apply to all repos (workspace-wide).
 - [x] Confirm base tracking model: workspace-level `.gwst/metadata.json base_branch` (and `gwst.yaml repos[].base_ref`).
 - [ ] Specify `gwst manifest rm` UX and how risk context is shown (in rm vs rely on apply plan).
 - [ ] Specify `gwst manifest ls` drift badges (applied/missing/drift/extra), sorting, and output IA.
