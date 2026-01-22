@@ -21,6 +21,7 @@ type Options struct {
 	AllowDirty       bool
 	AllowStatusError bool
 	PrefetchTimeout  time.Duration
+	PrefetchOK       bool
 	Step             func(text string)
 }
 
@@ -50,11 +51,11 @@ func Apply(ctx context.Context, rootDir string, plan manifestplan.Result, opts O
 	for _, change := range plan.Changes {
 		switch change.Kind {
 		case manifestplan.WorkspaceAdd:
-			if err := applyWorkspaceAdd(ctx, rootDir, plan.Desired, change, opts.Step); err != nil {
+			if err := applyWorkspaceAdd(ctx, rootDir, plan.Desired, change, opts); err != nil {
 				return err
 			}
 		case manifestplan.WorkspaceUpdate:
-			if err := applyRepoAdds(ctx, rootDir, plan.Desired, change, opts.Step); err != nil {
+			if err := applyRepoAdds(ctx, rootDir, plan.Desired, change, opts); err != nil {
 				return err
 			}
 		}
@@ -63,12 +64,12 @@ func Apply(ctx context.Context, rootDir string, plan manifestplan.Result, opts O
 	return nil
 }
 
-func applyWorkspaceAdd(ctx context.Context, rootDir string, desired manifest.File, change manifestplan.WorkspaceChange, step func(text string)) error {
+func applyWorkspaceAdd(ctx context.Context, rootDir string, desired manifest.File, change manifestplan.WorkspaceChange, opts Options) error {
 	ws, ok := desired.Workspaces[change.WorkspaceID]
 	if !ok {
 		return fmt.Errorf("workspace not found in manifest: %s", change.WorkspaceID)
 	}
-	logStep(step, fmt.Sprintf("create workspace %s", change.WorkspaceID))
+	logStep(opts.Step, fmt.Sprintf("create workspace %s", change.WorkspaceID))
 	_, err := create.CreateWorkspace(ctx, rootDir, change.WorkspaceID, workspace.Metadata{
 		Description: ws.Description,
 		Mode:        ws.Mode,
@@ -79,15 +80,19 @@ func applyWorkspaceAdd(ctx context.Context, rootDir string, desired manifest.Fil
 		return err
 	}
 	baseBranchToRecord := ""
+	fetch := true
+	if opts.PrefetchOK {
+		fetch = false
+	}
 	for _, repoEntry := range ws.Repos {
-		logStep(step, fmt.Sprintf("worktree add %s", repoEntry.Alias))
+		logStep(opts.Step, fmt.Sprintf("worktree add %s", repoEntry.Alias))
 		if strings.EqualFold(strings.TrimSpace(ws.Mode), workspace.MetadataModeReview) {
 			if err := applyReviewRepoAdd(ctx, rootDir, change.WorkspaceID, repoEntry); err != nil {
 				return err
 			}
 			continue
 		}
-		_, createdBranch, baseBranch, err := add.AddRepo(ctx, rootDir, change.WorkspaceID, repoEntry.RepoKey, repoEntry.Alias, repoEntry.Branch, repoEntry.BaseRef)
+		_, createdBranch, baseBranch, err := add.AddRepo(ctx, rootDir, change.WorkspaceID, repoEntry.RepoKey, repoEntry.Alias, repoEntry.Branch, repoEntry.BaseRef, fetch)
 		if err != nil {
 			return err
 		}
@@ -182,14 +187,18 @@ func applyRepoBranchRenames(ctx context.Context, rootDir string, change manifest
 	return nil
 }
 
-func applyRepoAdds(ctx context.Context, rootDir string, desired manifest.File, change manifestplan.WorkspaceChange, step func(text string)) error {
+func applyRepoAdds(ctx context.Context, rootDir string, desired manifest.File, change manifestplan.WorkspaceChange, opts Options) error {
 	baseBranchToRecord := ""
+	fetch := true
+	if opts.PrefetchOK {
+		fetch = false
+	}
 	for _, repoChange := range change.Repos {
 		switch repoChange.Kind {
 		case manifestplan.RepoAdd:
-			logStep(step, fmt.Sprintf("worktree add %s", repoChange.Alias))
+			logStep(opts.Step, fmt.Sprintf("worktree add %s", repoChange.Alias))
 			baseRef := desiredBaseRef(desired, change.WorkspaceID, repoChange.Alias)
-			_, createdBranch, baseBranch, err := add.AddRepo(ctx, rootDir, change.WorkspaceID, repoChange.ToRepo, repoChange.Alias, repoChange.ToBranch, baseRef)
+			_, createdBranch, baseBranch, err := add.AddRepo(ctx, rootDir, change.WorkspaceID, repoChange.ToRepo, repoChange.Alias, repoChange.ToBranch, baseRef, fetch)
 			if err != nil {
 				return err
 			}
@@ -200,9 +209,9 @@ func applyRepoAdds(ctx context.Context, rootDir string, desired manifest.File, c
 			if canRenameRepoBranchInPlace(repoChange) {
 				continue
 			}
-			logStep(step, fmt.Sprintf("worktree add %s", repoChange.Alias))
+			logStep(opts.Step, fmt.Sprintf("worktree add %s", repoChange.Alias))
 			baseRef := desiredBaseRef(desired, change.WorkspaceID, repoChange.Alias)
-			_, createdBranch, baseBranch, err := add.AddRepo(ctx, rootDir, change.WorkspaceID, repoChange.ToRepo, repoChange.Alias, repoChange.ToBranch, baseRef)
+			_, createdBranch, baseBranch, err := add.AddRepo(ctx, rootDir, change.WorkspaceID, repoChange.ToRepo, repoChange.Alias, repoChange.ToBranch, baseRef, fetch)
 			if err != nil {
 				return err
 			}

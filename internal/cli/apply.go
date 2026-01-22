@@ -159,15 +159,18 @@ func runApplyInternal(ctx context.Context, rootDir string, renderer *ui.Renderer
 
 	renderer.Blank()
 	renderer.Section("Apply")
+	prefetchOK := true
 	if err := prefetch.WaitAll(ctx, toPrefetch); err != nil {
 		// ここでのfetch失敗はネットワーク要因が多く、apply自体は継続できることもあるため、
 		// 警告を出しつつ続行する。
 		renderer.BulletWarn(fmt.Sprintf("prefetch failed (continuing): %v", err))
+		prefetchOK = false
 	}
 	if err := apply.Apply(ctx, rootDir, plan, apply.Options{
 		AllowDirty:       destructive,
 		AllowStatusError: destructive,
 		PrefetchTimeout:  defaultPrefetchTimeout,
+		PrefetchOK:       prefetchOK,
 		Step:             output.Step,
 	}); err != nil {
 		return applyInternalResult{HadChanges: true, Confirmed: confirmed, Applied: false}, err

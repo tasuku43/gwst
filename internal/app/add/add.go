@@ -10,7 +10,7 @@ import (
 	"github.com/tasuku43/gwst/internal/infra/gitcmd"
 )
 
-func AddRepo(ctx context.Context, rootDir, workspaceID, repoKey, alias, branch, baseRef string) (workspace.Repo, bool, string, error) {
+func AddRepo(ctx context.Context, rootDir, workspaceID, repoKey, alias, branch, baseRef string, fetch bool) (workspace.Repo, bool, string, error) {
 	repoSpec := repo.SpecFromKey(repoKey)
 	_, exists, err := repo.Exists(rootDir, repoSpec)
 	if err != nil {
@@ -44,7 +44,7 @@ func AddRepo(ctx context.Context, rootDir, workspaceID, repoKey, alias, branch, 
 		}
 	}
 
-	added, err := workspace.AddWithBranch(ctx, rootDir, workspaceID, repoSpec, alias, branch, baseRef, true)
+	added, err := workspace.AddWithBranch(ctx, rootDir, workspaceID, repoSpec, alias, branch, baseRef, fetch)
 	if err != nil {
 		return workspace.Repo{}, false, "", err
 	}
