@@ -61,6 +61,11 @@ Create the desired workspace inventory in `gwst.yaml` using an interactive UX (s
 - If `--base <ref>` is provided, it must be in the form `origin/<branch>`, and `gwst manifest add` writes it as `base_ref` into the corresponding repo entry in `gwst.yaml`.
   - `base_ref` is used only when the branch does not already exist in the bare store.
   - If `base_ref` does not resolve when it is needed, `gwst apply` fails (manifest remains updated).
+ - Scope (preset / multi-repo):
+   - In `--preset` interactive flows, the command asks for `base_ref` per repo (similar to per-repo branch prompts).
+     - Default is empty (meaning "use the repo's default branch").
+     - If `--base <ref>` is provided, it is used as the pre-filled default for each repo's base prompt (users can press Enter or edit per repo).
+   - With `--no-prompt`, per-repo base selection is not available; `--base <ref>` (when provided) is applied to all repos.
 
 ## Branch behavior (`--branch`) and defaults
 This command stores the target branch per repo as `repos[].branch` in `gwst.yaml`. When `gwst apply` materializes the workspace, each repo worktree is checked out to that branch.
