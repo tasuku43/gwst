@@ -100,6 +100,29 @@ Steps
 - Help line: muted color, minimal content
 - Long selection lists should scroll so Inputs stay visible.
 
+## Pickers
+
+### Workspace picker line format
+When rendering workspace candidates (e.g. in `gwst manifest rm`), use a compact single-line display:
+
+`<WORKSPACE_ID>[<status>] - <description>`
+
+Rules:
+- `<description>` is optional; omit ` - <description>` when empty.
+- Repo details should not be shown in the picker (deep review happens in the subsequent plan output).
+- `<status>` is a short aggregated label based on workspace scan:
+  - `clean`, `dirty`, `unpushed`, `diverged`, `unknown`
+
+Color guidance (TTY):
+- `<WORKSPACE_ID>`: default text color.
+- `[clean]`: muted gray.
+- `[unpushed]` / `[diverged]`: warn (yellow).
+- `[dirty]` / `[unknown]`: error (red).
+- ` - <description>`: muted gray.
+
+Example:
+`PROJ-123[clean] - fix login flow`
+
 ## Examples
 
 ### gwst create --preset (interactive)
