@@ -20,13 +20,27 @@ This backlog tracks the work to shift gwst from "direct filesystem commands" to 
 - Idempotent apply: repeated runs converge with no changes.
 
 ## Next TODOs (working set)
-- [ ] Finalize `gwst manifest add` mode details (no-prompt requirements, multi-select UX, error messages, output IA).
+
+Policy:
+- Keep this branch focused on specs/docs as much as possible.
+- Do implementation work in a separate PR/branch and track it here explicitly.
+
+### Specs / Docs (this branch)
+- [ ] Finalize `gwst manifest add` details (no-prompt requirements, multi-select UX, error messages, output IA).
 - [ ] Decide `--base` scope for multi-repo (preset): apply to all repos vs per-repo base selection.
-- [ ] Confirm base tracking model: workspace-level `.gwst/metadata.json base_branch` vs per-repo base tracking.
-- [ ] Specify and implement `gwst manifest rm` UX and how risk context is shown (in rm vs rely on apply plan).
-- [ ] Specify and implement `gwst manifest ls` drift badges (applied/missing/drift/extra) and sorting.
-- [ ] Implement CLI routing + aliases (`manifest`/`man`/`m`, `manifest preset`/`pre`/`p`) and remove `gwst ls` (hard error with suggestion).
-- [ ] Implement preset commands under `gwst manifest preset` and decide removal of legacy `gwst preset *`.
+- [x] Confirm base tracking model: workspace-level `.gwst/metadata.json base_branch` (and `gwst.yaml repos[].base_ref`).
+- [ ] Specify `gwst manifest rm` UX and how risk context is shown (in rm vs rely on apply plan).
+- [ ] Specify `gwst manifest ls` drift badges (applied/missing/drift/extra), sorting, and output IA.
+- [ ] Decide removal behavior for legacy `gwst preset *` (remove vs temporary alias vs hard error).
+- [ ] Decide removal behavior for `gwst ls` (exact error message guidance).
+
+### Implementation (separate PR)
+- [ ] Implement CLI routing + aliases (`manifest`/`man`/`m`, `manifest preset`/`pre`/`p`).
+- [ ] Remove `gwst ls` command (hard error + suggestion to use `gwst manifest ls`).
+- [ ] Implement `gwst manifest ls`.
+- [ ] Implement `gwst manifest add`.
+- [ ] Implement `gwst manifest rm`.
+- [ ] Implement `gwst manifest preset` subcommands.
 
 ## Command migration map (high level)
 
