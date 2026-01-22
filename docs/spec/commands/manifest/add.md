@@ -49,6 +49,25 @@ Create the desired workspace inventory in `gwst.yaml` using an interactive UX (s
   - `base_ref` is used only when the branch does not already exist in the bare store.
   - If `base_ref` does not resolve when it is needed, `gwst apply` fails (manifest remains updated).
 
+## Branch behavior (`--branch`) and defaults
+This command stores the target branch per repo as `repos[].branch` in `gwst.yaml`. When `gwst apply` materializes the workspace, each repo worktree is checked out to that branch.
+
+Defaults and `--branch` rules:
+- `--preset`:
+  - Default branch for each repo is `<WORKSPACE_ID>`.
+  - When prompts are allowed, the user can override branches per repo (input is pre-filled with `<WORKSPACE_ID>`).
+  - With `--no-prompt`, uses the default for all repos (no per-repo override).
+- `--repo`:
+  - Default branch is `<WORKSPACE_ID>`.
+  - `--branch` is not supported in MVP (error if provided); use interactive prompt when prompts are allowed.
+- `--review`:
+  - Branch defaults to the PR head ref (tracking `origin/<head_ref>`).
+  - `--branch` is not supported (error if provided).
+- `--issue`:
+  - Branch defaults to `issue/<number>`.
+  - `--branch <name>` overrides the default.
+  - `--no-prompt` accepts the default when `--branch` is omitted.
+
 ## Multi-selection (review / issue picker)
 - When `--review` or `--issue` is used without a URL (picker mode), the UX may allow selecting multiple items.
 - In multi-select mode:
