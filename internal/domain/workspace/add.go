@@ -192,7 +192,25 @@ func resolveBaseRef(ctx context.Context, storePath string) (string, error) {
 
 	remoteHead, remoteErr := detectDefaultRemoteRef(ctx, storePath)
 	if remoteErr == nil && remoteHead != "" {
-		return remoteHead, nil
+		exists, err := remoteRefExists(ctx, storePath, remoteHead)
+		if err != nil {
+			return "", err
+		}
+		if exists {
+			return remoteHead, nil
+		}
+		if strings.HasPrefix(remoteHead, "origin/") {
+			branch := strings.TrimPrefix(remoteHead, "origin/")
+			if branch != "" {
+				localExists, err := localRefExists(ctx, storePath, branch)
+				if err != nil {
+					return "", err
+				}
+				if localExists {
+					return fmt.Sprintf("refs/heads/%s", branch), nil
+				}
+			}
+		}
 	}
 
 	localHead, localErr := detectLocalHeadRef(ctx, storePath)

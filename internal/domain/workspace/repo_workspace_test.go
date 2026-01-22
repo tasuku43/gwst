@@ -286,6 +286,68 @@ func TestWorkspaceAddTracksRemoteBranchWhenPresent(t *testing.T) {
 	}
 }
 
+func TestResolveBaseRefFallsBackWhenRemoteHeadRefMissing(t *testing.T) {
+	t.Setenv("GIT_AUTHOR_NAME", "gwst")
+	t.Setenv("GIT_AUTHOR_EMAIL", "gwst@example.com")
+	t.Setenv("GIT_COMMITTER_NAME", "gwst")
+	t.Setenv("GIT_COMMITTER_EMAIL", "gwst@example.com")
+
+	ctx := context.Background()
+	tmp := t.TempDir()
+	rootDir := filepath.Join(tmp, "gwst")
+
+	remoteBase := filepath.Join(tmp, "remotes")
+	remotePath := filepath.Join(remoteBase, "org", "repo.git")
+	if err := os.MkdirAll(filepath.Dir(remotePath), 0o755); err != nil {
+		t.Fatalf("mkdir remote: %v", err)
+	}
+	runGit(t, "", "init", "--bare", remotePath)
+
+	seedDir := filepath.Join(tmp, "seed")
+	runGit(t, "", "init", seedDir)
+	runGit(t, seedDir, "checkout", "-b", "main")
+	if err := os.WriteFile(filepath.Join(seedDir, "README.md"), []byte("hello\n"), 0o644); err != nil {
+		t.Fatalf("write seed file: %v", err)
+	}
+	runGit(t, seedDir, "add", ".")
+	runGit(t, seedDir, "commit", "-m", "init")
+	runGit(t, seedDir, "remote", "add", "origin", remotePath)
+	runGit(t, seedDir, "push", "origin", "main")
+	runGit(t, "", "--git-dir", remotePath, "symbolic-ref", "HEAD", "refs/heads/main")
+
+	configPath := filepath.Join(tmp, "gitconfig")
+	fileURL := "file://" + filepath.ToSlash(remoteBase) + "/"
+	configData := fmt.Sprintf("[url \"%s\"]\n\tinsteadOf = https://example.com/\n", fileURL)
+	if err := os.WriteFile(configPath, []byte(configData), 0o644); err != nil {
+		t.Fatalf("write gitconfig: %v", err)
+	}
+	t.Setenv("GIT_CONFIG_GLOBAL", configPath)
+	t.Setenv("GIT_CONFIG_SYSTEM", "/dev/null")
+	t.Setenv("GIT_CONFIG_NOSYSTEM", "1")
+	t.Setenv("GIT_TERMINAL_PROMPT", "0")
+
+	repoSpec := "https://example.com/org/repo.git"
+	store, err := repo.Get(ctx, rootDir, repoSpec)
+	if err != nil {
+		t.Fatalf("repo get: %v", err)
+	}
+
+	// Simulate the broken state:
+	// - origin/HEAD points to origin/main
+	// - but refs/remotes/origin/main is missing
+	// - while refs/heads/main exists (common in bare clones)
+	runGit(t, "", "--git-dir", store.StorePath, "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main")
+	runGit(t, "", "--git-dir", store.StorePath, "update-ref", "-d", "refs/remotes/origin/main")
+
+	baseRef, err := workspace.ResolveBaseRef(ctx, store.StorePath)
+	if err != nil {
+		t.Fatalf("resolve base ref: %v", err)
+	}
+	if baseRef != "refs/heads/main" {
+		t.Fatalf("expected fallback to local head ref; got %q, want %q", baseRef, "refs/heads/main")
+	}
+}
+
 func runGit(t *testing.T, dir string, args ...string) {
 	t.Helper()
 	cmd := exec.Command("git", args...)
