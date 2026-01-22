@@ -55,7 +55,8 @@ When `gwst manifest add` runs apply (default behavior), it performs a two-phase 
 If the user cancels at the apply confirmation step (e.g. answers `n`/No) or interrupts at the prompt (`Ctrl-C`), `gwst manifest add` should roll back the manifest change by restoring the previous `gwst.yaml` content.
 
 Guidance:
-- Prefer restoring from an in-memory/temporary snapshot of the pre-change `gwst.yaml` (or a backup file) rather than running `gwst import`.
+- Prefer restoring from a backup of the pre-change `gwst.yaml` (or an in-memory snapshot) rather than running `gwst import`.
+  - A simple approach is to write a temporary backup file before the rewrite, then restore it on cancellation.
 - Do not use `gwst import` as a rollback mechanism:
   - It can drop desired-state-only entries that are not present on the filesystem.
   - It may lose or change metadata fields not fully reconstructible from the filesystem.
