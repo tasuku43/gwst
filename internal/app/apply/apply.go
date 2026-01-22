@@ -90,6 +90,12 @@ func applyWorkspaceAdd(ctx context.Context, rootDir string, desired manifest.Fil
 	baseBranchToRecord := ""
 	for _, repoEntry := range ws.Repos {
 		logStep(step, fmt.Sprintf("worktree add %s", repoEntry.Alias))
+		if strings.EqualFold(strings.TrimSpace(ws.Mode), workspace.MetadataModeReview) {
+			if err := applyReviewRepoAdd(ctx, rootDir, change.WorkspaceID, repoEntry); err != nil {
+				return err
+			}
+			continue
+		}
 		_, createdBranch, baseBranch, err := add.AddRepo(ctx, rootDir, change.WorkspaceID, repoEntry.RepoKey, repoEntry.Alias, repoEntry.Branch, repoEntry.BaseRef)
 		if err != nil {
 			return err
@@ -102,6 +108,41 @@ func applyWorkspaceAdd(ctx context.Context, rootDir string, desired manifest.Fil
 		return err
 	}
 	return nil
+}
+
+func applyReviewRepoAdd(ctx context.Context, rootDir, workspaceID string, repoEntry manifest.Repo) error {
+	repoSpec := repo.SpecFromKey(repoEntry.RepoKey)
+	_, exists, err := repo.Exists(rootDir, repoSpec)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		if _, err := repo.Get(ctx, rootDir, repoSpec); err != nil {
+			return err
+		}
+	}
+	store, err := repo.Open(ctx, rootDir, repoSpec, false)
+	if err != nil {
+		return err
+	}
+
+	branch := strings.TrimSpace(repoEntry.Branch)
+	if branch == "" {
+		return fmt.Errorf("branch is required")
+	}
+	gitcmd.Logf("git fetch origin %s", branch)
+	if _, err := gitcmd.Run(ctx, []string{"fetch", "origin", branch}, gitcmd.Options{Dir: store.StorePath}); err != nil {
+		return err
+	}
+	remoteRef := fmt.Sprintf("refs/remotes/origin/%s", branch)
+	if _, ok, err := gitcmd.ShowRef(ctx, store.StorePath, remoteRef); err != nil {
+		return err
+	} else if !ok {
+		return fmt.Errorf("ref not found: %s", remoteRef)
+	}
+
+	_, err = workspace.AddWithTrackingBranch(ctx, rootDir, workspaceID, repoSpec, repoEntry.Alias, branch, remoteRef, false)
+	return err
 }
 
 func applyRepoRemovals(ctx context.Context, rootDir string, change manifestplan.WorkspaceChange, opts Options) error {

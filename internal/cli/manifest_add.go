@@ -15,7 +15,6 @@ import (
 	"github.com/tasuku43/gwst/internal/domain/preset"
 	"github.com/tasuku43/gwst/internal/domain/repo"
 	"github.com/tasuku43/gwst/internal/domain/workspace"
-	"github.com/tasuku43/gwst/internal/infra/gitcmd"
 	"github.com/tasuku43/gwst/internal/infra/output"
 	"github.com/tasuku43/gwst/internal/infra/paths"
 	"github.com/tasuku43/gwst/internal/ui"
@@ -526,19 +525,6 @@ func manifestAddReviewURL(ctx context.Context, rootDir, prURL string, apply func
 		return fmt.Errorf("invalid base repo: %s", pr.BaseRepo)
 	}
 
-	repoURL := buildRepoURLFromParts(req.Host, baseOwner, baseRepo)
-	store, err := repo.Get(ctx, rootDir, repoURL)
-	if err != nil {
-		return err
-	}
-	if err := fetchPRHead(ctx, store.StorePath, pr.HeadRef); err != nil {
-		return err
-	}
-	remoteRef := fmt.Sprintf("refs/remotes/origin/%s", pr.HeadRef)
-	if err := ensureLocalBranchFromRemote(ctx, store.StorePath, pr.HeadRef, remoteRef); err != nil {
-		return err
-	}
-
 	workspaceID := formatReviewWorkspaceID(baseOwner, baseRepo, pr.Number)
 	description := pr.Title
 	renderInputs := func(r *ui.Renderer) {
@@ -563,6 +549,7 @@ func manifestAddReviewURL(ctx context.Context, rootDir, prURL string, apply func
 	} else if exists {
 		return fmt.Errorf("workspace exists on filesystem but missing in gwst.yaml: %s (suggest: gwst import)", workspaceID)
 	}
+	repoURL := buildRepoURLFromParts(req.Host, baseOwner, baseRepo)
 	spec, _, err := repo.Normalize(repoURL)
 	if err != nil {
 		return err
@@ -620,18 +607,6 @@ func manifestAddReviewSelected(ctx context.Context, rootDir string, repoSpec str
 			warnings = append(warnings, fmt.Sprintf("skipped PR #%d: invalid base repo: %s", pr.Number, pr.BaseRepo))
 			continue
 		}
-		repoURL := buildRepoURLFromParts(host, baseOwner, baseRepo)
-		store, err := repo.Get(ctx, rootDir, repoURL)
-		if err != nil {
-			return err
-		}
-		if err := fetchPRHead(ctx, store.StorePath, pr.HeadRef); err != nil {
-			return err
-		}
-		remoteRef := fmt.Sprintf("refs/remotes/origin/%s", pr.HeadRef)
-		if err := ensureLocalBranchFromRemote(ctx, store.StorePath, pr.HeadRef, remoteRef); err != nil {
-			return err
-		}
 
 		workspaceID := formatReviewWorkspaceID(baseOwner, baseRepo, pr.Number)
 		if _, exists := updated.Workspaces[workspaceID]; exists {
@@ -648,6 +623,7 @@ func manifestAddReviewSelected(ctx context.Context, rootDir string, repoSpec str
 		if err := workspace.ValidateBranchName(ctx, pr.HeadRef); err != nil {
 			return err
 		}
+		repoURL := buildRepoURLFromParts(host, baseOwner, baseRepo)
 		repoSpecNorm, err := normalizeRepoSpec(repoURL)
 		if err != nil {
 			return err
@@ -881,23 +857,4 @@ func planIncludesUnrelatedChanges(ctx context.Context, rootDir string, addedWork
 		return true
 	}
 	return false
-}
-
-func ensureLocalBranchFromRemote(ctx context.Context, storePath, branch, remoteRef string) error {
-	if err := workspace.ValidateBranchName(ctx, branch); err != nil {
-		return err
-	}
-	if _, ok, err := gitcmd.ShowRef(ctx, storePath, fmt.Sprintf("refs/heads/%s", strings.TrimSpace(branch))); err != nil {
-		return err
-	} else if ok {
-		return nil
-	}
-	if _, ok, err := gitcmd.ShowRef(ctx, storePath, strings.TrimSpace(remoteRef)); err != nil {
-		return err
-	} else if !ok {
-		return fmt.Errorf("ref not found: %s", remoteRef)
-	}
-	// Create local branch pointing to remoteRef.
-	_, err := gitcmd.Run(ctx, []string{"branch", strings.TrimSpace(branch), strings.TrimSpace(remoteRef)}, gitcmd.Options{Dir: storePath, ShowOutput: true})
-	return err
 }
