@@ -30,8 +30,10 @@ Policy:
 - [x] Decide `--base` scope for multi-repo (preset): per-repo in interactive flows (prefill via `--base`), workspace-wide only in `--no-prompt`.
 - [x] Confirm base tracking model: workspace-level `.gwst/metadata.json base_branch` (and `gwst.yaml repos[].base_ref`).
 - [x] Decide rollback behavior when apply confirmation is declined: restore a backup of `gwst.yaml` (do not use import).
-- [ ] Specify `gwst manifest rm` UX and how risk context is shown (in rm vs rely on apply plan).
-- [ ] Specify `gwst manifest ls` drift badges (applied/missing/drift/extra), sorting, and output IA.
+- [x] Specify `gwst manifest rm` UX and how risk context is shown (in rm vs rely on apply plan).
+- [x] Specify `gwst manifest ls` drift badges (applied/missing/drift/extra), sorting, and output IA.
+- [x] Specify `gwst manifest preset` subcommands (ls/add/rm/validate).
+- [x] Align `gwst import` spec with current implementation.
 - [ ] Decide removal behavior for legacy `gwst preset *` (remove vs temporary alias vs hard error).
 - [ ] Decide removal behavior for `gwst ls` (exact error message guidance).
 
