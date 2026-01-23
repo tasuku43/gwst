@@ -6,10 +6,10 @@
 - Goal: Manage workspaces (task-based directories) backed by bare repo stores + git worktrees.
 
 ## IaC-first direction (Plan / Apply / Import)
-- gwst is moving toward an IaC-style workflow centered on **Declare → Diff → Reconcile**.
+- gwst uses an IaC-style workflow centered on **Declare → Diff → Reconcile**.
 - `gwst.yaml` is the workspace **desired state (inventory)**:
   - Location: `<GWST_ROOT>/gwst.yaml`
-  - Normal commands (`create`/`add`/`rm`/...): the filesystem is the source of truth; after a successful change, gwst rewrites `gwst.yaml` to follow.
+  - Inventory is updated via `gwst manifest ...`.
   - `gwst apply`: `gwst.yaml` is the source of truth; gwst computes a diff and reconciles the filesystem.
   - `gwst import`: the filesystem (+ `.gwst/metadata.json`) is the source of truth; gwst rebuilds `gwst.yaml`.
 - Command roles:
@@ -30,7 +30,7 @@
 
 ## Plans / Backlogs
 - Design notes and backlogs live under `docs/plans/`.
-- Main IaC migration backlog: `docs/plans/2026-01-21-iac-migration-backlog.md`
+- Main IaC backlog: `docs/plans/2026-01-21-iac-backlog.md`
 
 ## Non-negotiables (safety)
 - Do NOT run destructive commands (e.g., `rm -rf`, `sudo`, `chmod -R`, `dd`, disk operations).
@@ -73,7 +73,9 @@
 ## MVP scope
 Only implement:
 - repo: get / ls
-- workspace: new / add / ls / status / rm
+- manifest: ls / add / rm / preset *
+- reconcile: plan / apply / import
+- open
 - doctor: minimal checks (missing remote, non-git workspace entries)
 
 ## How to proceed on a task
@@ -85,7 +87,7 @@ Only implement:
 - When creating issues or PRs with `gh`, pass the body via a here-doc to preserve newlines for proper GitHub rendering:
   ```sh
   gh issue create \
-    --title "Implement gwst create unified command" \
+    --title "Update gwst command surface" \
     --body "$(cat <<'EOF'
   ## Summary
   ...

@@ -14,8 +14,6 @@ This directory holds gwst specifications in English. Each file uses frontmatter 
 ### `status` values
 - `planned`: spec-first discussion; not implemented yet.
 - `implemented`: implemented and considered current.
-- `legacy`: implemented but being replaced by a newer concept/command; kept for reference during migration.
-- `superseded`: no longer current (replacement exists); kept for historical reference.
 
 ## Global CLI behavior
 - Command form: `gwst <command> [flags] [args]`.

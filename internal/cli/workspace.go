@@ -3,55 +3,13 @@ package cli
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/mattn/go-isatty"
 	"github.com/tasuku43/gwst/internal/domain/workspace"
 	"github.com/tasuku43/gwst/internal/infra/gitcmd"
 	"github.com/tasuku43/gwst/internal/ui"
 )
-
-func runWorkspaceStatus(ctx context.Context, rootDir string, args []string) error {
-	if len(args) == 1 && isHelpArg(args[0]) {
-		printStatusHelp(os.Stdout)
-		return nil
-	}
-	if len(args) > 1 {
-		return fmt.Errorf("usage: gwst status [<WORKSPACE_ID>]")
-	}
-	workspaceID := ""
-	if len(args) == 1 {
-		workspaceID = args[0]
-	}
-	if workspaceID == "" {
-		workspaces, wsWarn, err := workspace.List(rootDir)
-		if err != nil {
-			return err
-		}
-		if len(wsWarn) > 0 {
-			// ignore warnings for selection
-		}
-		workspaceChoices := buildWorkspaceChoices(ctx, workspaces)
-		if len(workspaceChoices) == 0 {
-			return fmt.Errorf("no workspaces found")
-		}
-		theme := ui.DefaultTheme()
-		useColor := isatty.IsTerminal(os.Stdout.Fd())
-		workspaceID, err = ui.PromptWorkspace("gwst status", workspaceChoices, theme, useColor)
-		if err != nil {
-			return err
-		}
-	}
-	result, err := workspace.Status(ctx, rootDir, workspaceID)
-	if err != nil {
-		return err
-	}
-
-	writeWorkspaceStatusText(result)
-	return nil
-}
 
 func loadWorkspaceDescription(wsDir string) string {
 	desc, err := workspace.ReadDescription(wsDir)

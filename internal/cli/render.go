@@ -21,11 +21,6 @@ import (
 	"github.com/tasuku43/gwst/internal/ui"
 )
 
-type statusDetail struct {
-	text string
-	warn bool
-}
-
 type treeLineStyle int
 
 const (
@@ -56,37 +51,6 @@ func renderWorkspaceBlock(r *ui.Renderer, workspaceID, description string, repos
 	}
 	r.BulletWithDescription(workspaceID, description, fmt.Sprintf("(repos: %d)", len(repos)))
 	renderWorkspaceRepos(r, repos, output.Indent)
-}
-
-func buildStatusDetails(repo workspace.RepoStatus) []statusDetail {
-	var details []statusDetail
-	head := strings.TrimSpace(repo.Head)
-	if head != "" {
-		details = append(details, statusDetail{text: fmt.Sprintf("head: %s", head)})
-	}
-	if repo.StagedCount == 0 && repo.UnstagedCount == 0 && repo.UntrackedCount == 0 && repo.UnmergedCount == 0 {
-		details = append(details, statusDetail{text: "changes: clean"})
-		return details
-	}
-	if repo.StagedCount > 0 {
-		details = append(details, statusDetail{text: fmt.Sprintf("staged: %d", repo.StagedCount), warn: true})
-	}
-	if repo.UnstagedCount > 0 {
-		details = append(details, statusDetail{text: fmt.Sprintf("unstaged: %d", repo.UnstagedCount), warn: true})
-	}
-	if repo.UntrackedCount > 0 {
-		details = append(details, statusDetail{text: fmt.Sprintf("untracked: %d", repo.UntrackedCount), warn: true})
-	}
-	if repo.UnmergedCount > 0 {
-		details = append(details, statusDetail{text: fmt.Sprintf("unmerged: %d", repo.UnmergedCount), warn: true})
-	}
-	if repo.AheadCount > 0 {
-		details = append(details, statusDetail{text: fmt.Sprintf("ahead: %d", repo.AheadCount), warn: true})
-	}
-	if repo.BehindCount > 0 {
-		details = append(details, statusDetail{text: fmt.Sprintf("behind: %d", repo.BehindCount), warn: true})
-	}
-	return details
 }
 
 func issueDetails(issue doctor.Issue) []string {
@@ -628,54 +592,6 @@ func renderSuggestions(r *ui.Renderer, useColor bool, lines []string) {
 	}
 }
 
-func writeWorkspaceStatusText(result workspace.StatusResult) {
-	theme := ui.DefaultTheme()
-	useColor := isatty.IsTerminal(os.Stdout.Fd())
-	renderer := ui.NewRenderer(os.Stdout, theme, useColor)
-
-	warningLines := appendWarningLines(nil, "", result.Warnings)
-	for _, repo := range result.Repos {
-		if repo.Error != nil {
-			label := strings.TrimSpace(repo.Alias)
-			if label == "" {
-				label = filepath.Base(repo.WorktreePath)
-			}
-			warningLines = append(warningLines, fmt.Sprintf("%s: %v", label, repo.Error))
-		}
-	}
-	if len(warningLines) > 0 {
-		renderWarningsSection(renderer, "warnings", warningLines, false)
-		renderer.Blank()
-	}
-
-	renderer.Section("Result")
-
-	for _, repo := range result.Repos {
-		label := repo.Alias
-		if strings.TrimSpace(label) == "" {
-			label = filepath.Base(repo.WorktreePath)
-		}
-		if strings.TrimSpace(repo.Branch) != "" {
-			label = fmt.Sprintf("%s (branch: %s)", label, repo.Branch)
-		}
-		renderer.Bullet(label)
-
-		details := buildStatusDetails(repo)
-		for i, detail := range details {
-			prefix := "├─ "
-			if i == len(details)-1 {
-				prefix = "└─ "
-			}
-			prefix = output.Indent + prefix
-			if detail.warn {
-				renderer.TreeLineWarn(prefix, detail.text)
-			} else {
-				renderer.TreeLineBranchMuted(prefix, detail.text, "")
-			}
-		}
-	}
-}
-
 func writeWorkspaceListText(ctx context.Context, rootDir string, entries []workspace.Entry, warnings []error, showDetails bool) {
 	theme := ui.DefaultTheme()
 	useColor := isatty.IsTerminal(os.Stdout.Fd())
@@ -776,7 +692,7 @@ func writeInitText(result initcmd.Result) {
 	renderer.Bullet(fmt.Sprintf("root: %s", result.RootDir))
 
 	renderSuggestions(renderer, useColor, []string{
-		"gwst preset ls",
+		"gwst manifest preset ls",
 		"gwst repo get <repo>",
 		fmt.Sprintf("Edit gwst.yaml: %s", filepath.Join(result.RootDir, manifest.FileName)),
 	})

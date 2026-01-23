@@ -176,14 +176,11 @@ Steps
   • run now? (y/n)
 ```
 
-### gwst status
+### gwst plan
 ```
-Result
-  • api (branch: PROJ-123)
-    ├─ head: 94a67ef
-    ├─ staged: 1
-    ├─ unstaged: 2
-    └─ untracked: 2
+Plan
+  • workspace add PROJ-123
+  • worktree add api (branch: PROJ-123)
 ```
 
 ## Notes

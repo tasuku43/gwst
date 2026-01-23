@@ -13,7 +13,6 @@ aliases:
 Create a preset entry in `gwst.yaml` without manual YAML editing.
 
 ## Notes
-- This is the manifest-first replacement for the legacy `gwst preset add`.
 - This command is inventory-only and does not run `gwst apply`.
 
 ## Behavior
