@@ -5,7 +5,7 @@ aliases:
   - "gwst man add"
   - "gwst m add"
 pending:
-  - interactive-flows-from-create
+  - interactive-flows
   - error-messages-and-output
 ---
 
@@ -15,7 +15,7 @@ pending:
 Note: If no mode flag is provided and prompts are allowed, the mode is chosen via an interactive picker.
 
 ## Intent
-Create the desired workspace inventory in `gwst.yaml` using an interactive UX (same intent as the legacy `gwst create`), then reconcile the filesystem via `gwst apply` by default.
+Create the desired workspace inventory in `gwst.yaml` using an interactive UX, then reconcile the filesystem via `gwst apply` by default.
 
 ## Modes and selection
 - Exactly one of `--preset`, `--review`, `--issue`, or `--repo` can be specified. If multiple are provided, error.
@@ -39,7 +39,7 @@ For URL-based modes, workspace IDs are derived mechanically:
 - These modes require an authenticated GitHub CLI (`gh`) to fetch PR/issue metadata.
 
 ## Behavior (high level)
-- Runs the same interactive selection and input UX as the legacy `gwst create` (mode picker + mode-specific prompts).
+- Runs an interactive selection and input UX (mode picker + mode-specific prompts).
 - Produces a workspace definition (mode, description, optional metadata, repo list with alias/repo_key/branch) and writes it to `<root>/gwst.yaml`.
 - If the target `WORKSPACE_ID` already exists in `gwst.yaml`, error (no upsert in MVP).
 - If the target workspace already exists on the filesystem (`<root>/workspaces/<WORKSPACE_ID>`) but is missing from `gwst.yaml`, error and suggest `gwst import` (do not adopt implicitly).

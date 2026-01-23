@@ -125,7 +125,7 @@ func runApplyInternalWithPlan(ctx context.Context, rootDir string, renderer *ui.
 	renderPlanChanges(ctx, rootDir, renderer, plan)
 
 	// Start background fetch while the user reviews the plan.
-	// This preserves the "gwst create" UX win (fetch overlaps with reading time),
+	// This preserves the "gwst manifest add" UX win (fetch overlaps with reading time),
 	// while keeping `gwst plan` itself side-effect free.
 	toPrefetch := repoSpecsForApplyPlan(plan)
 	prefetch := prefetcher.New(defaultPrefetchTimeout)

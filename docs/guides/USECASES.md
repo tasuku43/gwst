@@ -17,18 +17,18 @@ Rating legend:
 - **Switch roots** — Use `--root` or `GWST_ROOT` to separate environments. Rating: Excellent
 
 ## Start / During a Task
-- **Create workspace from preset** — `gwst create --preset <name> [<id>]`; prompts if omitted. `workspace_id` becomes the branch name for all repos. Rating: Excellent (interactive repo-get prompt appears when a preset repo is missing)
+- **Create workspace from preset** — `gwst manifest add --preset <name> <id>`; prompts if omitted. By default it updates `gwst.yaml` then runs `gwst apply`. `workspace_id` becomes the branch name for all repos. Rating: Excellent
 - **Add a repo mid-task** — `gwst add <id> <repo>`; branch name = workspace_id, base = origin/HEAD. Rating: Excellent
 - **List workspaces** — `gwst manifest ls` lists inventory and shows drift indicators. Rating: Good
 - **Jump to a path** — `gwst path --workspace` prints a selected path for `cd`. Rating: Good
 - **Check status** — `gwst status <id>` shows dirty/untracked counts and HEAD per repo. Rating: Excellent (lightweight)
 
 ## Reviews
-- **Start a PR review** — `gwst create --review <PR URL>` creates `<OWNER>-<REPO>-REVIEW-PR-<num>`, fetches the PR head branch (forks not supported) for GitHub; requires `gh`. Rating: Good (GitHub only)
+- **Start a PR review** — `gwst manifest add --review <PR URL>` creates `<OWNER>-<REPO>-REVIEW-PR-<num>` inventory and reconciles via apply for GitHub; requires `gh`. Rating: Good (GitHub only)
 - **Add repos during review** — Use `gwst add` after the review workspace is created. Rating: Good
 
 ## Cleanup / Maintenance
-- **Safe deletion** — `gwst rm <id>` removes worktrees then deletes the workspace dir; refuses when dirty. Rating: Excellent
+- **Safe deletion** — `gwst manifest rm <id>` updates inventory then reconciles via apply (which prompts/blocks on destructive risk). Rating: Excellent
 - **Repo store health check** — `gwst doctor [--fix]` detects common remote issues. Rating: Fair (narrow check set)
 - **Refresh to latest base** — Forcing a fresh fetch is manual via `git fetch`; gwst alone doesn’t cover it. Rating: Fair
 
@@ -41,4 +41,4 @@ Rating legend:
 - `gwst manifest ls` currently requires a drift model that remains stable and easy to understand.
 - `gwst doctor` checks only a narrow set; does not catch orphan worktrees, branch conflicts, or stale workspace artifacts.
 - No JSON/machine-readable output; agents must parse human text.
-- After `gwst create --review`, pulling newer PR updates still requires manual fetch; no auto-sync or “refresh review” command.
+- After `gwst manifest add --review`, pulling newer PR updates still requires manual fetch; no auto-sync or “refresh review” command.

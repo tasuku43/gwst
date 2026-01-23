@@ -56,6 +56,6 @@ Add new files in the same format when introducing new commands or options.
 
 ### Command spec layout
 Command specs are organized to mirror the CLI shape:
-- Single-word commands: `docs/spec/commands/<command>.md` (e.g. `create.md`, `apply.md`)
+- Single-word commands: `docs/spec/commands/<command>.md` (e.g. `init.md`, `apply.md`)
 - Subcommands: `docs/spec/commands/<command>/<subcommand>.md` (e.g. `repo/get.md`, `preset/add.md`)
 - Command group overview (optional): `docs/spec/commands/<command>/README.md`

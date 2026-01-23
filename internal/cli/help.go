@@ -25,11 +25,9 @@ func printGlobalHelp(w io.Writer) {
 	fmt.Fprintln(w, "")
 	fmt.Fprintln(w, helpSectionTitle(theme, useColor, "Commands:"))
 	fmt.Fprintln(w, helpCommand(theme, useColor, "init", "initialize gwst root layout"))
-	fmt.Fprintln(w, helpCommand(theme, useColor, "create [mode flags] [args]", "create workspace (preset/review/issue/repo)"))
 	fmt.Fprintln(w, helpCommand(theme, useColor, "open [<WORKSPACE_ID>] [--shell]", "open workspace in subshell"))
 	fmt.Fprintln(w, helpCommand(theme, useColor, "add [<WORKSPACE_ID>] [<repo>]", "add repo worktree to workspace"))
 	fmt.Fprintln(w, helpCommand(theme, useColor, "status [<WORKSPACE_ID>]", "check dirty/untracked status"))
-	fmt.Fprintln(w, helpCommand(theme, useColor, "rm [<WORKSPACE_ID>]", "remove workspace (confirms on warnings)"))
 	fmt.Fprintln(w, helpCommand(theme, useColor, "path --workspace", "print selected workspace path"))
 	fmt.Fprintln(w, helpCommand(theme, useColor, "manifest <subcommand>", "gwst.yaml inventory commands (aliases: man, m)"))
 	fmt.Fprintln(w, helpCommand(theme, useColor, "repo <subcommand>", "repo commands (get/ls)"))
@@ -50,16 +48,12 @@ func printGlobalHelp(w io.Writer) {
 
 func printCommandHelp(cmd string, w io.Writer) bool {
 	switch cmd {
-	case "create":
-		printCreateHelp(w)
 	case "add":
 		printAddHelp(w)
 	case "ls":
 		printLsHelp(w)
 	case "status":
 		printStatusHelp(w)
-	case "rm":
-		printRmHelp(w)
 	case "open":
 		printOpenHelp(w)
 	case "path":
@@ -88,18 +82,6 @@ func printCommandHelp(cmd string, w io.Writer) bool {
 	return true
 }
 
-func printCreateHelp(w io.Writer) {
-	theme, useColor := helpTheme(w)
-	fmt.Fprintln(w, "Usage: gwst create [--preset <name> | --review [<PR URL>] | --issue [<ISSUE_URL>] | --repo [<repo>]] [<WORKSPACE_ID>] [--workspace-id <id>] [--branch <name>] [--base <ref>] [--no-prompt]")
-	fmt.Fprintln(w, helpFlag(theme, useColor, "--preset <name>", "preset name"))
-	fmt.Fprintln(w, helpFlag(theme, useColor, "--review [<PR URL>]", "create review workspace from PR"))
-	fmt.Fprintln(w, helpFlag(theme, useColor, "--issue [<ISSUE_URL>]", "create issue workspace from issue"))
-	fmt.Fprintln(w, helpFlag(theme, useColor, "--repo [<repo>]", "create workspace from a repo (optional interactive selection)"))
-	fmt.Fprintln(w, helpFlag(theme, useColor, "--workspace-id <id>", "override workspace id (issue mode)"))
-	fmt.Fprintln(w, helpFlag(theme, useColor, "--branch <name>", "override branch name (issue mode)"))
-	fmt.Fprintln(w, helpFlag(theme, useColor, "--base <ref>", "override base ref (issue mode)"))
-}
-
 func printAddHelp(w io.Writer) {
 	fmt.Fprintln(w, "Usage: gwst add [<WORKSPACE_ID>] [<repo>]")
 }
@@ -116,10 +98,6 @@ func printLsHelp(w io.Writer) {
 func printStatusHelp(w io.Writer) {
 	fmt.Fprintln(w, "Usage: gwst status [<WORKSPACE_ID>]")
 	fmt.Fprintln(w, "  Show dirty/untracked state for each repo")
-}
-
-func printRmHelp(w io.Writer) {
-	fmt.Fprintln(w, "Usage: gwst rm [<WORKSPACE_ID>]")
 }
 
 func printOpenHelp(w io.Writer) {

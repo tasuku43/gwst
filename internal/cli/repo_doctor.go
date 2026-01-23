@@ -116,8 +116,8 @@ func runRepoGet(ctx context.Context, rootDir string, args []string) error {
 	renderer.Section("Result")
 	renderer.Bullet(fmt.Sprintf("%s %s", store.RepoKey, store.StorePath))
 	renderSuggestions(renderer, useColor, []string{
-		"gwst create",
-		"gwst create --repo <repo>",
+		"gwst manifest add --repo <repo>",
+		"gwst manifest add --repo",
 	})
 	return nil
 }

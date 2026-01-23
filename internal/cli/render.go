@@ -740,54 +740,6 @@ func writeRepoListText(entries []repo.Entry, warnings []error) {
 	}
 }
 
-func writePresetListText(file preset.File, names []string) {
-	theme := ui.DefaultTheme()
-	useColor := isatty.IsTerminal(os.Stdout.Fd())
-	renderer := ui.NewRenderer(os.Stdout, theme, useColor)
-
-	renderer.Section("Result")
-	if len(names) == 0 {
-		renderer.Bullet("no presets found")
-		renderSuggestions(renderer, useColor, []string{
-			"gwst create --preset",
-			"gwst create --preset <name>",
-		})
-		return
-	}
-	for _, name := range names {
-		renderer.Bullet(name)
-		presetEntry, ok := file.Presets[name]
-		if !ok {
-			continue
-		}
-		var repos []string
-		for _, repoSpec := range presetEntry.Repos {
-			display := displayPresetRepo(repoSpec)
-			if strings.TrimSpace(display) == "" {
-				continue
-			}
-			repos = append(repos, display)
-		}
-		renderTreeLines(renderer, repos, treeLineNormal)
-	}
-	renderSuggestions(renderer, useColor, []string{
-		"gwst create --preset",
-		"gwst create --preset <name>",
-	})
-}
-
-func writePresetShowText(name string, presetEntry preset.Preset) {
-	theme := ui.DefaultTheme()
-	useColor := isatty.IsTerminal(os.Stdout.Fd())
-	renderer := ui.NewRenderer(os.Stdout, theme, useColor)
-
-	renderer.Section("Result")
-	renderer.Bullet(name)
-	if len(presetEntry.Repos) > 0 {
-		renderTreeLines(renderer, presetEntry.Repos, treeLineNormal)
-	}
-}
-
 func writeInitText(result initcmd.Result) {
 	theme := ui.DefaultTheme()
 	useColor := isatty.IsTerminal(os.Stdout.Fd())

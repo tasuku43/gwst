@@ -17,28 +17,28 @@ https://github.com/user-attachments/assets/889e7f64-6222-4ad2-bc42-620dd1dd4139
 
 ## Who it's for
 
-- People or teams managing work via GitHub Issues → batch-create with `gwst create --issue`.
-- People or teams with frequent reviews → spin up review workspaces in bulk via `gwst create --review`.
+- People or teams managing work via GitHub Issues → batch-add inventory with `gwst manifest add --issue`.
+- People or teams with frequent reviews → spin up review workspaces in bulk via `gwst manifest add --review`.
 - People or teams changing multiple repos per task → presets create a task-level workspace (pseudo-monorepo).
-- People or teams overwhelmed by many worktrees and risky cleanup → guardrails in `gwst rm`.
+- People or teams overwhelmed by many worktrees and risky cleanup → safe reconciliation via `gwst plan` + `gwst apply`.
 
 ## What makes gwst different
 
-### 1) `create` is the center
+### 1) `gwst manifest add` is the center
 
 One command, four creation modes:
 
 ```bash
-gwst create --repo git@github.com:org/repo.git
-gwst create --preset app PROJ-123
-gwst create --review https://github.com/owner/repo/pull/123   # GitHub only
-gwst create --issue https://github.com/owner/repo/issues/123  # GitHub only
+gwst manifest add --repo git@github.com:org/repo.git
+gwst manifest add --preset app PROJ-123
+gwst manifest add --review https://github.com/owner/repo/pull/123   # GitHub only
+gwst manifest add --issue https://github.com/owner/repo/issues/123  # GitHub only
 ```
 
 If you omit options, gwst switches to an interactive flow:
 
 ```
-$ gwst create
+$ gwst manifest add
 Inputs
   • mode: s (type to filter)
     └─ repo - 1 repo only
@@ -50,7 +50,7 @@ Inputs
 Review/issue modes are also interactive (repo + multi-select):
 
 ```
-$ gwst create --review
+$ gwst manifest add --review
 Inputs
   • repo: org/gwst
   • pull request: s (type to filter)
@@ -61,7 +61,7 @@ Info
 ```
 
 ```
-$ gwst create --issue
+$ gwst manifest add --issue
 Inputs
   • repo: org/gwst
   • issue: s (type to filter)
@@ -86,21 +86,21 @@ presets:
 ```
 
 ```bash
-gwst create --preset app PROJ-123
+gwst manifest add --preset app PROJ-123
 ```
 
 ### 3) Guardrails on cleanup
 
-`gwst rm` refuses or asks for confirmation when workspaces are dirty, unpushed, or unknown:
+`gwst plan` + `gwst apply` refuse or ask for confirmation when removals are risky (dirty, unpushed, unknown, etc.):
 
 ```bash
-gwst rm PROJ-123
+gwst manifest rm PROJ-123
 ```
 
 Omitting the workspace id prompts selection:
 
 ```
-$ gwst rm
+$ gwst manifest rm
 Inputs
   • workspace: s (type to filter)
     └─ PROJ-123 [clean] - sample project
@@ -112,7 +112,7 @@ Inputs
 ## Requirements
 
 - Git
-- gh CLI (optional; required for `gwst create --review` and `gwst create --issue` — GitHub only)
+- gh CLI (optional; required for `gwst manifest add --review` and `gwst manifest add --issue` — GitHub only)
 
 ## Install
 
@@ -173,12 +173,12 @@ This step is required before creating a workspace.
 ### 3) Create a workspace
 
 ```bash
-gwst create --repo git@github.com:org/backend.git
+gwst manifest add --repo git@github.com:org/backend.git PROJ-123
 ```
 
 You'll be prompted for a workspace id (e.g. `PROJ-123`, typically a Jira or ticket id).
 
-Or run `gwst create` with no args to pick a mode and fill inputs interactively.
+Or run `gwst manifest add` with no args to pick a mode and fill inputs interactively.
 
 ### 4) Work and clean up
 
@@ -200,14 +200,14 @@ prefixes the prompt with `[gwst:<WORKSPACE_ID>]`.
 Remove a workspace with guardrails (prompts if omitted):
 
 ```bash
-gwst rm PROJ-123
+gwst manifest rm PROJ-123
 ```
 
 ## Help and docs
 
 - `docs/README.md` for documentation index
 - `docs/spec/README.md` for specs index and status
-- `docs/spec/commands/` for per-command specs (create/add/rm/etc.)
+- `docs/spec/commands/` for per-command specs
 - `docs/spec/core/GWST.md` for gwst.yaml format
 - `docs/spec/core/PRESETS.md` for preset format
 - `docs/spec/core/DIRECTORY_LAYOUT.md` for the file layout

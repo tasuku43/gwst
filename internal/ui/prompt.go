@@ -85,6 +85,7 @@ type inputsModel struct {
 type createFlowModel struct {
 	stage createFlowStage
 	mode  string
+	title string
 
 	presets []string
 	tmplErr error
@@ -148,6 +149,7 @@ func newCreateFlowModel(title string, presets []string, tmplErr error, repoChoic
 		repoChoices:        repoChoices,
 		repoErr:            repoErr,
 		defaultWorkspaceID: defaultWorkspaceID,
+		title:              title,
 		modeInput:          input,
 		reviewRepos:        reviewRepos,
 		issueRepos:         issueRepos,
@@ -168,7 +170,7 @@ func newCreateFlowModel(title string, presets []string, tmplErr error, repoChoic
 			if m.onReposResolved != nil {
 				m.onReposResolved(m.presetRepos)
 			}
-			m.presetModel = newInputsModelWithLabel("gwst create", nil, m.repoSelected, m.defaultWorkspaceID, "repo", m.theme, m.useColor)
+			m.presetModel = newInputsModelWithLabel(m.title, nil, m.repoSelected, m.defaultWorkspaceID, "repo", m.theme, m.useColor)
 			m.stage = createStageRepoWorkspace
 		} else {
 			m.startMode(startMode, presetName)
@@ -197,7 +199,7 @@ func (m *createFlowModel) startMode(mode, presetName string) {
 		}
 		m.mode = mode
 		m.stage = createStagePreset
-		m.presetModel = newInputsModel("gwst create", m.presets, presetName, m.defaultWorkspaceID, m.theme, m.useColor)
+		m.presetModel = newInputsModel(m.title, m.presets, presetName, m.defaultWorkspaceID, m.theme, m.useColor)
 	case "review":
 		if len(m.reviewRepos) == 0 {
 			m.err = fmt.Errorf("no GitHub repos found")
@@ -205,7 +207,7 @@ func (m *createFlowModel) startMode(mode, presetName string) {
 		}
 		m.mode = mode
 		m.stage = createStageReviewRepo
-		m.reviewRepoModel = newChoiceSelectModel("gwst create", "repo", m.reviewRepos, m.theme, m.useColor)
+		m.reviewRepoModel = newChoiceSelectModel(m.title, "repo", m.reviewRepos, m.theme, m.useColor)
 	case "issue":
 		if len(m.issueRepos) == 0 {
 			m.err = fmt.Errorf("no repos with supported hosts found")
@@ -213,7 +215,7 @@ func (m *createFlowModel) startMode(mode, presetName string) {
 		}
 		m.mode = mode
 		m.stage = createStageIssueRepo
-		m.issueRepoModel = newChoiceSelectModel("gwst create", "repo", m.issueRepos, m.theme, m.useColor)
+		m.issueRepoModel = newChoiceSelectModel(m.title, "repo", m.issueRepos, m.theme, m.useColor)
 	case "repo":
 		if m.repoErr != nil {
 			m.err = m.repoErr
@@ -225,7 +227,7 @@ func (m *createFlowModel) startMode(mode, presetName string) {
 		}
 		m.mode = mode
 		m.stage = createStageRepoSelect
-		m.repoSelectModel = newChoiceSelectModel("gwst create", "repo", m.repoChoices, m.theme, m.useColor)
+		m.repoSelectModel = newChoiceSelectModel(m.title, "repo", m.repoChoices, m.theme, m.useColor)
 	default:
 		m.err = fmt.Errorf("unknown mode: %s", mode)
 	}
@@ -299,21 +301,21 @@ func (m createFlowModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						return m, tea.Quit
 					}
 					m.stage = createStagePreset
-					m.presetModel = newInputsModel("gwst create", m.presets, "", "", m.theme, m.useColor)
+					m.presetModel = newInputsModel(m.title, m.presets, "", "", m.theme, m.useColor)
 				case "review":
 					if len(m.reviewRepos) == 0 {
 						m.err = fmt.Errorf("no GitHub repos found")
 						return m, tea.Quit
 					}
 					m.stage = createStageReviewRepo
-					m.reviewRepoModel = newChoiceSelectModel("gwst create", "repo", m.reviewRepos, m.theme, m.useColor)
+					m.reviewRepoModel = newChoiceSelectModel(m.title, "repo", m.reviewRepos, m.theme, m.useColor)
 				case "issue":
 					if len(m.issueRepos) == 0 {
 						m.err = fmt.Errorf("no repos with supported hosts found")
 						return m, tea.Quit
 					}
 					m.stage = createStageIssueRepo
-					m.issueRepoModel = newChoiceSelectModel("gwst create", "repo", m.issueRepos, m.theme, m.useColor)
+					m.issueRepoModel = newChoiceSelectModel(m.title, "repo", m.issueRepos, m.theme, m.useColor)
 				case "repo":
 					if m.repoErr != nil {
 						m.err = m.repoErr
@@ -324,7 +326,7 @@ func (m createFlowModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						return m, tea.Quit
 					}
 					m.stage = createStageRepoSelect
-					m.repoSelectModel = newChoiceSelectModel("gwst create", "repo", m.repoChoices, m.theme, m.useColor)
+					m.repoSelectModel = newChoiceSelectModel(m.title, "repo", m.repoChoices, m.theme, m.useColor)
 				default:
 					m.err = fmt.Errorf("unknown mode: %s", m.mode)
 					return m, tea.Quit
@@ -460,7 +462,7 @@ func (m createFlowModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.err = fmt.Errorf("no pull requests found")
 				return m, tea.Quit
 			}
-			m.reviewPRModel = newMultiSelectModel("gwst create", "pull request", choices, m.theme, m.useColor)
+			m.reviewPRModel = newMultiSelectModel(m.title, "pull request", choices, m.theme, m.useColor)
 			m.stage = createStageReviewPRs
 		}
 		return m, nil
@@ -493,7 +495,7 @@ func (m createFlowModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.err = fmt.Errorf("no issues found")
 				return m, tea.Quit
 			}
-			m.issueIssueModel = newIssueBranchSelectModel("gwst create", "issue", choices, m.validateBranch, m.theme, m.useColor)
+			m.issueIssueModel = newIssueBranchSelectModel(m.title, "issue", choices, m.validateBranch, m.theme, m.useColor)
 			m.stage = createStageIssueIssues
 		}
 		return m, nil
@@ -518,7 +520,7 @@ func (m createFlowModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.onReposResolved != nil {
 				m.onReposResolved(m.presetRepos)
 			}
-			m.presetModel = newInputsModelWithLabel("gwst create", nil, m.repoSelected, m.defaultWorkspaceID, "repo", m.theme, m.useColor)
+			m.presetModel = newInputsModelWithLabel(m.title, nil, m.repoSelected, m.defaultWorkspaceID, "repo", m.theme, m.useColor)
 			m.stage = createStageRepoWorkspace
 		}
 		return m, nil

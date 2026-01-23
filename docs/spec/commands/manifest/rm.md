@@ -10,12 +10,12 @@ aliases:
 `gwst manifest rm [<WORKSPACE_ID> ...] [--no-apply] [--no-prompt]`
 
 ## Intent
-Remove workspace entries from the inventory (`gwst.yaml`) using an interactive UX (same intent as the legacy `gwst rm` selection), then reconcile the filesystem via `gwst apply` by default.
+Remove workspace entries from the inventory (`gwst.yaml`) using an interactive UX, then reconcile the filesystem via `gwst apply` by default.
 
 ## Behavior (high level)
 - Targets one or more workspaces:
   - With args: treat as the selected workspace IDs.
-  - Without args: interactive multi-select (same UX as legacy `gwst rm`).
+  - Without args: interactive multi-select.
 - Workspace IDs are treated as workspace directory identifiers (they do not have to be valid git branch names).
 - Updates `<root>/gwst.yaml` by removing the selected workspace entries.
 - By default, runs `gwst apply` to reconcile the filesystem with the updated manifest.
@@ -63,7 +63,7 @@ When apply runs, `gwst manifest rm` should emit an `Info` section after `Inputs`
 - `apply: reconciling entire root (destructive removals require confirmation)`
 
 ## Risk context (guidance)
-This command should preserve the spirit of the legacy `gwst rm` UX:
+This command should provide lightweight risk context before apply runs:
 - In interactive selection, show warning indicators for risky workspaces (dirty/unpushed/diverged/unknown).
 - Keep the selection UI lightweight: show only a short aggregated status tag next to each workspace when non-clean (e.g. `[dirty]`, `[unpushed]`, `[diverged]`, `[unknown]`); omit the tag for clean.
   - Repo-level details are optional; plan output follows and is the primary place for deep review.
@@ -71,7 +71,7 @@ This command should preserve the spirit of the legacy `gwst rm` UX:
 - Status aggregation priority (if multiple conditions apply): `unknown` > `dirty` > `diverged` > `unpushed` (clean is omitted).
 
 ### Workspace State Model (picker tags)
-The picker status tags (`dirty`/`unpushed`/`diverged`/`unknown`) should preserve the semantics and detection rules of the legacy `gwst rm` behavior (documented here so the legacy spec can be removed later).
+The picker status tags (`dirty`/`unpushed`/`diverged`/`unknown`) follow these semantics and detection rules.
 
 Definitions (per repo, based on local state only):
 - **Clean**: no uncommitted changes; upstream set; not ahead/behind.

@@ -46,7 +46,7 @@ func runManifestAdd(ctx context.Context, rootDir string, args []string, globalNo
 	addFlags.Usage = func() {
 		printManifestAddHelp(os.Stdout)
 	}
-	if err := addFlags.Parse(normalizeCreateArgs(args)); err != nil {
+	if err := addFlags.Parse(normalizeManifestAddArgs(args)); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			return nil
 		}

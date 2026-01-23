@@ -128,7 +128,7 @@ Example:
 
 ## Examples
 
-### gwst create --preset (interactive)
+### gwst manifest add --preset (interactive)
 ```
 Inputs
   • preset: hel
@@ -146,7 +146,7 @@ Result
     └─ helmfiles (branch: PROJ-123)
 ```
 
-### gwst create (mode picker)
+### gwst manifest add (mode picker)
 ```
 Inputs
   • mode: s
@@ -156,7 +156,7 @@ Inputs
     └─ preset - From preset
 ```
 
-### gwst create --preset (non-interactive)
+### gwst manifest add --preset (non-interactive)
 ```
 Steps
   • repo get git@github.com:org/repo.git
@@ -168,7 +168,7 @@ Result
     └─ api
 ```
 
-### gwst create --review (interactive)
+### gwst manifest add --review (interactive)
 ```
 Steps
   • repo get required for 1 repo

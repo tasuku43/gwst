@@ -19,7 +19,7 @@ gwst init
 
 ## Source of truth
 
-- **Normal commands** (`create`, `add`, `rm`, `resume`, etc.): filesystem operations are the truth. After a successful change, `gwst` rewrites `gwst.yaml` as a whole to reflect the new state.
+- **Non-IaC commands**: filesystem operations are the truth. After a successful change, `gwst` rewrites `gwst.yaml` as a whole to reflect the new state.
 - **`gwst apply`**: `gwst.yaml` is the truth. `gwst` computes a diff, shows the plan, and applies the changes to the filesystem after confirmation.
 - **`gwst import`**: filesystem and `.gwst/metadata.json` are the truth. `gwst` rebuilds `gwst.yaml` from the current state.
 

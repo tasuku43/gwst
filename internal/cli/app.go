@@ -86,16 +86,12 @@ func Run() error {
 		return runPresetRemoved(args[1:])
 	case "manifest", "man", "m":
 		return runManifest(ctx, rootDir, args[1:], noPrompt)
-	case "create":
-		return runCreate(ctx, rootDir, args[1:], noPrompt)
 	case "add":
 		return runWorkspaceAdd(ctx, rootDir, args[1:])
 	case "ls":
 		return runLsRemoved(args[1:])
 	case "status":
 		return runWorkspaceStatus(ctx, rootDir, args[1:])
-	case "rm":
-		return runWorkspaceRemove(ctx, rootDir, args[1:])
 	case "open":
 		return runWorkspaceOpen(ctx, rootDir, args[1:], noPrompt)
 	case "path":

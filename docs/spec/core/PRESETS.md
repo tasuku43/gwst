@@ -33,25 +33,25 @@ presets:
 
 Notes:
 - Repo specs must be SSH (`git@host:owner/repo.git`) or HTTPS (`https://host/owner/repo.git`).
-- `gwst preset validate` checks YAML structure, preset names, and repo spec format.
+- `gwst manifest preset validate` checks YAML structure, preset names, and repo spec format.
 
 ## CLI usage
 
 Create a workspace from a preset:
 
 ```
-gwst create --preset example MY-123
+gwst manifest add --preset example MY-123
 ```
 
 List presets:
 
 ```
-gwst preset ls
+gwst manifest preset ls
 ```
 
 Add/remove presets without editing YAML directly:
 
 ```
-gwst preset add mytmpl --repo git@github.com:org/repo.git
-gwst preset rm mytmpl
+gwst manifest preset add mytmpl --repo git@github.com:org/repo.git
+gwst manifest preset rm mytmpl
 ```

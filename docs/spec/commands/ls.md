@@ -18,9 +18,9 @@ This command is removed. Use `gwst manifest ls` for inventory listing with drift
 - Scans `<root>/workspaces` for directories; ignores non-directories.
 - For each workspace, scans its contents to discover repo worktrees (alias, repo key, branch, path) and renders them in a tree view.
 - If a workspace description is available in `gwst.yaml`, show it alongside the workspace ID.
-- If a workspace has status warnings (dirty, unpushed, diverged, unknown), show an inline tag next to the workspace ID (same labels as `gwst rm`).
+- If a workspace has status warnings (dirty, unpushed, diverged, unknown), show an inline tag next to the workspace ID (same labels as `gwst manifest rm` workspace picker).
 - Collects and reports non-fatal warnings from scanning workspaces or repos.
-- `--details`: include repo-level git status details (same output as `gwst rm` confirmation: `git status --short --branch` for repos that need warnings).
+- `--details`: include repo-level git status details (same output as the removal risk scan: `git status --short --branch` for repos that need warnings).
 
 ## Success Criteria
 - Existing workspaces are listed; command succeeds even if none exist (empty result).

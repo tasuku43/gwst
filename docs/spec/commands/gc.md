@@ -13,11 +13,11 @@ pending:
 `gwst gc`
 
 ## Intent
-Bulk-delete workspaces that are highly likely safe to remove, using conservative rules. This is intentionally separated from `gwst rm`, which remains the explicit/manual path.
+Bulk-delete workspaces that are highly likely safe to remove, using conservative rules. This is intentionally separated from manual removal flows, which remain the explicit/human-judgment path.
 
 ## Scope
 - **GC**: automatic, bulk, conservative. Exclude when in doubt.
-- **RM**: explicit, interactive, for human judgment.
+- **Manual removal**: explicit, interactive, for human judgment.
 
 ## Definitions
 - **Clean**: no uncommitted changes in any repo.
@@ -54,7 +54,7 @@ Bulk-delete workspaces that are highly likely safe to remove, using conservative
 - Prints candidates with reasons (always shown before deletion).
 - Deletes all candidates in one run (single confirmation; no per-item selection).
 - Confirmation requires typing `y` to proceed; any other input cancels.
-- Removes worktrees and workspace directory (same removal semantics as `gwst rm`).
+- Removes worktrees and workspace directory (same removal semantics as `gwst apply` workspace removals).
 
 ## Output
 - Summary: scanned / candidates / deleted / skipped.
