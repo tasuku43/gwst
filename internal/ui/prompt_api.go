@@ -22,21 +22,6 @@ func PromptNewWorkspaceInputs(title string, presets []string, presetName string,
 	return strings.TrimSpace(final.preset), strings.TrimSpace(final.workspaceID), nil
 }
 
-func PromptWorkspaceAndRepo(title string, workspaces []WorkspaceChoice, repos []PromptChoice, workspaceID, repoSpec string, theme Theme, useColor bool) (string, string, error) {
-	debuglog.SetPrompt("workspace-and-repo")
-	defer debuglog.ClearPrompt()
-	model := newAddInputsModel(title, workspaces, repos, workspaceID, repoSpec, theme, useColor)
-	out, err := runProgram(model)
-	if err != nil {
-		return "", "", err
-	}
-	final := out.(addInputsModel)
-	if final.err != nil {
-		return "", "", final.err
-	}
-	return strings.TrimSpace(final.workspaceID), strings.TrimSpace(final.repoSpec), nil
-}
-
 func PromptWorkspace(title string, workspaces []WorkspaceChoice, theme Theme, useColor bool) (string, error) {
 	debuglog.SetPrompt("workspace")
 	defer debuglog.ClearPrompt()

@@ -8,90 +8,10 @@ import (
 	"strings"
 
 	"github.com/mattn/go-isatty"
-	"github.com/tasuku43/gwst/internal/domain/repo"
 	"github.com/tasuku43/gwst/internal/domain/workspace"
 	"github.com/tasuku43/gwst/internal/infra/gitcmd"
-	"github.com/tasuku43/gwst/internal/infra/output"
 	"github.com/tasuku43/gwst/internal/ui"
 )
-
-func runWorkspaceAdd(ctx context.Context, rootDir string, args []string) error {
-	if len(args) == 1 && isHelpArg(args[0]) {
-		printAddHelp(os.Stdout)
-		return nil
-	}
-	if len(args) > 2 {
-		return fmt.Errorf("usage: gwst add [<WORKSPACE_ID>] [<repo>]")
-	}
-	workspaceID := ""
-	repoSpec := ""
-	if len(args) >= 1 {
-		workspaceID = args[0]
-	}
-	if len(args) == 2 {
-		repoSpec = args[1]
-	}
-	theme := ui.DefaultTheme()
-	useColor := isatty.IsTerminal(os.Stdout.Fd())
-	renderer := ui.NewRenderer(os.Stdout, theme, useColor)
-	output.SetStepLogger(renderer)
-	defer output.SetStepLogger(nil)
-
-	if workspaceID == "" || repoSpec == "" {
-		workspaces, wsWarn, err := workspace.List(rootDir)
-		if err != nil {
-			return err
-		}
-		if len(wsWarn) > 0 {
-			// ignore warnings for selection
-		}
-		workspaceChoices := buildWorkspaceChoices(ctx, workspaces)
-		if len(workspaceChoices) == 0 {
-			return fmt.Errorf("no workspaces found")
-		}
-
-		repos, _, err := repo.List(rootDir)
-		if err != nil {
-			return err
-		}
-		var repoChoices []ui.PromptChoice
-		for _, entry := range repos {
-			label := displayRepoKey(entry.RepoKey)
-			value := repoSpecFromKey(entry.RepoKey)
-			repoChoices = append(repoChoices, ui.PromptChoice{Label: label, Value: value})
-		}
-		if len(repoChoices) == 0 {
-			return fmt.Errorf("no repos found")
-		}
-
-		if workspaceID == "" || repoSpec == "" {
-			workspaceID, repoSpec, err = ui.PromptWorkspaceAndRepo("gwst add", workspaceChoices, repoChoices, workspaceID, repoSpec, theme, useColor)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	startSteps(renderer)
-	output.Step(formatStep("worktree add", displayRepoName(repoSpec), worktreeDest(rootDir, workspaceID, repoSpec)))
-
-	if _, err := workspace.Add(ctx, rootDir, workspaceID, repoSpec, "", false); err != nil {
-		return err
-	}
-	if err := rebuildManifest(ctx, rootDir); err != nil {
-		return err
-	}
-	wsDir := workspace.WorkspaceDir(rootDir, workspaceID)
-	repos, _, _ := loadWorkspaceRepos(ctx, wsDir)
-	renderer.Blank()
-	renderer.Section("Result")
-	description := loadWorkspaceDescription(wsDir)
-	renderWorkspaceBlock(renderer, workspaceID, description, repos)
-	renderSuggestions(renderer, useColor, []string{
-		fmt.Sprintf("gwst open %s", workspaceID),
-	})
-	return nil
-}
 
 func runWorkspaceStatus(ctx context.Context, rootDir string, args []string) error {
 	if len(args) == 1 && isHelpArg(args[0]) {

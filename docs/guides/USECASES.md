@@ -18,14 +18,14 @@ Rating legend:
 
 ## Start / During a Task
 - **Create workspace from preset** — `gwst manifest add --preset <name> <id>`; prompts if omitted. By default it updates `gwst.yaml` then runs `gwst apply`. `workspace_id` becomes the branch name for all repos. Rating: Excellent
-- **Add a repo mid-task** — `gwst add <id> <repo>`; branch name = workspace_id, base = origin/HEAD. Rating: Excellent
+- **Add a repo mid-task** — Edit `gwst.yaml` to add a `repos[]` entry under the workspace, then run `gwst plan` / `gwst apply`. Rating: Good
 - **List workspaces** — `gwst manifest ls` lists inventory and shows drift indicators. Rating: Good
 - **Jump to a path** — `gwst path --workspace` prints a selected path for `cd`. Rating: Good
 - **Check status** — `gwst status <id>` shows dirty/untracked counts and HEAD per repo. Rating: Excellent (lightweight)
 
 ## Reviews
 - **Start a PR review** — `gwst manifest add --review <PR URL>` creates `<OWNER>-<REPO>-REVIEW-PR-<num>` inventory and reconciles via apply for GitHub; requires `gh`. Rating: Good (GitHub only)
-- **Add repos during review** — Use `gwst add` after the review workspace is created. Rating: Good
+- **Add repos during review** — Edit `gwst.yaml` then reconcile with `gwst apply` (same as mid-task). Rating: Good
 
 ## Cleanup / Maintenance
 - **Safe deletion** — `gwst manifest rm <id>` updates inventory then reconciles via apply (which prompts/blocks on destructive risk). Rating: Excellent

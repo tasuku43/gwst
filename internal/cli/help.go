@@ -26,7 +26,6 @@ func printGlobalHelp(w io.Writer) {
 	fmt.Fprintln(w, helpSectionTitle(theme, useColor, "Commands:"))
 	fmt.Fprintln(w, helpCommand(theme, useColor, "init", "initialize gwst root layout"))
 	fmt.Fprintln(w, helpCommand(theme, useColor, "open [<WORKSPACE_ID>] [--shell]", "open workspace in subshell"))
-	fmt.Fprintln(w, helpCommand(theme, useColor, "add [<WORKSPACE_ID>] [<repo>]", "add repo worktree to workspace"))
 	fmt.Fprintln(w, helpCommand(theme, useColor, "status [<WORKSPACE_ID>]", "check dirty/untracked status"))
 	fmt.Fprintln(w, helpCommand(theme, useColor, "path --workspace", "print selected workspace path"))
 	fmt.Fprintln(w, helpCommand(theme, useColor, "manifest <subcommand>", "gwst.yaml inventory commands (aliases: man, m)"))
@@ -48,8 +47,6 @@ func printGlobalHelp(w io.Writer) {
 
 func printCommandHelp(cmd string, w io.Writer) bool {
 	switch cmd {
-	case "add":
-		printAddHelp(w)
 	case "ls":
 		printLsHelp(w)
 	case "status":
@@ -80,10 +77,6 @@ func printCommandHelp(cmd string, w io.Writer) bool {
 		return false
 	}
 	return true
-}
-
-func printAddHelp(w io.Writer) {
-	fmt.Fprintln(w, "Usage: gwst add [<WORKSPACE_ID>] [<repo>]")
 }
 
 func printLsHelp(w io.Writer) {
