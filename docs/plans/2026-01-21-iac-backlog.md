@@ -43,10 +43,10 @@ Policy:
 - [x] Implement `gwst manifest add`. (spec: `docs/spec/commands/manifest/add.md`, UI: `docs/spec/ui/UI.md`)
 - [x] Implement `gwst manifest rm`. (spec: `docs/spec/commands/manifest/rm.md`, UI: `docs/spec/ui/UI.md`)
 - [x] Implement `gwst manifest preset` subcommands. (specs: `docs/spec/commands/manifest/preset/*.md`)
-- [ ] Add manifest validation surface (TBD: `gwst manifest validate` vs `gwst manifest doctor` vs `gwst doctor --manifest`).
+- [x] Add manifest validation surface (`gwst manifest validate`).
   - Validate `gwst.yaml` schema + invariants (workspace ids, repo keys, alias uniqueness, branch/base_ref formats, etc.)
   - Output: actionable errors (non-zero exit), suitable for humans and CI
-- [ ] Make `gwst plan` fail on manifest validation errors (non-zero exit; do not print a diff/plan when invalid).
+- [x] Make `gwst plan` fail on manifest validation errors (non-zero exit; do not print a diff/plan when invalid).
 
 ## Command map (high level)
 

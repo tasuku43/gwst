@@ -1,8 +1,6 @@
 ---
 title: "gwst manifest"
-status: planned
-pending:
-  - workspace-inventory-subcommands
+status: implemented
 aliases:
   - man
   - m
@@ -27,11 +25,12 @@ This command family is the new home for "YAML editing" flows, including workspac
 - Destructive changes are applied only by `gwst apply`, and `--no-prompt` must not allow destructive actions.
 - Idempotent: repeated apply converges.
 
-## Subcommands (planned)
+## Subcommands
 Workspace inventory (default target):
 - `gwst manifest ls`
 - `gwst manifest add`
 - `gwst manifest rm`
+- `gwst manifest validate`
 
 Preset inventory:
 - `gwst manifest preset ls`

@@ -10,6 +10,7 @@ import (
 	"github.com/mattn/go-isatty"
 	"github.com/tasuku43/gwst/internal/app/apply"
 	"github.com/tasuku43/gwst/internal/app/manifestplan"
+	"github.com/tasuku43/gwst/internal/domain/manifest"
 	"github.com/tasuku43/gwst/internal/domain/repo"
 	"github.com/tasuku43/gwst/internal/infra/output"
 	"github.com/tasuku43/gwst/internal/infra/prefetcher"
@@ -26,6 +27,14 @@ func runApply(ctx context.Context, rootDir string, args []string, noPrompt bool)
 	}
 	plan, err := manifestplan.Plan(ctx, rootDir)
 	if err != nil {
+		var vErr *manifest.ValidationError
+		if errors.As(err, &vErr) {
+			theme := ui.DefaultTheme()
+			useColor := isatty.IsTerminal(os.Stdout.Fd())
+			renderer := ui.NewRenderer(os.Stdout, theme, useColor)
+			renderManifestValidationResult(renderer, vErr.Result)
+			return err
+		}
 		return err
 	}
 	_, err = runApplyInternalWithPlan(ctx, rootDir, nil, noPrompt, plan)

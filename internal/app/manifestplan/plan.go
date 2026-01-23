@@ -49,6 +49,14 @@ type Result struct {
 }
 
 func Plan(ctx context.Context, rootDir string) (Result, error) {
+	validation, err := manifest.Validate(ctx, rootDir)
+	if err != nil {
+		return Result{}, err
+	}
+	if len(validation.Issues) > 0 {
+		return Result{}, &manifest.ValidationError{Result: validation}
+	}
+
 	desired, err := manifest.Load(rootDir)
 	if err != nil {
 		return Result{}, err

@@ -2,11 +2,13 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 
 	"github.com/mattn/go-isatty"
 	"github.com/tasuku43/gwst/internal/app/manifestplan"
+	"github.com/tasuku43/gwst/internal/domain/manifest"
 	"github.com/tasuku43/gwst/internal/ui"
 )
 
@@ -25,6 +27,11 @@ func runPlan(ctx context.Context, rootDir string, args []string) error {
 
 	result, err := manifestplan.Plan(ctx, rootDir)
 	if err != nil {
+		var vErr *manifest.ValidationError
+		if errors.As(err, &vErr) {
+			renderManifestValidationResult(renderer, vErr.Result)
+			return err
+		}
 		return err
 	}
 

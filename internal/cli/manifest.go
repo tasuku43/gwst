@@ -26,6 +26,8 @@ func runManifest(ctx context.Context, rootDir string, args []string, noPrompt bo
 		return runManifestAdd(ctx, rootDir, args[1:], noPrompt)
 	case "rm":
 		return runManifestRm(ctx, rootDir, args[1:], noPrompt)
+	case "validate":
+		return runManifestValidate(ctx, rootDir, args[1:])
 	case "preset", "pre", "p":
 		return runManifestPreset(ctx, rootDir, args[1:], noPrompt)
 	default:
