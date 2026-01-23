@@ -25,15 +25,13 @@ func printGlobalHelp(w io.Writer) {
 	fmt.Fprintln(w, "")
 	fmt.Fprintln(w, helpSectionTitle(theme, useColor, "Commands:"))
 	fmt.Fprintln(w, helpCommand(theme, useColor, "init", "initialize gwst root layout"))
-	fmt.Fprintln(w, helpCommand(theme, useColor, "open [<WORKSPACE_ID>] [--shell]", "open workspace in subshell"))
-	fmt.Fprintln(w, helpCommand(theme, useColor, "status [<WORKSPACE_ID>]", "check dirty/untracked status"))
-	fmt.Fprintln(w, helpCommand(theme, useColor, "path --workspace", "print selected workspace path"))
 	fmt.Fprintln(w, helpCommand(theme, useColor, "manifest <subcommand>", "gwst.yaml inventory commands (aliases: man, m)"))
-	fmt.Fprintln(w, helpCommand(theme, useColor, "repo <subcommand>", "repo commands (get/ls)"))
-	fmt.Fprintln(w, helpCommand(theme, useColor, "doctor [--fix | --self]", "check workspace/repo health"))
 	fmt.Fprintln(w, helpCommand(theme, useColor, "plan", "show gwst.yaml diff (no changes)"))
 	fmt.Fprintln(w, helpCommand(theme, useColor, "import", "rebuild gwst.yaml from filesystem"))
 	fmt.Fprintln(w, helpCommand(theme, useColor, "apply", "apply gwst.yaml to filesystem"))
+	fmt.Fprintln(w, helpCommand(theme, useColor, "repo <subcommand>", "repo commands (get/ls)"))
+	fmt.Fprintln(w, helpCommand(theme, useColor, "open [<WORKSPACE_ID>] [--shell]", "open workspace in subshell"))
+	fmt.Fprintln(w, helpCommand(theme, useColor, "doctor [--fix | --self]", "check workspace/repo health"))
 	fmt.Fprintln(w, helpCommand(theme, useColor, "version", "print gwst version"))
 	fmt.Fprintln(w, helpCommand(theme, useColor, "help [command]", "show help for a command"))
 	fmt.Fprintln(w, "")
@@ -47,18 +45,10 @@ func printGlobalHelp(w io.Writer) {
 
 func printCommandHelp(cmd string, w io.Writer) bool {
 	switch cmd {
-	case "ls":
-		printLsHelp(w)
-	case "status":
-		printStatusHelp(w)
 	case "open":
 		printOpenHelp(w)
-	case "path":
-		printPathHelp(w)
 	case "repo":
 		printRepoHelp(w)
-	case "preset":
-		printPresetHelp(w)
 	case "manifest", "man", "m":
 		printManifestHelp(w)
 	case "doctor":
@@ -79,30 +69,9 @@ func printCommandHelp(cmd string, w io.Writer) bool {
 	return true
 }
 
-func printLsHelp(w io.Writer) {
-	theme, useColor := helpTheme(w)
-	fmt.Fprintln(w, "gwst ls is removed.")
-	fmt.Fprintln(w, "Use: gwst manifest ls")
-	fmt.Fprintln(w, "")
-	fmt.Fprintln(w, "Legacy usage (no longer supported): gwst ls [--details]")
-	fmt.Fprintln(w, helpFlag(theme, useColor, "--details", "show git status details (removed)"))
-}
-
-func printStatusHelp(w io.Writer) {
-	fmt.Fprintln(w, "Usage: gwst status [<WORKSPACE_ID>]")
-	fmt.Fprintln(w, "  Show dirty/untracked state for each repo")
-}
-
 func printOpenHelp(w io.Writer) {
 	fmt.Fprintln(w, "Usage: gwst open [<WORKSPACE_ID>] [--shell]")
 	fmt.Fprintln(w, "  Open an interactive subshell at the workspace root")
-}
-
-func printPathHelp(w io.Writer) {
-	theme, useColor := helpTheme(w)
-	fmt.Fprintln(w, "Usage: gwst path --workspace")
-	fmt.Fprintln(w, helpFlag(theme, useColor, "--workspace", "select a workspace path"))
-	fmt.Fprintln(w, "  requires interactive prompt (omit --no-prompt)")
 }
 
 func printRepoHelp(w io.Writer) {
@@ -122,11 +91,6 @@ func printRepoGetHelp(w io.Writer) {
 
 func printRepoLsHelp(w io.Writer) {
 	fmt.Fprintln(w, "Usage: gwst repo ls")
-}
-
-func printPresetHelp(w io.Writer) {
-	fmt.Fprintln(w, "gwst preset is removed.")
-	fmt.Fprintln(w, "Use: gwst manifest preset")
 }
 
 func printManifestHelp(w io.Writer) {
@@ -213,25 +177,6 @@ func printManifestPresetValidateHelp(w io.Writer) {
 	theme, useColor := helpTheme(w)
 	fmt.Fprintln(w, "Usage: gwst manifest preset validate [--no-prompt]")
 	fmt.Fprintln(w, helpFlag(theme, useColor, "--no-prompt", "accepted for compatibility (no effect)"))
-}
-
-func printPresetLsHelp(w io.Writer) {
-	fmt.Fprintln(w, "Usage: gwst preset ls")
-}
-
-func printPresetAddHelp(w io.Writer) {
-	theme, useColor := helpTheme(w)
-	fmt.Fprintln(w, "Usage: gwst preset add [<name>] [--repo <repo> ...]")
-	fmt.Fprintln(w, helpFlag(theme, useColor, "--repo <repo>", "repo spec (repeatable)"))
-}
-
-func printPresetRmHelp(w io.Writer) {
-	fmt.Fprintln(w, "Usage: gwst preset rm [<name> ...]")
-}
-
-func printPresetValidateHelp(w io.Writer) {
-	fmt.Fprintln(w, "Usage: gwst preset validate")
-	fmt.Fprintln(w, "  Validate gwst.yaml")
 }
 
 func printDoctorHelp(w io.Writer) {

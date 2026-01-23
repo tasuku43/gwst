@@ -22,30 +22,16 @@ func TestPrintCommandHelp_ManifestAliases(t *testing.T) {
 	}
 }
 
-func TestPrintCommandHelp_LsRemoved(t *testing.T) {
+func TestPrintCommandHelp_Ls_IsUnknown(t *testing.T) {
 	var buf bytes.Buffer
-	if ok := printCommandHelp("ls", &buf); !ok {
-		t.Fatalf("expected ok=true")
-	}
-	out := buf.String()
-	if !strings.Contains(out, "gwst ls is removed") {
-		t.Fatalf("expected removed message, got:\n%s", out)
-	}
-	if !strings.Contains(out, "gwst manifest ls") {
-		t.Fatalf("expected suggestion to use manifest ls, got:\n%s", out)
+	if ok := printCommandHelp("ls", &buf); ok {
+		t.Fatalf("expected ok=false")
 	}
 }
 
-func TestPrintCommandHelp_PresetRemoved(t *testing.T) {
+func TestPrintCommandHelp_Preset_IsUnknown(t *testing.T) {
 	var buf bytes.Buffer
-	if ok := printCommandHelp("preset", &buf); !ok {
-		t.Fatalf("expected ok=true")
-	}
-	out := buf.String()
-	if !strings.Contains(out, "gwst preset is removed") {
-		t.Fatalf("expected removed message, got:\n%s", out)
-	}
-	if !strings.Contains(out, "gwst manifest preset") {
-		t.Fatalf("expected suggestion to use manifest preset, got:\n%s", out)
+	if ok := printCommandHelp("preset", &buf); ok {
+		t.Fatalf("expected ok=false")
 	}
 }

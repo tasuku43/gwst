@@ -1,12 +1,12 @@
 ---
-title: "IaC Migration Backlog"
+title: "IaC Backlog"
 status: planned
 since: "2026-01-21"
 ---
 
-# IaC Migration Backlog (manifest-first)
+# IaC Backlog (manifest-first)
 
-This backlog tracks the work to shift gwst from "direct filesystem commands" to an IaC-style workflow:
+This backlog tracks IaC-style workflow work for gwst:
 
 - Users primarily edit `gwst.yaml` (via `gwst manifest ...`).
 - Reconciliation happens only via `gwst apply` (which includes plan + confirmation).
@@ -24,8 +24,8 @@ This backlog tracks the work to shift gwst from "direct filesystem commands" to 
 Policy:
 - Keep this branch focused on specs/docs as much as possible.
 - Do implementation work in a separate PR/branch and track it here explicitly.
-- Legacy command implementations may be deleted as part of each ticket (prefer hard errors with a clear suggested replacement).
-- Prefer reusing/migrating existing implementation and interactive input UX into the new `gwst manifest ...` commands, so we can delete legacy code without regressions.
+- Keep the command surface manifest-first (inventory via `gwst manifest ...`, execution via `gwst apply`).
+- Prefer reusing existing interactive input UX within `gwst manifest ...` commands.
 
 ### Specs / Docs (this branch)
 - [x] Finalize `gwst manifest add` details (no-prompt requirements, multi-select UX, error messages, output IA).
@@ -39,7 +39,6 @@ Policy:
 
 ### Implementation (separate PR)
 - [x] Implement CLI routing + aliases (`manifest`/`man`/`m`, `manifest preset`/`pre`/`p`). (spec: `docs/spec/commands/manifest/README.md`)
-- [x] Remove legacy `gwst ls` command (hard error + suggestion to use `gwst manifest ls`). (spec: `docs/spec/commands/ls.md`)
 - [x] Implement `gwst manifest ls`. (spec: `docs/spec/commands/manifest/ls.md`, UI: `docs/spec/ui/UI.md`)
 - [x] Implement `gwst manifest add`. (spec: `docs/spec/commands/manifest/add.md`, UI: `docs/spec/ui/UI.md`)
 - [x] Implement `gwst manifest rm`. (spec: `docs/spec/commands/manifest/rm.md`, UI: `docs/spec/ui/UI.md`)
@@ -49,21 +48,17 @@ Policy:
   - Output: actionable errors (non-zero exit), suitable for humans and CI
 - [ ] Make `gwst plan` fail on manifest validation errors (non-zero exit; do not print a diff/plan when invalid).
 
-## Command migration map (high level)
+## Command map (high level)
 
 Inventory (desired state):
-- New: `gwst manifest` (aliases: `man`, `m`)
+- `gwst manifest` (aliases: `man`, `m`)
   - Default target: workspaces (`gwst manifest add/rm/ls`)
   - Presets: `gwst manifest preset ...` (aliases: `pre`, `p`)
 
 Reconcile / drift:
-- Keep: `gwst plan` (full diff, read-only)
-- Keep: `gwst apply` (plan + prompt + reconcile)
-- Keep: `gwst import` (filesystem -> manifest)
-
-Removed / replaced:
-- Remove: `gwst ls` (use `gwst manifest ls`)
-- Legacy (to be replaced by manifest flows): `create`, `add`, `rm`, `preset *`
+- `gwst plan` (full diff, read-only)
+- `gwst apply` (plan + prompt + reconcile)
+- `gwst import` (filesystem -> manifest)
 
 ## Backlog
 
@@ -74,22 +69,16 @@ Removed / replaced:
   - New: `docs/spec/commands/manifest/add.md`
   - New: `docs/spec/commands/manifest/rm.md`
   - New: `docs/spec/commands/manifest/preset/*.md` (ls/add/rm/validate)
-- Update existing specs to reflect migration state:
-  - Mark replaced commands as `legacy` and point to `superseded_by`.
-  - Decide on (and document) removal behavior for `gwst ls` (error message guidance).
+- Update existing specs to reflect current state.
 - Update UI spec examples where new commands affect section layout or prompts.
 
 ### 2) CLI surface (routing, help, aliases)
 - Add `manifest` command router with aliases `man` and `m`.
 - Add `manifest preset` router with aliases `pre` and `p`.
-- Remove legacy `ls` command:
-  - `gwst ls` should error and suggest `gwst manifest ls`.
-  - Remove from global help and command help.
 - Ensure help lists alias forms minimally (avoid clutter) but keeps discoverability.
 
 Spec references:
 - `docs/spec/commands/manifest/README.md`
-- `docs/spec/commands/ls.md` (removed/superseded behavior)
 
 ### 3) Manifest editing primitives (library layer)
 - Implement a manifest read/modify/write package:
@@ -120,8 +109,8 @@ Spec references:
 - `docs/spec/commands/manifest/ls.md`
 - `docs/spec/ui/UI.md`
 
-### 5) `gwst manifest add` (replace create flows)
-- Preserve the interactive selection UX from `gwst create`:
+### 5) `gwst manifest add` (interactive inventory authoring)
+- Preserve the interactive selection UX:
   - Modes: preset / repo / review / issue (as today)
   - Inputs section remains a single in-place interaction
 - Replace the final "filesystem create" step with:
@@ -176,14 +165,12 @@ Spec references:
   - "Add workspace to manifest then apply"
   - "Remove workspace from manifest then apply"
   - "List inventory and check drift"
-- Add migration notes:
-  - Which commands are removed / replaced
-  - Recommended replacements
+- Add onboarding notes:
+  - Recommended workflows (`gwst.yaml` + `gwst plan`/`gwst apply`/`gwst import`)
 
 ### 10) Tests & validation
 - Add/adjust tests for:
   - Manifest edit operations (pure functions where possible)
   - CLI routing and alias behavior
   - `gwst manifest ls` classification
-  - Removal behavior for `gwst ls`
 - Always run: `gofmt -w .`, `go test ./...`, `go vet ./...`, `go build ./...`

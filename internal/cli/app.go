@@ -82,18 +82,10 @@ func Run() error {
 		return runDoctor(ctx, rootDir, args[1:])
 	case "repo":
 		return runRepo(ctx, rootDir, args[1:])
-	case "preset":
-		return runPresetRemoved(args[1:])
 	case "manifest", "man", "m":
 		return runManifest(ctx, rootDir, args[1:], noPrompt)
-	case "ls":
-		return runLsRemoved(args[1:])
-	case "status":
-		return runWorkspaceStatus(ctx, rootDir, args[1:])
 	case "open":
 		return runWorkspaceOpen(ctx, rootDir, args[1:], noPrompt)
-	case "path":
-		return runPath(rootDir, args[1:], noPrompt)
 	case "plan":
 		return runPlan(ctx, rootDir, args[1:])
 	case "import":
