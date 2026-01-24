@@ -52,6 +52,36 @@ func PromptWorkspaceRepoSelect(title string, workspaces []WorkspaceChoice, theme
 	return strings.TrimSpace(final.selectedPath), nil
 }
 
+func PromptWorkspaceRepoSelectWithOutput(title string, workspaces []WorkspaceChoice, theme Theme, useColor bool, out io.Writer) (string, error) {
+	debuglog.SetPrompt("workspace-repo")
+	defer debuglog.ClearPrompt()
+	model := newWorkspaceRepoSelectModel(title, workspaces, theme, useColor)
+	finalModel, err := runProgramWithOutput(model, out)
+	if err != nil {
+		return "", err
+	}
+	final := finalModel.(workspaceRepoSelectModel)
+	if final.err != nil {
+		return "", final.err
+	}
+	return strings.TrimSpace(final.selectedPath), nil
+}
+
+func PromptWorkspaceRepoSelectWithIO(title string, workspaces []WorkspaceChoice, theme Theme, useColor bool, in io.Reader, out io.Writer, altScreen bool) (string, error) {
+	debuglog.SetPrompt("workspace-repo")
+	defer debuglog.ClearPrompt()
+	model := newWorkspaceRepoSelectModel(title, workspaces, theme, useColor)
+	finalModel, err := runProgramWithIO(model, in, out, altScreen)
+	if err != nil {
+		return "", err
+	}
+	final := finalModel.(workspaceRepoSelectModel)
+	if final.err != nil {
+		return "", final.err
+	}
+	return strings.TrimSpace(final.selectedPath), nil
+}
+
 func PromptWorkspaceWithBlocked(title string, workspaces []WorkspaceChoice, blocked []BlockedChoice, theme Theme, useColor bool) (string, error) {
 	debuglog.SetPrompt("workspace")
 	defer debuglog.ClearPrompt()

@@ -10,7 +10,9 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/mattn/go-isatty"
+	"github.com/muesli/termenv"
 	"github.com/tasuku43/gwst/internal/domain/workspace"
 	"github.com/tasuku43/gwst/internal/infra/paths"
 	"github.com/tasuku43/gwst/internal/ui"
@@ -73,8 +75,33 @@ func RunGiongo() error {
 		return err
 	}
 	theme := ui.DefaultTheme()
+	out := os.Stdout
 	useColor := isTerminal(os.Stdout.Fd())
-	selected, err := ui.PromptWorkspaceRepoSelect("giongo", choices, theme, useColor)
+	if printFlag {
+		tty, err := os.OpenFile("/dev/tty", os.O_RDWR, 0)
+		if err != nil {
+			return fmt.Errorf("interactive selection requires a TTY")
+		}
+		defer tty.Close()
+		profile := termenv.NewOutput(tty).EnvColorProfile()
+		prevProfile := lipgloss.ColorProfile()
+		lipgloss.SetColorProfile(profile)
+		defer lipgloss.SetColorProfile(prevProfile)
+		useColor = profile != termenv.Ascii
+		selected, err := ui.PromptWorkspaceRepoSelectWithIO("giongo", choices, theme, useColor, tty, tty, true)
+		if err != nil {
+			if errors.Is(err, ui.ErrPromptCanceled) {
+				return nil
+			}
+			return err
+		}
+		if strings.TrimSpace(selected) == "" {
+			return nil
+		}
+		fmt.Fprintln(os.Stdout, selected)
+		return nil
+	}
+	selected, err := ui.PromptWorkspaceRepoSelectWithOutput("giongo", choices, theme, useColor, out)
 	if err != nil {
 		if errors.Is(err, ui.ErrPromptCanceled) {
 			return nil

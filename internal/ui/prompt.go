@@ -2142,6 +2142,18 @@ func runProgramWithOutput(model tea.Model, out io.Writer) (tea.Model, error) {
 	return unwrapWindowSizeModel(final), nil
 }
 
+func runProgramWithIO(model tea.Model, in io.Reader, out io.Writer, altScreen bool) (tea.Model, error) {
+	opts := []tea.ProgramOption{tea.WithInput(in), tea.WithOutput(out)}
+	if altScreen {
+		opts = append(opts, tea.WithAltScreen())
+	}
+	final, err := tea.NewProgram(windowSizeModel{inner: model}, opts...).Run()
+	if err != nil {
+		return final, err
+	}
+	return unwrapWindowSizeModel(final), nil
+}
+
 func collectLines(render func(*strings.Builder)) []string {
 	var b strings.Builder
 	render(&b)
@@ -3077,6 +3089,14 @@ func renderWorkspaceRepoChoiceList(b *strings.Builder, items []WorkspaceChoice, 
 		selectIndex += len(items[i].Repos)
 	}
 
+	baseIndent := output.Indent + output.Indent
+	selectIndent := func(selected bool) string {
+		if !selected || useColor {
+			return baseIndent
+		}
+		return ">" + baseIndent[1:]
+	}
+
 	for i := start; i < end; i++ {
 		item := items[i]
 		workspaceConnector := "├─"
@@ -3135,7 +3155,8 @@ func renderWorkspaceRepoChoiceList(b *strings.Builder, items []WorkspaceChoice, 
 				display += " - " + desc
 			}
 		}
-		b.WriteString(fmt.Sprintf("%s%s %s\n", output.Indent+output.Indent, connectorToken, display))
+		indent := selectIndent(selectedWorkspace)
+		b.WriteString(fmt.Sprintf("%s%s %s\n", indent, connectorToken, display))
 		selectIndex++
 
 		if len(item.Repos) == 0 {
@@ -3158,7 +3179,8 @@ func renderWorkspaceRepoChoiceList(b *strings.Builder, items []WorkspaceChoice, 
 			if useColor && selectedRepo {
 				repoLabel = lipgloss.NewStyle().Bold(true).Render(repoLabel)
 			}
-			line := fmt.Sprintf("%s%s%s %s", output.Indent+output.Indent, stemToken, connector, repoLabel)
+			indent := selectIndent(selectedRepo)
+			line := fmt.Sprintf("%s%s%s %s", indent, stemToken, connector, repoLabel)
 			b.WriteString(line)
 			b.WriteString("\n")
 			selectIndex++
