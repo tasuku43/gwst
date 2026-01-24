@@ -146,8 +146,9 @@ func printManifestRmHelp(w io.Writer) {
 
 func printManifestGcHelp(w io.Writer) {
 	theme, useColor := helpTheme(w)
-	fmt.Fprintln(w, "Usage: gion manifest gc [--no-apply] [--no-prompt]")
+	fmt.Fprintln(w, "Usage: gion manifest gc [--no-apply] [--no-fetch] [--no-prompt]")
 	fmt.Fprintln(w, helpFlag(theme, useColor, "--no-apply", fmt.Sprintf("update %s only (do not run gion apply)", manifest.FileName)))
+	fmt.Fprintln(w, helpFlag(theme, useColor, "--no-fetch", "disable git fetch for repo stores"))
 	fmt.Fprintln(w, helpFlag(theme, useColor, "--no-prompt", "disable interactive prompt"))
 }
 

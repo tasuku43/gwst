@@ -2,6 +2,7 @@
 title: "Design: gion manifest gc"
 status: draft
 date: 2026-01-23
+updated: 2026-01-24
 ---
 
 # gion manifest gc (Design Note)
@@ -20,7 +21,7 @@ Manual removal (`gion manifest rm`) remains the explicit, human-judgment path.
 
 ## Assumptions / Data sources
 
-- Decisions are based on local state only (**no implicit fetch/prune**).
+- Decisions default to freshly fetched bare repo base refs (opt-out via `--no-fetch`).
 - Dirty/ahead/behind detection follows `git status --porcelain=v2 -b` (via existing workspace status/state logic).
 - Merge target selection is per-repo:
   1) Use `gion.yaml repos[].base_ref` when set (e.g. `origin/release/1.2`)

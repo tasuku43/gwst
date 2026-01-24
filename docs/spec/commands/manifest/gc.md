@@ -11,7 +11,7 @@ pending:
 ---
 
 ## Synopsis
-`gion manifest gc [--no-apply] [--no-prompt]`
+`gion manifest gc [--no-apply] [--no-fetch] [--no-prompt]`
 
 ## Intent
 Conservatively remove workspace entries from `gion.yaml` that are highly likely safe to delete, then (by default) run `gion apply` to reconcile the filesystem.
@@ -20,7 +20,7 @@ This command is intentionally separated from manual removal flows (`gion manifes
 
 ## Scope / Non-goals
 - **GC**: automatic, bulk, conservative. Exclude when in doubt.
-- No implicit `git fetch` / `git remote prune`.
+- Default to fetching only the required base refs for repos referenced by workspaces (opt-out via `--no-fetch`).
 - No per-item interactive selection (single bulk decision + apply confirmation).
 
 ## Definitions
@@ -54,6 +54,7 @@ A workspace is a candidate only if:
 
 ## Behavior
 - Scans workspaces present in `gion.yaml`.
+- If not `--no-fetch`, fetches only the base refs needed for merge checks from bare repo stores.
 - For each workspace:
   - Loads per-repo state (clean/unpushed/etc).
   - Computes per-repo rule results and reasons.
@@ -64,6 +65,7 @@ A workspace is a candidate only if:
 
 ## Flags
 - `--no-apply`: update `gion.yaml` and exit (do not run `gion apply`).
+- `--no-fetch`: skip fetching bare repo stores before evaluation.
 - `--no-prompt`: forwarded to `gion apply` when apply is run (behavior follows `gion apply` spec).
 
 ## Output
