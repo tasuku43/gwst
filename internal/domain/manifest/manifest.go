@@ -10,7 +10,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const FileName = "gwst.yaml"
+const FileName = "gwiac.yaml"
 
 type File struct {
 	Version    int                  `yaml:"version"`
@@ -73,11 +73,11 @@ func Load(rootDir string) (File, error) {
 	path := Path(rootDir)
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return File{}, fmt.Errorf("read gwst.yaml: %w", err)
+		return File{}, fmt.Errorf("read %s: %w", FileName, err)
 	}
 	var file File
 	if err := yaml.Unmarshal(data, &file); err != nil {
-		return File{}, fmt.Errorf("parse gwst.yaml: %w", err)
+		return File{}, fmt.Errorf("parse %s: %w", FileName, err)
 	}
 	if file.Version == 0 {
 		file.Version = 1
@@ -97,7 +97,7 @@ func Save(rootDir string, file File) error {
 		return err
 	}
 	if err := os.WriteFile(Path(rootDir), data, 0o644); err != nil {
-		return fmt.Errorf("write gwst.yaml: %w", err)
+		return fmt.Errorf("write %s: %w", FileName, err)
 	}
 	return nil
 }
@@ -121,10 +121,10 @@ func Marshal(file File) ([]byte, error) {
 	enc.SetIndent(2)
 	if err := enc.Encode(rest{Presets: file.Presets, Workspaces: file.Workspaces}); err != nil {
 		_ = enc.Close()
-		return nil, fmt.Errorf("marshal gwst.yaml: %w", err)
+		return nil, fmt.Errorf("marshal %s: %w", FileName, err)
 	}
 	if err := enc.Close(); err != nil {
-		return nil, fmt.Errorf("close gwst.yaml encoder: %w", err)
+		return nil, fmt.Errorf("close %s encoder: %w", FileName, err)
 	}
 	out := []byte(fmt.Sprintf("version: %d\n\n%s", file.Version, buf.String()))
 	return out, nil

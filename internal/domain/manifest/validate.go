@@ -17,7 +17,7 @@ import (
 
 type ValidationIssue struct {
 	// Ref is a logical reference path like:
-	// - gwst.yaml
+	// - gwiac.yaml
 	// - workspaces
 	// - workspaces.PROJ-123.repos[0].branch
 	Ref     string
@@ -48,7 +48,7 @@ func Validate(ctx context.Context, rootDir string) (ValidationResult, error) {
 	if err != nil {
 		return ValidationResult{
 			Path:   path,
-			Issues: []ValidationIssue{{Ref: "gwst.yaml", Message: err.Error()}},
+			Issues: []ValidationIssue{{Ref: FileName, Message: err.Error()}},
 		}, nil
 	}
 
@@ -56,7 +56,7 @@ func Validate(ctx context.Context, rootDir string) (ValidationResult, error) {
 	if err := yaml.Unmarshal(data, &doc); err != nil {
 		return ValidationResult{
 			Path:   path,
-			Issues: []ValidationIssue{{Ref: "gwst.yaml", Message: fmt.Sprintf("invalid yaml (%s)", strings.TrimSpace(err.Error()))}},
+			Issues: []ValidationIssue{{Ref: FileName, Message: fmt.Sprintf("invalid yaml (%s)", strings.TrimSpace(err.Error()))}},
 		}, nil
 	}
 
@@ -209,8 +209,8 @@ func validateWorkspaceEntry(ctx context.Context, workspaceID string, node *yaml.
 		if alias == "" {
 			issues = append(issues, ValidationIssue{Ref: refPrefix + ".alias", Message: "missing required field"})
 		} else {
-			if alias == ".gwst" {
-				issues = append(issues, ValidationIssue{Ref: refPrefix + ".alias", Message: "invalid value: .gwst is reserved"})
+			if alias == workspace.MetadataDirName {
+				issues = append(issues, ValidationIssue{Ref: refPrefix + ".alias", Message: fmt.Sprintf("invalid value: %s is reserved", alias)})
 			}
 			if strings.Contains(alias, "/") || strings.Contains(alias, "\\") {
 				issues = append(issues, ValidationIssue{Ref: refPrefix + ".alias", Message: "invalid value (must not contain path separators)"})

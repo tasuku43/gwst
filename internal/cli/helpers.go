@@ -130,7 +130,7 @@ func ensureRepoGet(ctx context.Context, rootDir string, repoSpecs []string, noPr
 	}
 	output.Step(fmt.Sprintf("repo get required for %d %s", len(missing), label))
 	for _, repoSpec := range missing {
-		output.Log(fmt.Sprintf("gwst repo get %s", displayRepoSpec(repoSpec)))
+		output.Log(fmt.Sprintf("gwiac repo get %s", displayRepoSpec(repoSpec)))
 	}
 	confirm, err := ui.PromptConfirmInline("run now?", theme, useColor)
 	if err != nil {

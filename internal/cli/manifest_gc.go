@@ -29,7 +29,7 @@ func runManifestGc(ctx context.Context, rootDir string, args []string, globalNoP
 	var noApply bool
 	var noPromptFlag bool
 	var helpFlag bool
-	gcFlags.BoolVar(&noApply, "no-apply", false, "do not run gwst apply")
+	gcFlags.BoolVar(&noApply, "no-apply", false, "do not run gwiac apply")
 	gcFlags.BoolVar(&noPromptFlag, "no-prompt", false, "disable interactive prompt")
 	gcFlags.BoolVar(&helpFlag, "help", false, "show help")
 	gcFlags.BoolVar(&helpFlag, "h", false, "show help")
@@ -48,7 +48,7 @@ func runManifestGc(ctx context.Context, rootDir string, args []string, globalNoP
 		return nil
 	}
 	if gcFlags.NArg() != 0 {
-		return fmt.Errorf("usage: gwst manifest gc [--no-apply] [--no-prompt]")
+		return fmt.Errorf("usage: gwiac manifest gc [--no-apply] [--no-prompt]")
 	}
 
 	noPrompt := globalNoPrompt || noPromptFlag
@@ -61,7 +61,7 @@ func runManifestGc(ctx context.Context, rootDir string, args []string, globalNoP
 	manifestPath := manifest.Path(rootDir)
 	originalBytes, err := os.ReadFile(manifestPath)
 	if err != nil {
-		return fmt.Errorf("read gwst.yaml: %w", err)
+		return fmt.Errorf("read %s: %w", manifest.FileName, err)
 	}
 
 	ids := make([]string, 0, len(desired.Workspaces))
@@ -171,20 +171,20 @@ func runManifestGc(ctx context.Context, rootDir string, args []string, globalNoP
 				renderManifestGcInfo(r, candidates, warningLines)
 				r.Blank()
 				r.Section("Result")
-				r.Bullet(fmt.Sprintf("updated gwst.yaml (removed %d workspace(s))", len(candidateIDs)))
+				r.Bullet(fmt.Sprintf("updated %s (removed %d workspace(s))", manifest.FileName, len(candidateIDs)))
 				r.Blank()
 				r.Section("Suggestion")
-				r.Bullet("gwst apply")
+				r.Bullet("gwiac apply")
 			},
 			RenderNoChanges: func(r *ui.Renderer) {
 				r.Section("Result")
-				r.Bullet(fmt.Sprintf("updated gwst.yaml (removed %d workspace(s))", len(candidateIDs)))
+				r.Bullet(fmt.Sprintf("updated %s (removed %d workspace(s))", manifest.FileName, len(candidateIDs)))
 				r.Bullet("no changes")
 			},
 			RenderInfoBeforeApply: func(r *ui.Renderer, plan manifestplan.Result, _ bool) {
 				r.Section("Info")
 				renderManifestGcInfo(r, candidates, warningLines)
-				r.Bullet(r.AccentText("manifest:") + " " + r.SuccessText("updated") + " gwst.yaml (" + r.ErrorText(fmt.Sprintf("removed %d workspace(s)", len(candidateIDs))) + ")")
+				r.Bullet(r.AccentText("manifest:") + " " + r.SuccessText("updated") + " " + manifest.FileName + " (" + r.ErrorText(fmt.Sprintf("removed %d workspace(s)", len(candidateIDs))) + ")")
 				if planIncludesChangesOutsideWorkspaceIDs(plan, candidateIDs) {
 					r.Bullet(r.AccentText("apply:") + " reconciling entire root (" + r.WarnText("plan includes changes outside GC scope") + ")")
 				} else {
@@ -280,7 +280,7 @@ func strictMergedIntoTarget(ctx context.Context, rootDir string, entry manifest.
 		return false, err
 	}
 	if !exists {
-		return false, fmt.Errorf("repo store not found (run: gwst repo get %s)", repo.SpecFromKey(entry.RepoKey))
+		return false, fmt.Errorf("repo store not found (run: gwiac repo get %s)", repo.SpecFromKey(entry.RepoKey))
 	}
 
 	headRef := fmt.Sprintf("refs/heads/%s", branch)

@@ -18,7 +18,7 @@ func runImport(ctx context.Context, rootDir string, args []string, noPrompt bool
 		return nil
 	}
 	if len(args) != 0 {
-		return fmt.Errorf("usage: gwst import")
+		return fmt.Errorf("usage: gwiac import")
 	}
 	currentFile, err := loadManifestOrEmpty(rootDir)
 	if err != nil {

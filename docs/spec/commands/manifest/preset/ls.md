@@ -1,22 +1,22 @@
 ---
-title: "gwst manifest preset ls"
+title: "gwiac manifest preset ls"
 status: implemented
 aliases:
-  - "gwst manifest pre ls"
-  - "gwst manifest p ls"
+  - "gwiac manifest pre ls"
+  - "gwiac manifest p ls"
 ---
 
 ## Synopsis
-`gwst manifest preset ls [--no-prompt]`
+`gwiac manifest preset ls [--no-prompt]`
 
 ## Intent
-List preset entries in `gwst.yaml`.
+List preset entries in `gwiac.yaml`.
 
 ## Notes
-- This command is inventory-only and does not run `gwst apply`.
+- This command is inventory-only and does not run `gwiac apply`.
 
 ## Behavior
-- Loads `<root>/gwst.yaml`; fails if the file is missing, unreadable, or invalid YAML.
+- Loads `<root>/gwiac.yaml`; fails if the file is missing, unreadable, or invalid YAML.
 - Parses preset entries and prints them in sorted order by preset name.
 - For each preset, lists its repository specs in the stored order.
 - No changes are made (read-only).
@@ -46,4 +46,4 @@ Result
 
 ## Failure Modes
 - Root not resolved.
-- `gwst.yaml` missing, unreadable, or invalid YAML.
+- `gwiac.yaml` missing, unreadable, or invalid YAML.

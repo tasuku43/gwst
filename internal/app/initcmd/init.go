@@ -74,7 +74,7 @@ func writeManifest(path string) error {
 		return err
 	}
 	if err := os.WriteFile(path, data, 0o644); err != nil {
-		return fmt.Errorf("write gwst.yaml: %w", err)
+		return fmt.Errorf("write %s: %w", manifest.FileName, err)
 	}
 	return nil
 }

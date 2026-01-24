@@ -54,13 +54,13 @@ jobs:
           app-id: ${{ secrets.HOMEBREW_APP_ID }}
           private-key: ${{ secrets.HOMEBREW_APP_KEY }}
           owner: tasuku43
-          repositories: homebrew-gwst
+          repositories: homebrew-gwiac
 
       - name: Checkout Homebrew tap
         if: steps.channel.outputs.stable == 'true'
         uses: actions/checkout@v4
         with:
-          repository: tasuku43/homebrew-gwst
+          repository: tasuku43/homebrew-gwiac
           token: ${{ steps.homebrew-token.outputs.token }}
           path: homebrew-tap
 
@@ -80,9 +80,9 @@ jobs:
           commit-message: "Update Homebrew formula for ${{ github.ref_name }}"
           title: "Update Homebrew formula for ${{ github.ref_name }}"
           body: |
-            Updates `Formula/gwst.rb` to point to GitHub Releases artifacts for `${{ github.ref_name }}`.
+            Updates `Formula/gwiac.rb` to point to GitHub Releases artifacts for `${{ github.ref_name }}`.
           add-paths: |
-            Formula/gwst.rb
+            Formula/gwiac.rb
           base: main
           branch: "chore/homebrew-formula-${{ github.ref_name }}"
           delete-branch: true

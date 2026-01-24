@@ -1,11 +1,11 @@
 ---
-title: "Releasing gwst"
+title: "Releasing gwiac"
 status: implemented
 ---
 
-# Releasing gwst (v0.1.0)
+# Releasing gwiac (v0.1.0)
 
-This document describes how we ship gwst as a “touchable OSS” with a reliable install path.
+This document describes how we ship gwiac as a “touchable OSS” with a reliable install path.
 
 For the pipeline architecture and sequence, see `docs/ops/RELEASE_PIPELINE.md`.
 
@@ -23,11 +23,11 @@ For the pipeline architecture and sequence, see `docs/ops/RELEASE_PIPELINE.md`.
 - Release notes include links to:
   - Install guide: `docs/guides/INSTALL.md`
   - Compatibility policy: `docs/spec/core/COMPATIBILITY.md`
-- `gwst version` (and `gwst --version`) shows `vX.Y.Z` in the GitHub Releases binaries.
+- `gwiac version` (and `gwiac --version`) shows `vX.Y.Z` in the GitHub Releases binaries.
 
 ## Versioning and build metadata
 
-`gwst version` output is populated via `-ldflags` at build time:
+`gwiac version` output is populated via `-ldflags` at build time:
 
 - `internal/cli.version` = tag (e.g. `v0.1.0`)
 - `internal/cli.commit` = short commit hash
@@ -49,8 +49,8 @@ For the pipeline architecture and sequence, see `docs/ops/RELEASE_PIPELINE.md`.
    - release note links to INSTALL and COMPATIBILITY
 6. For stable tags (no `-rc` / no prerelease suffix), confirm the Homebrew update PR was created and auto-merged.
 7. Smoke test by downloading a release artifact and running:
-   - `./gwst version`
-   - `./gwst --version`
+   - `./gwiac version`
+   - `./gwiac --version`
 
 ## Distribution
 

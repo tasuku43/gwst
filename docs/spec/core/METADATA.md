@@ -5,16 +5,16 @@ status: planned
 
 # workspace metadata.json
 
-Each workspace stores minimal metadata under its `.gwst` directory so information can be restored when importing from the filesystem.
+Each workspace stores minimal metadata under its `.gwiac` directory so information can be restored when importing from the filesystem.
 
 ## Location
 
-`<GWST_ROOT>/workspaces/<WORKSPACE_ID>/.gwst/metadata.json`
+`<GWIAC_ROOT>/workspaces/<WORKSPACE_ID>/.gwiac/metadata.json`
 
 ## Source of truth
 
-- During normal commands, gwst writes both `gwst.yaml` and `.gwst/metadata.json`.
-- During import/rebuild from filesystem, gwst reads `.gwst/metadata.json` to restore metadata fields.
+- During normal commands, gwiac writes both `gwiac.yaml` and `.gwiac/metadata.json`.
+- During import/rebuild from filesystem, gwiac reads `.gwiac/metadata.json` to restore metadata fields.
 - Repo branch names are derived from each worktree's Git state when importing (not stored in metadata).
 
 ## Format
@@ -37,7 +37,7 @@ Each workspace stores minimal metadata under its `.gwst` directory so informatio
 - `source_url` (optional): set when created from a URL (issue/review) or other modes with known origin.
 - `base_branch` (optional): base branch/ref used when creating new branches for this workspace the first time.
   - When omitted, the implicit default is the repo's detected default branch (typically `refs/remotes/origin/HEAD`).
-  - When present, import may use it to restore `base_ref` in `gwst.yaml` so future re-creation can cut from the same base.
+  - When present, import may use it to restore `base_ref` in `gwiac.yaml` so future re-creation can cut from the same base.
 
 ## Validation rules
 

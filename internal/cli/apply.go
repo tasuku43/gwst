@@ -23,7 +23,7 @@ func runApply(ctx context.Context, rootDir string, args []string, noPrompt bool)
 		return nil
 	}
 	if len(args) != 0 {
-		return fmt.Errorf("usage: gwst apply")
+		return fmt.Errorf("usage: gwiac apply")
 	}
 	plan, err := manifestplan.Plan(ctx, rootDir)
 	if err != nil {
@@ -134,8 +134,8 @@ func runApplyInternalWithPlan(ctx context.Context, rootDir string, renderer *ui.
 	renderPlanChanges(ctx, rootDir, renderer, plan)
 
 	// Start background fetch while the user reviews the plan.
-	// This preserves the "gwst manifest add" UX win (fetch overlaps with reading time),
-	// while keeping `gwst plan` itself side-effect free.
+	// This preserves the "gwiac manifest add" UX win (fetch overlaps with reading time),
+	// while keeping `gwiac plan` itself side-effect free.
 	toPrefetch := repoSpecsForApplyPlan(plan)
 	prefetch := prefetcher.New(defaultPrefetchTimeout)
 	if _, err := prefetch.StartAll(ctx, rootDir, toPrefetch); err != nil {
@@ -192,7 +192,7 @@ func runApplyInternalWithPlan(ctx context.Context, rootDir string, renderer *ui.
 	renderer.Section("Result")
 	adds, updates, removes := countWorkspaceChangeKinds(plan)
 	renderer.BulletSuccess(fmt.Sprintf("applied: add=%d update=%d remove=%d", adds, updates, removes))
-	renderer.Bullet("gwst.yaml rewritten")
+	renderer.Bullet(fmt.Sprintf("%s rewritten", manifest.FileName))
 	return applyInternalResult{HadChanges: true, Confirmed: confirmed, Applied: true}, nil
 }
 

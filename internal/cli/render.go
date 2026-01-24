@@ -66,7 +66,7 @@ func issueDetails(issue doctor.Issue) []string {
 
 func presetIssueDetails(issue preset.ValidationIssue, path string) []string {
 	var details []string
-	if strings.TrimSpace(path) != "" && (issue.Kind == preset.IssueKindFile || issue.Kind == preset.IssueKindInvalidYAML) {
+	if strings.TrimSpace(path) != "" && (issue.Kind == manifest.FileName || issue.Kind == preset.IssueKindInvalidYAML) {
 		details = append(details, fmt.Sprintf("path: %s", path))
 	}
 	if strings.TrimSpace(issue.Preset) != "" {
@@ -106,8 +106,8 @@ func buildUnifiedDiffLines(current, next []byte) ([]string, error) {
 	diff := difflib.UnifiedDiff{
 		A:        difflib.SplitLines(string(current)),
 		B:        difflib.SplitLines(string(next)),
-		FromFile: "gwst.yaml (current)",
-		ToFile:   "gwst.yaml (target)",
+		FromFile: fmt.Sprintf("%s (current)", manifest.FileName),
+		ToFile:   fmt.Sprintf("%s (target)", manifest.FileName),
 		Context:  3,
 	}
 	text, err := difflib.GetUnifiedDiffString(diff)
@@ -697,9 +697,9 @@ func writeInitText(result initcmd.Result) {
 	renderer.Bullet(fmt.Sprintf("root: %s", result.RootDir))
 
 	renderSuggestions(renderer, useColor, []string{
-		"gwst manifest preset ls",
-		"gwst repo get <repo>",
-		fmt.Sprintf("Edit gwst.yaml: %s", filepath.Join(result.RootDir, manifest.FileName)),
+		"gwiac manifest preset ls",
+		"gwiac repo get <repo>",
+		fmt.Sprintf("Edit %s: %s", manifest.FileName, filepath.Join(result.RootDir, manifest.FileName)),
 	})
 }
 

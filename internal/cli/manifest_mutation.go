@@ -78,14 +78,14 @@ func applyManifestMutation(ctx context.Context, rootDir string, updated manifest
 	}
 	if res.Canceled || (res.HadChanges && !res.Confirmed) {
 		if err := os.WriteFile(manifest.Path(rootDir), opts.OriginalBytes, 0o644); err != nil {
-			return fmt.Errorf("restore gwst.yaml: %w", err)
+			return fmt.Errorf("restore %s: %w", manifest.FileName, err)
 		}
 		renderer.Blank()
 		renderer.Section("Result")
 		if res.Canceled {
-			renderer.Bullet("gwst.yaml rolled back (apply canceled)")
+			renderer.Bullet(fmt.Sprintf("%s rolled back (apply canceled)", manifest.FileName))
 		} else {
-			renderer.Bullet("gwst.yaml rolled back (apply declined)")
+			renderer.Bullet(fmt.Sprintf("%s rolled back (apply declined)", manifest.FileName))
 		}
 		return nil
 	}

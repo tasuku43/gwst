@@ -1,7 +1,7 @@
 # USE CASES (MVP Coverage)
 
 Purpose:
-- Enumerate typical ways people use gwst and judge whether the current UX is sufficient.
+- Enumerate typical ways people use gwiac and judge whether the current UX is sufficient.
 - Make it obvious which subcommands/flags to use for each situation.
 
 Rating legend:
@@ -11,25 +11,25 @@ Rating legend:
 - Missing: Not supported
 
 ## Setup / Preparation
-- **Initialize root** — `gwst init` creates bare/workspaces and `gwst.yaml` in one shot. Once per environment. Rating: Excellent
-- **Define / check presets** — Edit `gwst.yaml` directly, confirm names with `gwst manifest preset ls`, validate with `gwst manifest preset validate`. Rating: Good
-- **Fetch repositories** — `gwst repo get <repo>` creates bare store; `gwst repo ls` lists fetched repos. Rating: Good (does not fetch when bare already exists, so not ideal for updating)
-- **Switch roots** — Use `--root` or `GWST_ROOT` to separate environments. Rating: Excellent
+- **Initialize root** — `gwiac init` creates bare/workspaces and `gwiac.yaml` in one shot. Once per environment. Rating: Excellent
+- **Define / check presets** — Edit `gwiac.yaml` directly, confirm names with `gwiac manifest preset ls`, validate with `gwiac manifest preset validate`. Rating: Good
+- **Fetch repositories** — `gwiac repo get <repo>` creates bare store; `gwiac repo ls` lists fetched repos. Rating: Good (does not fetch when bare already exists, so not ideal for updating)
+- **Switch roots** — Use `--root` or `GWIAC_ROOT` to separate environments. Rating: Excellent
 
 ## Start / During a Task
-- **Create workspace from preset** — `gwst manifest add --preset <name> <id>`; prompts if omitted. By default it updates `gwst.yaml` then runs `gwst apply`. `workspace_id` becomes the branch name for all repos. Rating: Excellent
-- **Add a repo mid-task** — Edit `gwst.yaml` to add a `repos[]` entry under the workspace, then run `gwst plan` / `gwst apply`. Rating: Good
-- **List workspaces** — `gwst manifest ls` lists inventory and shows drift indicators. Rating: Good
-- **Check drift / changes** — `gwst plan` shows the full diff between `gwst.yaml` and the filesystem. Rating: Good
+- **Create workspace from preset** — `gwiac manifest add --preset <name> <id>`; prompts if omitted. By default it updates `gwiac.yaml` then runs `gwiac apply`. `workspace_id` becomes the branch name for all repos. Rating: Excellent
+- **Add a repo mid-task** — Edit `gwiac.yaml` to add a `repos[]` entry under the workspace, then run `gwiac plan` / `gwiac apply`. Rating: Good
+- **List workspaces** — `gwiac manifest ls` lists inventory and shows drift indicators. Rating: Good
+- **Check drift / changes** — `gwiac plan` shows the full diff between `gwiac.yaml` and the filesystem. Rating: Good
 
 ## Reviews
-- **Start a PR review** — `gwst manifest add --review <PR URL>` creates `<OWNER>-<REPO>-REVIEW-PR-<num>` inventory and reconciles via apply for GitHub; requires `gh`. Rating: Good (GitHub only)
-- **Add repos during review** — Edit `gwst.yaml` then reconcile with `gwst apply` (same as mid-task). Rating: Good
+- **Start a PR review** — `gwiac manifest add --review <PR URL>` creates `<OWNER>-<REPO>-REVIEW-PR-<num>` inventory and reconciles via apply for GitHub; requires `gh`. Rating: Good (GitHub only)
+- **Add repos during review** — Edit `gwiac.yaml` then reconcile with `gwiac apply` (same as mid-task). Rating: Good
 
 ## Cleanup / Maintenance
-- **Safe deletion** — `gwst manifest rm <id>` updates inventory then reconciles via apply (which prompts/blocks on destructive risk). Rating: Excellent
-- **Repo store health check** — `gwst doctor [--fix]` detects common remote issues. Rating: Fair (narrow check set)
-- **Refresh to latest base** — Forcing a fresh fetch is manual via `git fetch`; gwst alone doesn’t cover it. Rating: Fair
+- **Safe deletion** — `gwiac manifest rm <id>` updates inventory then reconciles via apply (which prompts/blocks on destructive risk). Rating: Excellent
+- **Repo store health check** — `gwiac doctor [--fix]` detects common remote issues. Rating: Fair (narrow check set)
+- **Refresh to latest base** — Forcing a fresh fetch is manual via `git fetch`; gwiac alone doesn’t cover it. Rating: Fair
 
 ## Human + Agent Co-use
 - **Non-interactive runs (agent/CI)** — `--no-prompt` suppresses interaction, though destructive ops may still halt. Rating: Good
@@ -37,7 +37,7 @@ Rating legend:
 
 ## Known Gaps / Improvement Ideas
 - Keeping the bare store “always fresh” depends on manual `git fetch`; no built-in auto/update flow.
-- `gwst manifest ls` currently requires a drift model that remains stable and easy to understand.
-- `gwst doctor` checks only a narrow set; does not catch orphan worktrees, branch conflicts, or stale workspace artifacts.
+- `gwiac manifest ls` currently requires a drift model that remains stable and easy to understand.
+- `gwiac doctor` checks only a narrow set; does not catch orphan worktrees, branch conflicts, or stale workspace artifacts.
 - No JSON/machine-readable output; agents must parse human text.
-- After `gwst manifest add --review`, pulling newer PR updates still requires manual fetch; no auto-sync or “refresh review” command.
+- After `gwiac manifest add --review`, pulling newer PR updates still requires manual fetch; no auto-sync or “refresh review” command.

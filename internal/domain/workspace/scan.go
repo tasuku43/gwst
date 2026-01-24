@@ -22,7 +22,7 @@ func ScanRepos(ctx context.Context, wsDir string) ([]Repo, []error, error) {
 		if !entry.IsDir() {
 			continue
 		}
-		if entry.Name() == ".gwst" {
+		if entry.Name() == MetadataDirName {
 			continue
 		}
 		repoPath := filepath.Join(wsDir, entry.Name())

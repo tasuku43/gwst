@@ -22,7 +22,7 @@ workspaces: {}
 `)
 	path := filepath.Join(rootDir, manifest.FileName)
 	if err := os.WriteFile(path, data, 0o644); err != nil {
-		t.Fatalf("write gwst.yaml: %v", err)
+		t.Fatalf("write %s: %v", manifest.FileName, err)
 	}
 	result, err := Validate(rootDir)
 	if err != nil {
@@ -47,7 +47,7 @@ workspaces: {}
 `)
 	path := filepath.Join(rootDir, manifest.FileName)
 	if err := os.WriteFile(path, data, 0o644); err != nil {
-		t.Fatalf("write gwst.yaml: %v", err)
+		t.Fatalf("write %s: %v", manifest.FileName, err)
 	}
 	result, err := Validate(rootDir)
 	if err != nil {
@@ -68,7 +68,7 @@ workspaces: {}
 `)
 	path := filepath.Join(rootDir, manifest.FileName)
 	if err := os.WriteFile(path, data, 0o644); err != nil {
-		t.Fatalf("write gwst.yaml: %v", err)
+		t.Fatalf("write %s: %v", manifest.FileName, err)
 	}
 	result, err := Validate(rootDir)
 	if err != nil {
@@ -90,7 +90,7 @@ workspaces: {}
 `)
 	path := filepath.Join(rootDir, manifest.FileName)
 	if err := os.WriteFile(path, data, 0o644); err != nil {
-		t.Fatalf("write gwst.yaml: %v", err)
+		t.Fatalf("write %s: %v", manifest.FileName, err)
 	}
 	result, err := Validate(rootDir)
 	if err != nil {
@@ -106,7 +106,7 @@ func TestValidatePresetsInvalidYAML(t *testing.T) {
 	data := []byte("presets: [")
 	path := filepath.Join(rootDir, manifest.FileName)
 	if err := os.WriteFile(path, data, 0o644); err != nil {
-		t.Fatalf("write gwst.yaml: %v", err)
+		t.Fatalf("write %s: %v", manifest.FileName, err)
 	}
 	result, err := Validate(rootDir)
 	if err != nil {
@@ -128,7 +128,7 @@ workspaces: {}
 `)
 	path := filepath.Join(rootDir, manifest.FileName)
 	if err := os.WriteFile(path, data, 0o644); err != nil {
-		t.Fatalf("write gwst.yaml: %v", err)
+		t.Fatalf("write %s: %v", manifest.FileName, err)
 	}
 	result, err := Validate(rootDir)
 	if err != nil {

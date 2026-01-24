@@ -1,79 +1,132 @@
-# gwst - Git Workspaces for Human + Agentic Development
+# gwiac — inventory-driven Git workspaces with guardrails
 
-A git workspace tool and worktree manager for human + agentic development.
-
-gwst moves local development from "clone-directory centric" to "workspace centric"
-so humans and multiple AI agents can work in parallel without stepping on each other.
+Create and delete whole workspaces (single- or multi-repo) safely using Git worktrees.
+Designed for human + agentic development: each task (or each agent) gets an isolated workspace directory.
 
 ## Demo
 
 https://github.com/user-attachments/assets/889e7f64-6222-4ad2-bc42-620dd1dd4139
 
-## Why gwst
+## The core: “make many, remove many” without fear
 
-- In the era of AI agents, multiple actors edit in parallel and context collisions become common.
-- gwst promotes directories into explicit workspaces and manages them safely with Git worktrees.
-- It focuses on creating, listing, and safely cleaning up work environments.
+gwiac’s strongest feature is not just creating worktrees — it’s making workspace lifecycle **repeatable and safe**:
 
-## Who it's for
+- **Declare** the desired workspaces in `gwiac.yaml` (inventory / desired state)
+- **Declare** the desired workspaces in `gwiac.yaml` (inventory / desired state)
+- **Diff** with `gwiac plan` (read-only)
+- **Reconcile** with `gwiac apply` (shows a plan; asks for confirmation for destructive changes)
 
-- People or teams managing work via GitHub Issues → batch-add inventory with `gwst manifest add --issue`.
-- People or teams with frequent reviews → spin up review workspaces in bulk via `gwst manifest add --review`.
-- People or teams changing multiple repos per task → presets create a task-level workspace (pseudo-monorepo).
-- People or teams overwhelmed by many worktrees and risky cleanup → safe reconciliation via `gwst plan` + `gwst apply`.
+This is what lets you spin up dozens of workspaces for parallel work — and clean them up in bulk with guardrails.
 
-## What makes gwst different
+### Example: `gwiac plan` shows risk before removals
 
-### 1) `gwst manifest add` is the center
+When a plan includes removals, `gwiac plan` inspects each repo in the workspace and summarizes risk (dirty/unpushed/diverged/unknown) so you can review before running `apply`.
 
-One command, four creation modes:
+How to generate this on your machine (optional):
 
 ```bash
-gwst manifest add --repo git@github.com:org/repo.git
-gwst manifest add --preset app PROJ-123
-gwst manifest add --review https://github.com/owner/repo/pull/123   # GitHub only
-gwst manifest add --issue https://github.com/owner/repo/issues/123  # GitHub only
+gwiac manifest add --repo <REPO> <WORKSPACE_ID>
+# (optional) make the workspace risky: dirty changes / unpushed commits / etc.
+gwiac manifest rm <WORKSPACE_ID> --no-apply
+gwiac plan
 ```
 
-If you omit options, gwst switches to an interactive flow:
-
+<!-- BEGIN: gwiac plan removal-risk example (paste real output) -->
+```text
+PASTE REAL OUTPUT OF: gwiac plan
 ```
-$ gwst manifest add
-Inputs
-  • mode: s (type to filter)
-    └─ repo - 1 repo only
-    └─ issue - From an issue (multi-select, GitHub only)
-    └─ review - From a review request (multi-select, GitHub only)
-    └─ preset - From preset
-```
+<!-- END: gwiac plan removal-risk example (paste real output) -->
 
-Review/issue modes are also interactive (repo + multi-select):
+## Quickstart (5 minutes)
 
-```
-$ gwst manifest add --review
-Inputs
-  • repo: org/gwst
-  • pull request: s (type to filter)
-Info
-  • selected
-    └─ #123 Fix status output
-    └─ #120 Add repo prompt
+### 1) Install
+
+```bash
+brew tap tasuku43/gwiac
+brew install gwiac
 ```
 
-```
-$ gwst manifest add --issue
-Inputs
-  • repo: org/gwst
-  • issue: s (type to filter)
-Info
-  • selected
-    └─ #45 Improve preset flow
-    └─ #39 Add doctor checks
+Other options:
+
+- Version pinning with mise (optional): `mise use -g github:tasuku43/gwiac@<version>`
+- Manual install via GitHub Releases (download archive → put `gwiac` on your PATH)
+- Build from source requires Go 1.24+
+
+For details and other options, see `docs/guides/INSTALL.md`.
+
+### 2) Initialize a root
+
+```bash
+gwiac init
 ```
 
-### 2) Preset = pseudo-monorepo workspace
+Root resolution order:
+1) `--root <path>`
+2) `GWIAC_ROOT` environment variable
+3) `~/gwiac` (default)
 
-Define multiple repos as one task unit, then create them together:
+Default layout:
+
+```
+~/gwiac/
+├── bare/           # shared bare repo store
+├── workspaces/     # task workspaces (one directory per workspace id)
+└── gwiac.yaml      # inventory (desired state)
+```
+
+### 3) Create a workspace (interactive front-end to the inventory)
+
+The happy path is `gwiac manifest add`: it writes `gwiac.yaml` and (by default) runs `gwiac apply`.
+Run it with no args to choose a mode interactively (`repo` / `preset` / `review` / `issue`).
+
+```bash
+gwiac manifest add --repo git@github.com:org/backend.git PROJ-123
+```
+
+Open a workspace:
+
+```bash
+gwiac open PROJ-123
+```
+
+### 4) Remove safely (bulk cleanup with a plan)
+
+```bash
+gwiac manifest rm PROJ-123
+```
+
+`gwiac manifest rm` updates `gwiac.yaml` and (by default) runs `gwiac apply`, which prints a plan and enforces confirmation for destructive removals. Omit the workspace id to select interactively (multi-select).
+
+### Interactive shortcuts (omit args to prompt)
+
+gwiac falls back to interactive prompts when you omit required args (unless `--no-prompt` is set):
+
+```bash
+gwiac manifest add   # mode picker: repo / preset / review / issue
+gwiac manifest rm    # workspace multi-select
+gwiac open           # workspace picker
+```
+
+## The “create in bulk” entry points
+
+### 1) From PRs / issues (GitHub only)
+
+These modes are built to create workspaces from your existing workflow.
+
+Direct URL (single workspace):
+
+```bash
+gwiac manifest add --review https://github.com/owner/repo/pull/123
+gwiac manifest add --issue  https://github.com/owner/repo/issues/123
+```
+
+Notes:
+- Requires `gh` (authenticated) to fetch metadata.
+- For bulk creation, run `gwiac manifest add` with no args and use the interactive picker (supports multi-select), then confirm a single `apply`.
+
+### 2) From presets (multi-repo “task workspace”)
+
+A preset is a lightweight “pseudo-monorepo” template: one task creates multiple repos together.
 
 ```yaml
 presets:
@@ -81,138 +134,71 @@ presets:
     repos:
       - git@github.com:org/backend.git
       - git@github.com:org/frontend.git
-      - git@github.com:org/manifests.git
-      - git@github.com:org/docs.git
+      - git@github.com:org/infra.git
 ```
 
 ```bash
-gwst manifest add --preset app PROJ-123
+gwiac manifest add --preset app PROJ-123
 ```
 
-### 3) Guardrails on cleanup
+## Power move: edit `gwiac.yaml` by hand (AI-friendly)
 
-`gwst plan` + `gwst apply` refuse or ask for confirmation when removals are risky (dirty, unpushed, unknown, etc.):
+`gwiac.yaml` is just YAML. You can edit it directly (humans or AI), then review/apply changes:
 
 ```bash
-gwst manifest rm PROJ-123
+gwiac plan
+gwiac apply
 ```
 
-Omitting the workspace id prompts selection:
+Minimal example:
 
+```yaml
+version: 1
+workspaces:
+  PROJ-123:
+    description: "fix login flow"
+    mode: repo
+    repos:
+      - alias: backend
+        repo_key: github.com/org/backend.git
+        branch: PROJ-123
 ```
-$ gwst manifest rm
-Inputs
-  • workspace: s (type to filter)
-    └─ PROJ-123 [clean] - sample project
-      └─ gwst (branch: PROJ-123-backend)
-    └─ PROJ-124 [dirty changes] - wip
-      └─ gwst (branch: PROJ-124-backend)
+
+Notes:
+- `gwiac.yaml` is gwiac-managed: commands rewrite the whole file, so comments/ordering may not be preserved.
+- If filesystem is the truth (someone changed worktrees manually), use `gwiac import` to rebuild `gwiac.yaml` from the current state and see a diff.
+
+### Example: `gwiac import` prints a unified diff
+
+How to generate this on your machine (optional):
+
+```bash
+gwiac manifest add --repo <REPO> <WORKSPACE_ID>
+gwiac manifest rm <WORKSPACE_ID> --no-apply
+gwiac import
 ```
+
+<!-- BEGIN: gwiac import unified-diff example (paste real output) -->
+```text
+PASTE REAL OUTPUT OF: gwiac import
+```
+<!-- END: gwiac import unified-diff example (paste real output) -->
 
 ## Requirements
 
 - Git
-- gh CLI (optional; required for `gwst manifest add --review` and `gwst manifest add --issue` — GitHub only)
-
-## Install
-
-Recommended:
-
-```bash
-brew tap tasuku43/gwst
-brew install gwst
-```
-
-Version pinning (optional):
-
-```bash
-mise use -g github:tasuku43/gwst
-```
-If you want to pin a specific version, use `mise use -g github:tasuku43/gwst@<version>`.
-
-Manual (GitHub Releases):
-- Download the archive for your OS/arch
-- Extract and place `gwst` on your PATH
-- Building from source requires Go 1.24+
-
-For details and other options, see `docs/guides/INSTALL.md`.
-
-## Quickstart (5 minutes)
-
-### 1) Initialize the root
-
-```bash
-gwst init
-```
-
-This creates `GWST_ROOT` with the standard layout and a starter `gwst.yaml`.
-
-Root resolution order:
-1) `--root <path>`
-2) `GWST_ROOT` environment variable
-3) `~/gwst` (default)
-
-Default layout example:
-
-```
-~/gwst/
-├── bare/           # bare repo store (shared Git objects)
-├── workspaces/     # task worktrees (one folder per workspace id)
-└── gwst.yaml
-```
-
-### 2) Fetch repos (bare store)
-
-```bash
-gwst repo get git@github.com:org/backend.git
-```
-
-This stores the repository in the bare store (no working tree is created yet).
-This step is required before creating a workspace.
-
-### 3) Create a workspace
-
-```bash
-gwst manifest add --repo git@github.com:org/backend.git PROJ-123
-```
-
-You'll be prompted for a workspace id (e.g. `PROJ-123`, typically a Jira or ticket id).
-
-Or run `gwst manifest add` with no args to pick a mode and fill inputs interactively.
-
-### 4) Work and clean up
-
-List workspaces:
-
-```bash
-gwst manifest ls
-```
-
-Open a workspace (prompts if omitted):
-
-```bash
-gwst open PROJ-123
-```
-
-This launches an interactive subshell at the workspace root (parent cwd unchanged) and
-prefixes the prompt with `[gwst:<WORKSPACE_ID>]`.
-
-Remove a workspace with guardrails (prompts if omitted):
-
-```bash
-gwst manifest rm PROJ-123
-```
+- `gh` CLI (optional; required for `gwiac manifest add --review` and `gwiac manifest add --issue` — GitHub only)
 
 ## Help and docs
 
 - `docs/README.md` for documentation index
 - `docs/spec/README.md` for specs index and status
 - `docs/spec/commands/` for per-command specs
-- `docs/spec/core/GWST.md` for gwst.yaml format
+- `docs/spec/core/INVENTORY.md` for `gwiac.yaml` format
 - `docs/spec/core/PRESETS.md` for preset format
 - `docs/spec/core/DIRECTORY_LAYOUT.md` for the file layout
 - `docs/spec/ui/UI.md` for output conventions
-- `docs/concepts/CONCEPT.md` for the background and motivation
+- `docs/concepts/CONCEPT.md` for background and motivation
 
 ## Maintainer
 

@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/tasuku43/gwst/internal/domain/manifest"
 )
 
 func TestRunCreatesAndSkips(t *testing.T) {
@@ -26,26 +28,26 @@ func TestRunCreatesAndSkips(t *testing.T) {
 			t.Fatalf("missing dir %s: %v", dir, err)
 		}
 	}
-	configPath := filepath.Join(rootDir, "gwst.yaml")
+	configPath := filepath.Join(rootDir, manifest.FileName)
 	if _, err := os.Stat(configPath); err != nil {
-		t.Fatalf("missing file gwst.yaml: %v", err)
+		t.Fatalf("missing file %s: %v", manifest.FileName, err)
 	}
 	data, err := os.ReadFile(configPath)
 	if err != nil {
-		t.Fatalf("read gwst.yaml: %v", err)
+		t.Fatalf("read %s: %v", manifest.FileName, err)
 	}
 	content := string(data)
 	if !strings.Contains(content, "presets:") {
-		t.Fatalf("expected presets in gwst.yaml")
+		t.Fatalf("expected presets in %s", manifest.FileName)
 	}
 	if !strings.Contains(content, "example:") {
-		t.Fatalf("expected example preset in gwst.yaml")
+		t.Fatalf("expected example preset in %s", manifest.FileName)
 	}
 	if !strings.Contains(content, "git@github.com:octocat/Hello-World.git") {
-		t.Fatalf("expected octocat/Hello-World repo in gwst.yaml")
+		t.Fatalf("expected octocat/Hello-World repo in %s", manifest.FileName)
 	}
 	if !strings.Contains(content, "git@github.com:octocat/Spoon-Knife.git") {
-		t.Fatalf("expected octocat/Spoon-Knife repo in gwst.yaml")
+		t.Fatalf("expected octocat/Spoon-Knife repo in %s", manifest.FileName)
 	}
 
 	second, err := Run(rootDir)

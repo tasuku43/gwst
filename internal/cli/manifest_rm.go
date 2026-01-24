@@ -21,7 +21,7 @@ func runManifestRm(ctx context.Context, rootDir string, args []string, globalNoP
 	var noApply bool
 	var noPromptFlag bool
 	var helpFlag bool
-	rmFlags.BoolVar(&noApply, "no-apply", false, "do not run gwst apply")
+	rmFlags.BoolVar(&noApply, "no-apply", false, "do not run gwiac apply")
 	rmFlags.BoolVar(&noPromptFlag, "no-prompt", false, "disable interactive prompt")
 	rmFlags.BoolVar(&helpFlag, "help", false, "show help")
 	rmFlags.BoolVar(&helpFlag, "h", false, "show help")
@@ -50,7 +50,7 @@ func runManifestRm(ctx context.Context, rootDir string, args []string, globalNoP
 	manifestPath := manifest.Path(rootDir)
 	originalBytes, err := os.ReadFile(manifestPath)
 	if err != nil {
-		return fmt.Errorf("read gwst.yaml: %w", err)
+		return fmt.Errorf("read %s: %w", manifest.FileName, err)
 	}
 
 	selectedIDs := uniqueNonEmptyStrings(rmFlags.Args())
@@ -65,7 +65,7 @@ func runManifestRm(ctx context.Context, rootDir string, args []string, globalNoP
 		theme := ui.DefaultTheme()
 		useColor := isatty.IsTerminal(os.Stdout.Fd())
 		choices := buildManifestRmWorkspaceChoices(ctx, rootDir, desired)
-		selected, err := ui.PromptWorkspaceMultiSelectWithBlocked("gwst manifest rm", choices, nil, theme, useColor)
+		selected, err := ui.PromptWorkspaceMultiSelectWithBlocked("gwiac manifest rm", choices, nil, theme, useColor)
 		if err != nil {
 			return err
 		}
@@ -87,7 +87,7 @@ func runManifestRm(ctx context.Context, rootDir string, args []string, globalNoP
 	}
 	if len(missing) > 0 {
 		sort.Strings(missing)
-		return fmt.Errorf("workspace(s) not found in gwst.yaml: %s", strings.Join(missing, ", "))
+		return fmt.Errorf("workspace(s) not found in %s: %s", manifest.FileName, strings.Join(missing, ", "))
 	}
 
 	updated := desired
@@ -128,21 +128,21 @@ func runManifestRm(ctx context.Context, rootDir string, args []string, globalNoP
 			ShowPrelude: showPrelude,
 			RenderNoApply: func(r *ui.Renderer) {
 				r.Section("Result")
-				r.Bullet(fmt.Sprintf("updated gwst.yaml (removed %d workspace(s))", len(selectedIDs)))
+				r.Bullet(fmt.Sprintf("updated %s (removed %d workspace(s))", manifest.FileName, len(selectedIDs)))
 				r.Blank()
 				r.Section("Suggestion")
-				r.Bullet("gwst apply")
+				r.Bullet("gwiac apply")
 			},
 			RenderNoChanges: func(r *ui.Renderer) {
 				r.Section("Result")
-				r.Bullet(fmt.Sprintf("updated gwst.yaml (removed %d workspace(s))", len(selectedIDs)))
+				r.Bullet(fmt.Sprintf("updated %s (removed %d workspace(s))", manifest.FileName, len(selectedIDs)))
 				r.Bullet("no changes")
 			},
 			RenderInfoBeforeApply: func(r *ui.Renderer, _ manifestplan.Result, _ bool) {
 				if !selectedFromPrompt {
 					r.Section("Info")
 				}
-				r.Bullet(fmt.Sprintf("manifest: updated gwst.yaml (removed %d workspace(s))", len(selectedIDs)))
+				r.Bullet(fmt.Sprintf("manifest: updated %s (removed %d workspace(s))", manifest.FileName, len(selectedIDs)))
 				r.Bullet("apply: reconciling entire root (destructive removals require confirmation)")
 			},
 		},

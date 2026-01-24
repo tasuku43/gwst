@@ -103,7 +103,7 @@ func applyWorkspaceAdd(ctx context.Context, rootDir string, desired manifest.Fil
 	}
 	if baseBranchMixed {
 		// Workspace-level base_branch can't represent multiple different bases across repos.
-		// Keep it empty so `gwst import` doesn't inject an incorrect base_ref into every repo.
+		// Keep it empty so `gwiac import` doesn't inject an incorrect base_ref into every repo.
 		baseBranchToRecord = ""
 	}
 	if err := recordBaseBranchIfMissing(rootDir, change.WorkspaceID, baseBranchToRecord); err != nil {

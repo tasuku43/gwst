@@ -1,28 +1,28 @@
 ---
-title: "gwst manifest preset validate"
+title: "gwiac manifest preset validate"
 status: implemented
 aliases:
-  - "gwst manifest pre validate"
-  - "gwst manifest p validate"
+  - "gwiac manifest pre validate"
+  - "gwiac manifest p validate"
 ---
 
 ## Synopsis
-`gwst manifest preset validate [--no-prompt]`
+`gwiac manifest preset validate [--no-prompt]`
 
 ## Intent
-Validate preset entries in `gwst.yaml`.
+Validate preset entries in `gwiac.yaml`.
 
 ## Notes
-- This command is inventory-only and does not run `gwst apply`.
+- This command is inventory-only and does not run `gwiac apply`.
 
 ## Behavior
-- Loads `<root>/gwst.yaml`; missing or unreadable file is reported as an issue.
+- Loads `<root>/gwiac.yaml`; missing or unreadable file is reported as an issue.
 - Parses YAML and reports errors if invalid.
 - Checks for required fields:
   - top-level `presets` mapping exists.
   - each preset entry includes a non-empty `repos` list.
 - Detects duplicate preset names in the YAML source.
-- Validates preset names using the same rules as `gwst manifest preset add`.
+- Validates preset names using the same rules as `gwiac manifest preset add`.
 - Validates each repo spec via the existing repo spec normalization rules.
 - Output uses the standard sectioned layout:
   - `Result` contains one bullet per issue; when no issues are found, prints `no issues found`.
@@ -40,9 +40,9 @@ Result
 ```
 
 ## Success Criteria
-- Returns success when `gwst.yaml` presets are valid.
+- Returns success when `gwiac.yaml` presets are valid.
 
 ## Failure Modes
-- `gwst.yaml` missing/unreadable.
+- `gwiac.yaml` missing/unreadable.
 - YAML parse error.
 - Missing required fields, duplicate preset names, invalid preset names, or invalid repo specs.

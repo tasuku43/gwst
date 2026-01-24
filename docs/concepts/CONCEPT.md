@@ -1,6 +1,6 @@
-# gwst Concept
+# gwiac Concept
 
-## 1. Why gwst is needed (Problem)
+## 1. Why gwiac is needed (Problem)
 
 In the era of AI agents, multiple actors (humans + multiple agents) make changes in parallel on the same machine and the same codebase. With the traditional workflow of directly editing a single clone directory, the following issues become prominent:
 
@@ -9,12 +9,12 @@ In the era of AI agents, multiple actors (humans + multiple agents) make changes
 - Cleanup (deletion) feels risky, so leftovers accumulate and the environment becomes even more error-prone
 - Agents are more likely to perform destructive operations by mistake (e.g., `rm -rf`, running commands in the wrong directory)
 
-gwst promotes working directories into explicit **workspaces (task-scoped working directories)** and enables Git worktrees to be operated in a **standardized, safer, and listable** way.  
-gwst focuses on **creating and managing work environments**; downstream development workflows (run, test, PR, etc.) are intentionally left to the user’s existing practices.
+gwiac promotes working directories into explicit **workspaces (task-scoped working directories)** and enables Git worktrees to be operated in a **standardized, safer, and listable** way.  
+gwiac focuses on **creating and managing work environments**; downstream development workflows (run, test, PR, etc.) are intentionally left to the user’s existing practices.
 
 ## 2. Who this tool is for (Target users)
 
-gwst is primarily for developers and teams who work in the terminal and build productivity by composing existing tools (git/gh/tmux/make/just/direnv, etc.).
+gwiac is primarily for developers and teams who work in the terminal and build productivity by composing existing tools (git/gh/tmux/make/just/direnv, etc.).
 
 - Prefer tracking state via text and commands rather than delegating the workflow to a GUI
 - Run multiple tasks (humans + agents) in parallel, but struggle with isolation and cleanup
@@ -23,7 +23,7 @@ gwst is primarily for developers and teams who work in the terminal and build pr
 
 ## 3. What it provides (Minimal primitives)
 
-gwst provides a minimal set of management capabilities: **create, extend, list, and safely clean up** workspaces.  
+gwiac provides a minimal set of management capabilities: **create, extend, list, and safely clean up** workspaces.  
 It does not replace existing development practices; instead, it makes workspaces **composable** with the user’s preferred toolchain and command workflows.
 
 ## 4. When it helps (Representative scenarios)

@@ -1,9 +1,9 @@
 ---
-title: "gwst CLI specs"
+title: "gwiac CLI specs"
 status: implemented
 ---
 
-This directory holds gwst specifications in English. Each file uses frontmatter metadata to track implementation status so we can evolve features intentionally.
+This directory holds gwiac specifications in English. Each file uses frontmatter metadata to track implementation status so we can evolve features intentionally.
 
 ## Metadata rules
 - Required: `title`, `status`.
@@ -16,15 +16,15 @@ This directory holds gwst specifications in English. Each file uses frontmatter 
 - `implemented`: implemented and considered current.
 
 ## Global CLI behavior
-- Command form: `gwst <command> [flags] [args]`.
-- Root resolution precedence: `--root` flag > `GWST_ROOT` environment variable > default `~/gwst`.
+- Command form: `gwiac <command> [flags] [args]`.
+- Root resolution precedence: `--root` flag > `GWIAC_ROOT` environment variable > default `~/gwiac`.
 - Common flags: `--root <path>`, `--no-prompt`, `--debug`, `--help`/`-h`.
-- Version: `gwst --version` (or `gwst version`) prints a single-line version and exits 0.
+- Version: `gwiac --version` (or `gwiac version`) prints a single-line version and exits 0.
 - Output: human-readable text only in the current MVP; JSON output is future work.
 
 ## Debug logging
 - `--debug` enables debug logging to a file (no on-screen debug output).
-- Output directory: `<GWST_ROOT>/logs/`.
+- Output directory: `<GWIAC_ROOT>/logs/`.
 - File naming: `debug-YYYYMMDD.log` using local date.
 - Append mode: always append to the day file (single file per day).
 - Format: one event per line, human-readable key/value pairs.

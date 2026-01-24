@@ -1,30 +1,30 @@
-# AGENTS.md — gwst repository instructions
+# AGENTS.md — gwiac repository instructions
 
 ## Project summary
-- Project: gwst (Git Workspace Manager)
+- Project: gwiac (Git Workspace Manager)
 - Language: Go
 - Goal: Manage workspaces (task-based directories) backed by bare repo stores + git worktrees.
 
 ## IaC-first direction (Plan / Apply / Import)
-- gwst uses an IaC-style workflow centered on **Declare → Diff → Reconcile**.
-- `gwst.yaml` is the workspace **desired state (inventory)**:
-  - Location: `<GWST_ROOT>/gwst.yaml`
-  - Inventory is updated via `gwst manifest ...`.
-  - `gwst apply`: `gwst.yaml` is the source of truth; gwst computes a diff and reconciles the filesystem.
-  - `gwst import`: the filesystem (+ `.gwst/metadata.json`) is the source of truth; gwst rebuilds `gwst.yaml`.
+- gwiac uses an IaC-style workflow centered on **Declare → Diff → Reconcile**.
+- `gwiac.yaml` is the workspace **desired state (inventory)**:
+  - Location: `<GWIAC_ROOT>/gwiac.yaml`
+  - Inventory is updated via `gwiac manifest ...`.
+  - `gwiac apply`: `gwiac.yaml` is the source of truth; gwiac computes a diff and reconciles the filesystem.
+  - `gwiac import`: the filesystem (+ `.gwiac/metadata.json`) is the source of truth; gwiac rebuilds `gwiac.yaml`.
 - Command roles:
-  - `gwst plan`: **read-only** (no side effects). Shows the diff between `gwst.yaml` and the filesystem.
-  - `gwst apply`: **reconcile**. Output is `Plan` → (confirm y/n) → `Apply` → `Result`
+  - `gwiac plan`: **read-only** (no side effects). Shows the diff between `gwiac.yaml` and the filesystem.
+  - `gwiac apply`: **reconcile**. Output is `Plan` → (confirm y/n) → `Apply` → `Result`
     - The confirmation prompt is shown at the end of the `Plan` section (with a blank line before the prompt).
     - `Apply` prints steps plus partial git command logs (tree-style).
     - `Result` prints a completion summary (applied counts / manifest rewrite, etc.).
-  - `gwst import`: **rebuild inventory**. Reconstructs/normalizes `gwst.yaml` from the current filesystem.
+  - `gwiac import`: **rebuild inventory**. Reconstructs/normalizes `gwiac.yaml` from the current filesystem.
 - Non-negotiables:
   - Idempotent (running `apply` repeatedly converges to no changes)
   - Destructive changes require explicit confirmation (`--no-prompt` must not allow destructive changes)
   - Treat drift detection (`plan`) and restoration (`apply`/`import`) as first-class
 - Specs (source of truth):
-  - `docs/spec/core/GWST.md`
+  - `docs/spec/core/INVENTORY.md`
   - `docs/spec/commands/plan.md`, `docs/spec/commands/apply.md`, `docs/spec/commands/import.md`
   - `docs/spec/ui/UI.md`
 
@@ -50,7 +50,7 @@
 - Keep the section order from `docs/spec/ui/UI.md` and avoid emitting duplicate sections.
 - Follow the color semantics from `docs/spec/ui/UI.md` (success/warn/error/muted/accent) when adding colored output; do not introduce command-specific color rules without updating the spec.
 - Tree/list indentation must use shared tokens from `internal/infra/output` (e.g. `output.Indent`, `output.Indent2`, `output.TreeBranch*`, `output.TreeStem*`) to keep nesting consistent across commands.
-- For manifest mutation commands (`gwst manifest add/rm/gc/...`):
+- For manifest mutation commands (`gwiac manifest add/rm/gc/...`):
   - Do not print "partial" output (e.g. an `Info` section) before calling `applyManifestMutation`.
   - Instead, compute everything up front and render via `applyManifestMutation` hooks:
     - `ShowPrelude` for user-provided inputs (interactive selections / flag-driven args).
@@ -73,8 +73,8 @@
 ## Repository contracts
 - Root resolution precedence:
     1) CLI flag `--root`
-    2) env `GWST_ROOT`
-    3) default `~/gwst`
+    2) env `GWIAC_ROOT`
+    3) default `~/gwiac`
 - Directory layout under root:
     - `<root>/bare` (bare repo store)
     - `<root>/src` (human working tree)
@@ -98,7 +98,7 @@ Only implement:
 - When creating issues or PRs with `gh`, pass the body via a here-doc to preserve newlines for proper GitHub rendering:
   ```sh
   gh issue create \
-    --title "Update gwst command surface" \
+    --title "Update gwiac command surface" \
     --body "$(cat <<'EOF'
   ## Summary
   ...

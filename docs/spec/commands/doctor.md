@@ -1,17 +1,17 @@
 ---
-title: "gwst doctor"
+title: "gwiac doctor"
 status: implemented
 ---
 
 ## Synopsis
-`gwst doctor [--fix | --self]`
+`gwiac doctor [--fix | --self]`
 
 ## Intent
-Detect common problems that block gwst from working and surface them before users run other commands.
+Detect common problems that block gwiac from working and surface them before users run other commands.
 
 ## Behavior
 - Validates that a root directory was resolved.
-- Checks the root layout for the presence of `bare/`, `workspaces/`, and `gwst.yaml`, reporting missing or invalid entries as issues.
+- Checks the root layout for the presence of `bare/`, `workspaces/`, and `gwiac.yaml`, reporting missing or invalid entries as issues.
 - Scans existing workspaces and aggregates any warnings emitted while inspecting their repositories (e.g., unreadable worktrees).
 - Lists repo stores and flags any store whose `origin` remote is missing or lacks a URL (`missing_remote`).
 - `--fix` currently performs the same checks and returns the list of issues; no automatic fixes are applied yet (the `fixed` list remains empty).

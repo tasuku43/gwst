@@ -66,7 +66,7 @@ func Open(ctx context.Context, rootDir string, repo string, fetch bool) (Store, 
 		return Store{}, err
 	}
 	if !exists {
-		return Store{}, fmt.Errorf("repo store not found, run: gwst repo get %s", repo)
+		return Store{}, fmt.Errorf("repo store not found, run: gwiac repo get %s", repo)
 	}
 
 	if err := normalizeStore(ctx, storePath, spec.RepoKey, fetch); err != nil {
@@ -93,7 +93,7 @@ func Prefetch(ctx context.Context, rootDir string, repo string) error {
 		return err
 	}
 	if !exists {
-		return fmt.Errorf("repo store not found, run: gwst repo get %s", repo)
+		return fmt.Errorf("repo store not found, run: gwiac repo get %s", repo)
 	}
 
 	_, err = ensureDefaultBranch(ctx, storePath, true, false)
@@ -276,7 +276,7 @@ func worktreeBranchNames(ctx context.Context, storePath string) (map[string]stru
 }
 
 func fetchGraceDuration() time.Duration {
-	val := strings.TrimSpace(os.Getenv("GWST_FETCH_GRACE_SECONDS"))
+	val := strings.TrimSpace(os.Getenv("GWIAC_FETCH_GRACE_SECONDS"))
 	if val == "" {
 		return 30 * time.Second
 	}

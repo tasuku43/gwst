@@ -1,13 +1,13 @@
 ---
-title: "gwst manifest preset"
+title: "gwiac manifest preset"
 status: implemented
 aliases:
-  - "gwst manifest pre"
-  - "gwst manifest p"
+  - "gwiac manifest pre"
+  - "gwiac manifest p"
 ---
 
 ## Intent
-Manage preset entries in `gwst.yaml` without manual YAML editing.
+Manage preset entries in `gwiac.yaml` without manual YAML editing.
 
 ## Notes
-- Preset commands are inventory-only and do not run `gwst apply`.
+- Preset commands are inventory-only and do not run `gwiac apply`.

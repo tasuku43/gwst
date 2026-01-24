@@ -13,12 +13,12 @@ This document explains the architecture and sequence of the v0.1.0 release pipel
 - GitHub Actions workflow: `.github/workflows/release.yml`
 - GoReleaser config: `.goreleaser.yaml`
 - GitHub Release artifacts:
-  - `gwst_vX.Y.Z_macos_arm64.tar.gz`
-  - `gwst_vX.Y.Z_macos_x64.tar.gz`
-  - `gwst_vX.Y.Z_linux_arm64.tar.gz`
-  - `gwst_vX.Y.Z_linux_x64.tar.gz`
+  - `gwiac_vX.Y.Z_macos_arm64.tar.gz`
+  - `gwiac_vX.Y.Z_macos_x64.tar.gz`
+  - `gwiac_vX.Y.Z_linux_arm64.tar.gz`
+  - `gwiac_vX.Y.Z_linux_x64.tar.gz`
   - `checksums.txt` (SHA256)
-- Homebrew Formula: `Formula/gwst.rb`
+- Homebrew Formula: `Formula/gwiac.rb`
 - Formula updater script: `.github/scripts/update-homebrew-formula.sh`
 
 ## Architecture (high-level)
@@ -32,7 +32,7 @@ flowchart LR
   RLS -->|download| Users[Users]
 
   RLS -->|checksums.txt + tag| Updater[update-homebrew-formula.sh]
-  Updater --> PR[PR updating Formula/gwst.rb]
+  Updater --> PR[PR updating Formula/gwiac.rb]
   GH -->|auto-merge PR after CI| Main[main branch]
   Main --> Brew[brew tap + brew install]
   RLS --> Mise[mise github backend]
@@ -56,17 +56,17 @@ sequenceDiagram
   GA->>GR: goreleaser release --clean
   GR->>RLS: create/update release + upload artifacts
   GA->>GA: run formula update script (from dist/checksums.txt)
-  GA->>PR: open PR to update Formula/gwst.rb
+  GA->>PR: open PR to update Formula/gwiac.rb
   PR-->>GH: CI passes
   GH->>GH: auto-merge PR (stable tags only)
-  Brew->>GH: brew tap tasuku43/gwst (pulls Formula/gwst.rb)
+  Brew->>GH: brew tap tasuku43/gwiac (pulls Formula/gwiac.rb)
   Brew->>RLS: download tar.gz + verify sha256
-  Brew->>Brew: install gwst
+  Brew->>Brew: install gwiac
   Mise->>RLS: download tar.gz + install (github backend)
 ```
 
 ## Notes
 
-- `gwst version` correctness is guaranteed for **GitHub Releases binaries** by `-ldflags` injected by GoReleaser.
+- `gwiac version` correctness is guaranteed for **GitHub Releases binaries** by `-ldflags` injected by GoReleaser.
 - Homebrew formula is updated via a PR after each stable release tag; GitHub auto-merge is enabled by the release workflow.
 - Homebrew formula updates are performed for **stable tags only** (tags without a `-...` prerelease suffix).

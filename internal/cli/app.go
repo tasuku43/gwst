@@ -13,13 +13,13 @@ import (
 
 // Run is a placeholder for the CLI entrypoint.
 func Run() error {
-	fs := flag.NewFlagSet("gwst", flag.ContinueOnError)
+	fs := flag.NewFlagSet("gwiac", flag.ContinueOnError)
 	var rootFlag string
 	var noPrompt bool
 	var debugFlag bool
 	var helpFlag bool
 	var versionFlag bool
-	fs.StringVar(&rootFlag, "root", "", "override gwst root")
+	fs.StringVar(&rootFlag, "root", "", "override root")
 	fs.BoolVar(&noPrompt, "no-prompt", false, "disable interactive prompt")
 	fs.BoolVar(&debugFlag, "debug", false, "write debug logs to file")
 	fs.BoolVar(&helpFlag, "help", false, "show help")

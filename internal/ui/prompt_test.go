@@ -10,24 +10,24 @@ func TestFormatInputsHeader(t *testing.T) {
 		want        string
 	}{
 		{
-			title: "gwst manifest add",
-			want:  "gwst manifest add",
+			title: "gwiac manifest add",
+			want:  "gwiac manifest add",
 		},
 		{
-			title:  "gwst manifest add",
+			title:  "gwiac manifest add",
 			preset: "app",
-			want:   "gwst manifest add (preset: app)",
+			want:   "gwiac manifest add (preset: app)",
 		},
 		{
-			title:       "gwst manifest add",
+			title:       "gwiac manifest add",
 			workspaceID: "ABC-123",
-			want:        "gwst manifest add (workspace id: ABC-123)",
+			want:        "gwiac manifest add (workspace id: ABC-123)",
 		},
 		{
-			title:       "gwst manifest add",
+			title:       "gwiac manifest add",
 			preset:      "app",
 			workspaceID: "ABC-123",
-			want:        "gwst manifest add (preset: app, workspace id: ABC-123)",
+			want:        "gwiac manifest add (preset: app, workspace id: ABC-123)",
 		},
 	}
 

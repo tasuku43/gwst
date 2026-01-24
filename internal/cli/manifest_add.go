@@ -38,7 +38,7 @@ func runManifestAdd(ctx context.Context, rootDir string, args []string, globalNo
 	addFlags.Var(&workspaceIDFlag, "workspace-id", "not supported (use positional WORKSPACE_ID)")
 	addFlags.StringVar(&branch, "branch", "", "branch name")
 	addFlags.StringVar(&baseRef, "base", "", "base ref")
-	addFlags.BoolVar(&noApply, "no-apply", false, "do not run gwst apply")
+	addFlags.BoolVar(&noApply, "no-apply", false, "do not run gwiac apply")
 	addFlags.BoolVar(&noPromptFlag, "no-prompt", false, "disable interactive prompt")
 	addFlags.BoolVar(&helpFlag, "help", false, "show help")
 	addFlags.BoolVar(&helpFlag, "h", false, "show help")
@@ -93,7 +93,7 @@ func runManifestAdd(ctx context.Context, rootDir string, args []string, globalNo
 	manifestPath := manifest.Path(rootDir)
 	originalBytes, err := os.ReadFile(manifestPath)
 	if err != nil {
-		return fmt.Errorf("read gwst.yaml: %w", err)
+		return fmt.Errorf("read %s: %w", manifest.FileName, err)
 	}
 
 	apply := func(updated manifest.File, showInputs func(*ui.Renderer), addedWorkspaceIDs []string) error {
@@ -105,19 +105,19 @@ func runManifestAdd(ctx context.Context, rootDir string, args []string, globalNo
 				ShowPrelude: showInputs,
 				RenderNoApply: func(r *ui.Renderer) {
 					r.Section("Result")
-					r.Bullet("updated gwst.yaml")
+					r.Bullet(fmt.Sprintf("updated %s", manifest.FileName))
 					r.Blank()
 					r.Section("Suggestion")
-					r.Bullet("gwst apply")
+					r.Bullet("gwiac apply")
 				},
 				RenderNoChanges: func(r *ui.Renderer) {
 					r.Section("Result")
-					r.Bullet("updated gwst.yaml")
+					r.Bullet(fmt.Sprintf("updated %s", manifest.FileName))
 					r.Bullet("no changes")
 				},
 				RenderInfoBeforeApply: func(r *ui.Renderer, plan manifestplan.Result, planOK bool) {
 					r.Section("Info")
-					r.Bullet("manifest: updated gwst.yaml")
+					r.Bullet(fmt.Sprintf("manifest: updated %s", manifest.FileName))
 					if planOK && planIncludesChangesOutsideWorkspaceIDs(plan, addedWorkspaceIDs) {
 						r.BulletWarn("apply: plan includes unrelated changes")
 					}
@@ -197,7 +197,7 @@ func runManifestAdd(ctx context.Context, rootDir string, args []string, globalNo
 		}
 
 		mode, tmplName, tmplWorkspaceID, tmplDesc, tmplBranches, reviewRepo, reviewPRs, issueRepo, issueSelections, repoSelected, err := ui.PromptCreateFlow(
-			"gwst manifest add",
+			"gwiac manifest add",
 			"",
 			"",
 			"",
@@ -237,7 +237,7 @@ func runManifestAdd(ctx context.Context, rootDir string, args []string, globalNo
 	remaining := addFlags.Args()
 	if presetMode {
 		if len(remaining) > 1 {
-			return fmt.Errorf("usage: gwst manifest add --preset <name> [<WORKSPACE_ID>]")
+			return fmt.Errorf("usage: gwiac manifest add --preset <name> [<WORKSPACE_ID>]")
 		}
 		workspaceID := ""
 		if len(remaining) == 1 {
@@ -279,7 +279,7 @@ func runManifestAdd(ctx context.Context, rootDir string, args []string, globalNo
 
 	if repoMode {
 		if len(remaining) > 1 {
-			return fmt.Errorf("usage: gwst manifest add --repo [<repo>] [<WORKSPACE_ID>]")
+			return fmt.Errorf("usage: gwiac manifest add --repo [<repo>] [<WORKSPACE_ID>]")
 		}
 		repoSpec := strings.TrimSpace(repoFlag.value)
 		workspaceID := ""
@@ -321,7 +321,7 @@ func runManifestAdd(ctx context.Context, rootDir string, args []string, globalNo
 
 	if reviewMode {
 		if len(remaining) > 1 {
-			return fmt.Errorf("usage: gwst manifest add --review [<PR URL>]")
+			return fmt.Errorf("usage: gwiac manifest add --review [<PR URL>]")
 		}
 		if branch != "" || baseRef != "" {
 			return fmt.Errorf("--branch and --base are not valid with --review")
@@ -341,7 +341,7 @@ func runManifestAdd(ctx context.Context, rootDir string, args []string, globalNo
 
 	if issueMode {
 		if len(remaining) > 1 {
-			return fmt.Errorf("usage: gwst manifest add --issue <ISSUE_URL> [--branch <name>] [--base <ref>]")
+			return fmt.Errorf("usage: gwiac manifest add --issue <ISSUE_URL> [--branch <name>] [--base <ref>]")
 		}
 		issueURL := ""
 		if len(remaining) == 1 {
@@ -386,13 +386,13 @@ func manifestAddPresetWithFile(ctx context.Context, rootDir, presetName, workspa
 	}
 
 	if _, exists := desired.Workspaces[workspaceID]; exists {
-		return fmt.Errorf("workspace already exists in gwst.yaml: %s", workspaceID)
+		return fmt.Errorf("workspace already exists in %s: %s", manifest.FileName, workspaceID)
 	}
 	wsDir := workspace.WorkspaceDir(rootDir, workspaceID)
 	if exists, err := paths.DirExists(wsDir); err != nil {
 		return err
 	} else if exists {
-		return fmt.Errorf("workspace exists on filesystem but missing in gwst.yaml: %s (suggest: gwst import)", workspaceID)
+		return fmt.Errorf("workspace exists on filesystem but missing in %s: %s (suggest: gwiac import)", manifest.FileName, workspaceID)
 	}
 
 	var repos []manifest.Repo
@@ -446,13 +446,13 @@ func manifestAddRepoWithSpec(ctx context.Context, rootDir, repoSpec, workspaceID
 		return err
 	}
 	if _, exists := desired.Workspaces[workspaceID]; exists {
-		return fmt.Errorf("workspace already exists in gwst.yaml: %s", workspaceID)
+		return fmt.Errorf("workspace already exists in %s: %s", manifest.FileName, workspaceID)
 	}
 	wsDir := workspace.WorkspaceDir(rootDir, workspaceID)
 	if exists, err := paths.DirExists(wsDir); err != nil {
 		return err
 	} else if exists {
-		return fmt.Errorf("workspace exists on filesystem but missing in gwst.yaml: %s (suggest: gwst import)", workspaceID)
+		return fmt.Errorf("workspace exists on filesystem but missing in %s: %s (suggest: gwiac import)", manifest.FileName, workspaceID)
 	}
 
 	spec, _, err := repo.Normalize(repoSpec)
@@ -516,13 +516,13 @@ func manifestAddReviewURL(ctx context.Context, rootDir, prURL string, apply func
 		return err
 	}
 	if _, exists := desired.Workspaces[workspaceID]; exists {
-		return fmt.Errorf("workspace already exists in gwst.yaml: %s", workspaceID)
+		return fmt.Errorf("workspace already exists in %s: %s", manifest.FileName, workspaceID)
 	}
 	wsDir := workspace.WorkspaceDir(rootDir, workspaceID)
 	if exists, err := paths.DirExists(wsDir); err != nil {
 		return err
 	} else if exists {
-		return fmt.Errorf("workspace exists on filesystem but missing in gwst.yaml: %s (suggest: gwst import)", workspaceID)
+		return fmt.Errorf("workspace exists on filesystem but missing in %s: %s (suggest: gwiac import)", manifest.FileName, workspaceID)
 	}
 	repoURL := buildRepoURLFromParts(req.Host, baseOwner, baseRepo)
 	spec, _, err := repo.Normalize(repoURL)
@@ -586,14 +586,14 @@ func manifestAddReviewSelected(ctx context.Context, rootDir string, repoSpec str
 
 		workspaceID := formatReviewWorkspaceID(baseOwner, baseRepo, pr.Number)
 		if _, exists := updated.Workspaces[workspaceID]; exists {
-			warnings = append(warnings, fmt.Sprintf("skipped: workspace already exists in gwst.yaml: %s", workspaceID))
+			warnings = append(warnings, fmt.Sprintf("skipped: workspace already exists in %s: %s", manifest.FileName, workspaceID))
 			continue
 		}
 		wsDir := workspace.WorkspaceDir(rootDir, workspaceID)
 		if exists, err := paths.DirExists(wsDir); err != nil {
 			return err
 		} else if exists {
-			warnings = append(warnings, fmt.Sprintf("skipped: workspace exists on filesystem but missing in gwst.yaml: %s (suggest: gwst import)", workspaceID))
+			warnings = append(warnings, fmt.Sprintf("skipped: workspace exists on filesystem but missing in %s: %s (suggest: gwiac import)", manifest.FileName, workspaceID))
 			continue
 		}
 		if err := workspace.ValidateBranchName(ctx, pr.HeadRef); err != nil {
@@ -694,13 +694,13 @@ func manifestAddIssueURL(ctx context.Context, rootDir, issueURL, branch, baseRef
 		return err
 	}
 	if _, exists := desired.Workspaces[workspaceID]; exists {
-		return fmt.Errorf("workspace already exists in gwst.yaml: %s", workspaceID)
+		return fmt.Errorf("workspace already exists in %s: %s", manifest.FileName, workspaceID)
 	}
 	wsDir := workspace.WorkspaceDir(rootDir, workspaceID)
 	if exists, err := paths.DirExists(wsDir); err != nil {
 		return err
 	} else if exists {
-		return fmt.Errorf("workspace exists on filesystem but missing in gwst.yaml: %s (suggest: gwst import)", workspaceID)
+		return fmt.Errorf("workspace exists on filesystem but missing in %s: %s (suggest: gwiac import)", manifest.FileName, workspaceID)
 	}
 
 	desired.Workspaces[workspaceID] = manifest.Workspace{
@@ -751,14 +751,14 @@ func manifestAddIssueSelected(ctx context.Context, rootDir string, repoSpec stri
 		}
 		workspaceID := formatIssueWorkspaceID(owner, repoName, num)
 		if _, exists := updated.Workspaces[workspaceID]; exists {
-			warnings = append(warnings, fmt.Sprintf("skipped: workspace already exists in gwst.yaml: %s", workspaceID))
+			warnings = append(warnings, fmt.Sprintf("skipped: workspace already exists in %s: %s", manifest.FileName, workspaceID))
 			continue
 		}
 		wsDir := workspace.WorkspaceDir(rootDir, workspaceID)
 		if exists, err := paths.DirExists(wsDir); err != nil {
 			return err
 		} else if exists {
-			warnings = append(warnings, fmt.Sprintf("skipped: workspace exists on filesystem but missing in gwst.yaml: %s (suggest: gwst import)", workspaceID))
+			warnings = append(warnings, fmt.Sprintf("skipped: workspace exists on filesystem but missing in %s: %s (suggest: gwiac import)", manifest.FileName, workspaceID))
 			continue
 		}
 

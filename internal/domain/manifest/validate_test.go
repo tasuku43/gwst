@@ -19,15 +19,15 @@ func TestValidate_MissingFileIsIssue(t *testing.T) {
 	if len(result.Issues) != 1 {
 		t.Fatalf("expected 1 issue, got %d", len(result.Issues))
 	}
-	if !strings.Contains(result.Issues[0].Ref, "gwst.yaml") {
-		t.Fatalf("expected gwst.yaml ref, got: %+v", result.Issues[0])
+	if !strings.Contains(result.Issues[0].Ref, FileName) {
+		t.Fatalf("expected %s ref, got: %+v", FileName, result.Issues[0])
 	}
 }
 
 func TestValidate_InvalidYAMLIsIssue(t *testing.T) {
 	ctx := context.Background()
 	rootDir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(rootDir, "gwst.yaml"), []byte(":\n  -\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(rootDir, FileName), []byte(":\n  -\n"), 0o644); err != nil {
 		t.Fatalf("write: %v", err)
 	}
 
@@ -54,7 +54,7 @@ workspaces:
         branch: PROJ-1
         base_ref: origin/main
 `
-	if err := os.WriteFile(filepath.Join(rootDir, "gwst.yaml"), []byte(content), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(rootDir, FileName), []byte(content), 0o644); err != nil {
 		t.Fatalf("write: %v", err)
 	}
 
@@ -82,7 +82,7 @@ workspaces:
         repo_key: github.com/org/web.git
         branch: PROJ-2
 `
-	if err := os.WriteFile(filepath.Join(rootDir, "gwst.yaml"), []byte(content), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(rootDir, FileName), []byte(content), 0o644); err != nil {
 		t.Fatalf("write: %v", err)
 	}
 
@@ -126,7 +126,7 @@ workspaces:
     preset_name: missing
     repos: []
 `
-	if err := os.WriteFile(filepath.Join(rootDir, "gwst.yaml"), []byte(content), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(rootDir, FileName), []byte(content), 0o644); err != nil {
 		t.Fatalf("write: %v", err)
 	}
 

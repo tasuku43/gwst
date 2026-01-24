@@ -51,10 +51,10 @@ Rules:
 
 Notes:
 - IaC-style commands use `Plan`/`Apply`:
-  - `gwst plan`: renders `Info` (optional) then `Plan` only.
-  - `gwst apply`: renders `Info` (optional) → `Plan` → `Apply` (execution steps + git logs) → `Result`.
+  - `gwiac plan`: renders `Info` (optional) then `Plan` only.
+  - `gwiac apply`: renders `Info` (optional) → `Plan` → `Apply` (execution steps + git logs) → `Result`.
 - `Apply` is semantically the same as `Steps`, but reserved for execution output in reconcile flows.
-- Prompts may appear inside a section when it improves flow readability (e.g. `gwst apply` renders the final y/n confirmation prompt at the end of `Plan` with a blank line before it).
+- Prompts may appear inside a section when it improves flow readability (e.g. `gwiac apply` renders the final y/n confirmation prompt at the end of `Plan` with a blank line before it).
 
 ## Prefix & Indentation
 - Default prefix token: `•` (can be changed later)
@@ -103,7 +103,7 @@ Steps
 ## Pickers
 
 ### Workspace picker line format
-When rendering workspace candidates (e.g. in `gwst manifest rm`), use a compact single-line display:
+When rendering workspace candidates (e.g. in `gwiac manifest rm`), use a compact single-line display:
 
 `<WORKSPACE_ID>[<status>] - <description>`
 
@@ -115,7 +115,7 @@ Rules:
   - `clean` should be treated as the default and omitted (no status tag).
 - If multiple conditions apply, the status tag should be the highest priority item:
   - `unknown` > `dirty` > `diverged` > `unpushed` (clean is omitted).
-- Semantics and detection guidance for these labels are defined by the command specs (e.g. `gwst manifest rm`).
+- Semantics and detection guidance for these labels are defined by the command specs (e.g. `gwiac manifest rm`).
 
 Color guidance (TTY):
 - `<WORKSPACE_ID>`: default text color.
@@ -128,7 +128,7 @@ Example:
 
 ## Examples
 
-### gwst manifest add --preset (interactive)
+### gwiac manifest add --preset (interactive)
 ```
 Inputs
   • preset: hel
@@ -142,11 +142,11 @@ Steps
   • worktree add helmfiles
 
 Result
-  • /Users/me/gwst/workspaces/PROJ-123
+  • /Users/me/gwiac/workspaces/PROJ-123
     └─ helmfiles (branch: PROJ-123)
 ```
 
-### gwst manifest add (mode picker)
+### gwiac manifest add (mode picker)
 ```
 Inputs
   • mode: s
@@ -156,27 +156,27 @@ Inputs
     └─ preset - From preset
 ```
 
-### gwst manifest add --preset (non-interactive)
+### gwiac manifest add --preset (non-interactive)
 ```
 Steps
   • repo get git@github.com:org/repo.git
   • worktree add repo
 
 Result
-  • /Users/me/gwst/workspaces/PROJ-123
+  • /Users/me/gwiac/workspaces/PROJ-123
     ├─ repo
     └─ api
 ```
 
-### gwst manifest add --review (interactive)
+### gwiac manifest add --review (interactive)
 ```
 Steps
   • repo get required for 1 repo
-    └─ gwst repo get git@github.com:org/repo.git
+    └─ gwiac repo get git@github.com:org/repo.git
   • run now? (y/n)
 ```
 
-### gwst plan
+### gwiac plan
 ```
 Plan
   • workspace add PROJ-123

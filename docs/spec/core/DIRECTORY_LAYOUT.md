@@ -1,27 +1,27 @@
 ---
-title: "Directory layout under GWST_ROOT"
+title: "Directory layout under GWIAC_ROOT"
 status: implemented
 ---
 
-# Directory layout under GWST_ROOT
+# Directory layout under GWIAC_ROOT
 
-`gwst` manages a single root directory (`GWST_ROOT`) that contains the bare repo store and workspaces.
+`gwiac` manages a single root directory (`GWIAC_ROOT`) that contains the bare repo store and workspaces.
 
 ## Root resolution
 
-`GWST_ROOT` is resolved in this order:
+`GWIAC_ROOT` is resolved in this order:
 
 1. `--root <path>`
-2. `GWST_ROOT` environment variable
-3. default `~/gwst`
+2. `GWIAC_ROOT` environment variable
+3. default `~/gwiac`
 
 ## Layout
 
 ```
-GWST_ROOT/
+GWIAC_ROOT/
   bare/         # bare repo store (shared Git objects)
   workspaces/   # workspaces (task-scoped worktrees)
-  gwst.yaml
+  gwiac.yaml
   logs/         # created when --debug is used
 ```
 
@@ -30,10 +30,10 @@ GWST_ROOT/
 Each workspace is a directory under `workspaces/` and contains one or more repo worktrees:
 
 ```
-GWST_ROOT/workspaces/<WORKSPACE_ID>/
+GWIAC_ROOT/workspaces/<WORKSPACE_ID>/
   <alias1>/
   <alias2>/
-  .gwst/metadata.json   # workspace metadata (optional: mode, description, source_url, preset_name, base_branch)
+  .gwiac/metadata.json   # workspace metadata (optional: mode, description, source_url, preset_name, base_branch)
 ```
 
-`gwst open` runs a subshell with `GWST_WORKSPACE=<WORKSPACE_ID>` set for the child process.
+`gwiac open` runs a subshell with `GWIAC_WORKSPACE=<WORKSPACE_ID>` set for the child process.

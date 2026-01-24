@@ -1,22 +1,22 @@
 ---
-title: "gwst manifest ls"
+title: "gwiac manifest ls"
 status: implemented
 aliases:
-  - "gwst man ls"
-  - "gwst m ls"
+  - "gwiac man ls"
+  - "gwiac m ls"
 migrated_from: "docs/spec/commands/manifest-ls.md"
 ---
 
 ## Synopsis
-`gwst manifest ls [--root <path>] [--no-prompt]`
+`gwiac manifest ls [--root <path>] [--no-prompt]`
 
 ## Intent
-List the workspace inventory in `gwst.yaml` (desired state) and show a lightweight per-workspace drift indicator by scanning the filesystem (actual state).
+List the workspace inventory in `gwiac.yaml` (desired state) and show a lightweight per-workspace drift indicator by scanning the filesystem (actual state).
 
 This is the primary "what do I have and is it applied?" command.
 
 ## Behavior
-- Loads `<root>/gwst.yaml`; errors if missing or invalid.
+- Loads `<root>/gwiac.yaml`; errors if missing or invalid.
 - Scans `<root>/workspaces` to build the current filesystem state.
 - For each workspace in the manifest, computes a status summary:
   - `applied`: no diff.
@@ -24,11 +24,11 @@ This is the primary "what do I have and is it applied?" command.
   - `drift`: present in both but differs (would be `update` in plan/apply).
 - Optionally (best-effort), computes a lightweight workspace risk tag by scanning attached repo worktrees:
   - Uses the same labels as the workspace picker: `dirty`, `unpushed`, `diverged`, `unknown` (clean is omitted).
-  - Semantics and detection follow the `gwst manifest rm` "Workspace State Model" (no implicit fetch; do not warn for behind-only).
+  - Semantics and detection follow the `gwiac manifest rm` "Workspace State Model" (no implicit fetch; do not warn for behind-only).
   - Workspace risk tag is an aggregation of repo risks using the priority defined in `docs/spec/ui/UI.md` (unknown > dirty > diverged > unpushed).
   - Risk tags are shown only when the workspace exists on the filesystem.
 - Also detects filesystem-only workspaces (present on filesystem, missing in manifest) and reports them as `extra`.
-  - `extra` entries are informational only; use `gwst import` to capture them into the manifest, or `gwst apply` (with confirmation) to remove them.
+  - `extra` entries are informational only; use `gwiac import` to capture them into the manifest, or `gwiac apply` (with confirmation) to remove them.
 - `extra` entries are included in `Result` after the manifest entries so users can see the full picture of "what exists under this root".
 - No changes are made (read-only).
 - `--no-prompt` is accepted but has no effect (kept for CLI consistency).

@@ -1,11 +1,11 @@
 ---
-title: "gwst repo ls"
+title: "gwiac repo ls"
 status: implemented
 migrated_from: "docs/spec/commands/repo-ls.md"
 ---
 
 ## Synopsis
-`gwst repo ls`
+`gwiac repo ls`
 
 ## Intent
 List bare repo stores currently managed under the GWS root.

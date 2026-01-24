@@ -40,10 +40,10 @@ func runDoctor(ctx context.Context, rootDir string, args []string) error {
 		return nil
 	}
 	if fix && self {
-		return fmt.Errorf("usage: gwst doctor [--fix | --self]")
+		return fmt.Errorf("usage: gwiac doctor [--fix | --self]")
 	}
 	if doctorFlags.NArg() != 0 {
-		return fmt.Errorf("usage: gwst doctor [--fix | --self]")
+		return fmt.Errorf("usage: gwiac doctor [--fix | --self]")
 	}
 	now := time.Now().UTC()
 	if self {
@@ -92,7 +92,7 @@ func runRepoGet(ctx context.Context, rootDir string, args []string) error {
 		return nil
 	}
 	if len(args) != 1 {
-		return fmt.Errorf("usage: gwst repo get <repo>")
+		return fmt.Errorf("usage: gwiac repo get <repo>")
 	}
 	repoSpec := strings.TrimSpace(args[0])
 	if repoSpec == "" {
@@ -116,8 +116,8 @@ func runRepoGet(ctx context.Context, rootDir string, args []string) error {
 	renderer.Section("Result")
 	renderer.Bullet(fmt.Sprintf("%s %s", store.RepoKey, store.StorePath))
 	renderSuggestions(renderer, useColor, []string{
-		"gwst manifest add --repo <repo>",
-		"gwst manifest add --repo",
+		"gwiac manifest add --repo <repo>",
+		"gwiac manifest add --repo",
 	})
 	return nil
 }
@@ -128,7 +128,7 @@ func runRepoList(ctx context.Context, rootDir string, args []string) error {
 		return nil
 	}
 	if len(args) != 0 {
-		return fmt.Errorf("usage: gwst repo ls")
+		return fmt.Errorf("usage: gwiac repo ls")
 	}
 	entries, warnings, err := repo.List(rootDir)
 	if err != nil {

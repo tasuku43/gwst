@@ -6,7 +6,7 @@ import (
 )
 
 func TestResolveRootFlagOverrides(t *testing.T) {
-	t.Setenv("GWST_ROOT", "/tmp/ignore")
+	t.Setenv("GWIAC_ROOT", "/tmp/ignore")
 	root, err := ResolveRoot("/tmp/custom")
 	if err != nil {
 		t.Fatalf("ResolveRoot error: %v", err)
@@ -17,7 +17,7 @@ func TestResolveRootFlagOverrides(t *testing.T) {
 }
 
 func TestResolveRootEnvOverridesConfig(t *testing.T) {
-	t.Setenv("GWST_ROOT", "/tmp/env-root")
+	t.Setenv("GWIAC_ROOT", "/tmp/env-root")
 	root, err := ResolveRoot("")
 	if err != nil {
 		t.Fatalf("ResolveRoot error: %v", err)
@@ -34,7 +34,7 @@ func TestResolveRootDefault(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ResolveRoot error: %v", err)
 	}
-	expected := filepath.Join(temp, "gwst")
+	expected := filepath.Join(temp, "gwiac")
 	if root != expected {
 		t.Fatalf("expected %s, got %s", expected, root)
 	}

@@ -13,7 +13,7 @@ func runInit(rootDir string, args []string) error {
 		return nil
 	}
 	if len(args) != 0 {
-		return fmt.Errorf("usage: gwst init")
+		return fmt.Errorf("usage: gwiac init")
 	}
 	result, err := initcmd.Run(rootDir)
 	if err != nil {

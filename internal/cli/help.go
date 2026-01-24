@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/mattn/go-isatty"
+	"github.com/tasuku43/gwst/internal/domain/manifest"
 	"github.com/tasuku43/gwst/internal/ui"
 )
 
@@ -21,22 +22,22 @@ func isHelpArg(arg string) bool {
 
 func printGlobalHelp(w io.Writer) {
 	theme, useColor := helpTheme(w)
-	fmt.Fprintln(w, "Usage: gwst <command> [flags] [args]")
+	fmt.Fprintln(w, "Usage: gwiac <command> [flags] [args]")
 	fmt.Fprintln(w, "")
 	fmt.Fprintln(w, helpSectionTitle(theme, useColor, "Commands:"))
-	fmt.Fprintln(w, helpCommand(theme, useColor, "init", "initialize gwst root layout"))
-	fmt.Fprintln(w, helpCommand(theme, useColor, "manifest <subcommand>", "gwst.yaml inventory commands (aliases: man, m)"))
-	fmt.Fprintln(w, helpCommand(theme, useColor, "plan", "show gwst.yaml diff (no changes)"))
-	fmt.Fprintln(w, helpCommand(theme, useColor, "import", "rebuild gwst.yaml from filesystem"))
-	fmt.Fprintln(w, helpCommand(theme, useColor, "apply", "apply gwst.yaml to filesystem"))
+	fmt.Fprintln(w, helpCommand(theme, useColor, "init", "initialize root layout"))
+	fmt.Fprintln(w, helpCommand(theme, useColor, "manifest <subcommand>", fmt.Sprintf("%s inventory commands (aliases: man, m)", manifest.FileName)))
+	fmt.Fprintln(w, helpCommand(theme, useColor, "plan", fmt.Sprintf("show %s diff (no changes)", manifest.FileName)))
+	fmt.Fprintln(w, helpCommand(theme, useColor, "import", fmt.Sprintf("rebuild %s from filesystem", manifest.FileName)))
+	fmt.Fprintln(w, helpCommand(theme, useColor, "apply", fmt.Sprintf("apply %s to filesystem", manifest.FileName)))
 	fmt.Fprintln(w, helpCommand(theme, useColor, "repo <subcommand>", "repo commands (get/ls)"))
 	fmt.Fprintln(w, helpCommand(theme, useColor, "open [<WORKSPACE_ID>] [--shell]", "open workspace in subshell"))
 	fmt.Fprintln(w, helpCommand(theme, useColor, "doctor [--fix | --self]", "check workspace/repo health"))
-	fmt.Fprintln(w, helpCommand(theme, useColor, "version", "print gwst version"))
+	fmt.Fprintln(w, helpCommand(theme, useColor, "version", "print version"))
 	fmt.Fprintln(w, helpCommand(theme, useColor, "help [command]", "show help for a command"))
 	fmt.Fprintln(w, "")
 	fmt.Fprintln(w, helpSectionTitle(theme, useColor, "Global flags:"))
-	fmt.Fprintln(w, helpFlag(theme, useColor, "--root <path>", "override gwst root"))
+	fmt.Fprintln(w, helpFlag(theme, useColor, "--root <path>", "override root"))
 	fmt.Fprintln(w, helpFlag(theme, useColor, "--no-prompt", "disable interactive prompt"))
 	fmt.Fprintln(w, helpFlag(theme, useColor, "--debug", "write debug logs to file"))
 	fmt.Fprintln(w, helpFlag(theme, useColor, "--version", "print version"))
@@ -70,13 +71,13 @@ func printCommandHelp(cmd string, w io.Writer) bool {
 }
 
 func printOpenHelp(w io.Writer) {
-	fmt.Fprintln(w, "Usage: gwst open [<WORKSPACE_ID>] [--shell]")
+	fmt.Fprintln(w, "Usage: gwiac open [<WORKSPACE_ID>] [--shell]")
 	fmt.Fprintln(w, "  Open an interactive subshell at the workspace root")
 }
 
 func printRepoHelp(w io.Writer) {
 	theme, useColor := helpTheme(w)
-	fmt.Fprintln(w, "Usage: gwst repo <subcommand>")
+	fmt.Fprintln(w, "Usage: gwiac repo <subcommand>")
 	fmt.Fprintln(w, "")
 	fmt.Fprintln(w, helpSectionTitle(theme, useColor, "Subcommands:"))
 	fmt.Fprintln(w, helpCommand(theme, useColor, "get <repo>", "fetch or update bare repo store"))
@@ -85,32 +86,32 @@ func printRepoHelp(w io.Writer) {
 
 func printRepoGetHelp(w io.Writer) {
 	theme, useColor := helpTheme(w)
-	fmt.Fprintln(w, "Usage: gwst repo get <repo>")
+	fmt.Fprintln(w, "Usage: gwiac repo get <repo>")
 	fmt.Fprintln(w, helpFlag(theme, useColor, "repo", "git@github.com:owner/repo.git | https://github.com/owner/repo.git"))
 }
 
 func printRepoLsHelp(w io.Writer) {
-	fmt.Fprintln(w, "Usage: gwst repo ls")
+	fmt.Fprintln(w, "Usage: gwiac repo ls")
 }
 
 func printManifestHelp(w io.Writer) {
 	theme, useColor := helpTheme(w)
-	fmt.Fprintln(w, "Usage: gwst manifest <subcommand>")
+	fmt.Fprintln(w, "Usage: gwiac manifest <subcommand>")
 	fmt.Fprintln(w, "")
-	fmt.Fprintln(w, "Aliases: gwst man, gwst m")
+	fmt.Fprintln(w, "Aliases: gwiac man, gwiac m")
 	fmt.Fprintln(w, "")
 	fmt.Fprintln(w, helpSectionTitle(theme, useColor, "Subcommands:"))
 	fmt.Fprintln(w, helpCommand(theme, useColor, "ls", "list workspace inventory with drift tags"))
-	fmt.Fprintln(w, helpCommand(theme, useColor, "add [mode flags] [args]", "add workspace to gwst.yaml then apply (default)"))
-	fmt.Fprintln(w, helpCommand(theme, useColor, "rm [<WORKSPACE_ID> ...]", "remove workspace entries from gwst.yaml then apply (default)"))
-	fmt.Fprintln(w, helpCommand(theme, useColor, "gc", "conservatively remove safe workspaces from gwst.yaml then apply (default)"))
-	fmt.Fprintln(w, helpCommand(theme, useColor, "validate", "validate gwst.yaml inventory"))
+	fmt.Fprintln(w, helpCommand(theme, useColor, "add [mode flags] [args]", fmt.Sprintf("add workspace to %s then apply (default)", manifest.FileName)))
+	fmt.Fprintln(w, helpCommand(theme, useColor, "rm [<WORKSPACE_ID> ...]", fmt.Sprintf("remove workspace entries from %s then apply (default)", manifest.FileName)))
+	fmt.Fprintln(w, helpCommand(theme, useColor, "gc", fmt.Sprintf("conservatively remove safe workspaces from %s then apply (default)", manifest.FileName)))
+	fmt.Fprintln(w, helpCommand(theme, useColor, "validate", fmt.Sprintf("validate %s inventory", manifest.FileName)))
 	fmt.Fprintln(w, helpCommand(theme, useColor, "preset <subcommand>", "preset inventory commands (aliases: pre, p)"))
 }
 
 func printManifestLsHelp(w io.Writer) {
 	theme, useColor := helpTheme(w)
-	fmt.Fprintln(w, "Usage: gwst manifest ls [--no-prompt]")
+	fmt.Fprintln(w, "Usage: gwiac manifest ls [--no-prompt]")
 	fmt.Fprintln(w, helpFlag(theme, useColor, "--no-prompt", "accepted for compatibility (no effect)"))
 	fmt.Fprintln(w, "")
 	fmt.Fprintln(w, helpSectionTitle(theme, useColor, "Statuses:"))
@@ -120,101 +121,101 @@ func printManifestLsHelp(w io.Writer) {
 	fmt.Fprintln(w, helpFlag(theme, useColor, "extra", "on filesystem but missing in manifest (use import to capture)"))
 	fmt.Fprintln(w, "")
 	fmt.Fprintln(w, helpSectionTitle(theme, useColor, "Tips:"))
-	fmt.Fprintln(w, helpFlag(theme, useColor, "gwst plan", "show the full diff details for drift/missing/extra"))
+	fmt.Fprintln(w, helpFlag(theme, useColor, "gwiac plan", "show the full diff details for drift/missing/extra"))
 }
 
 func printManifestAddHelp(w io.Writer) {
 	theme, useColor := helpTheme(w)
-	fmt.Fprintln(w, "Usage: gwst manifest add [--preset <name> | --review [<PR URL>] | --issue <ISSUE_URL> | --repo <repo>] [<WORKSPACE_ID>] [--branch <name>] [--base <ref>] [--no-apply] [--no-prompt]")
+	fmt.Fprintln(w, "Usage: gwiac manifest add [--preset <name> | --review [<PR URL>] | --issue <ISSUE_URL> | --repo <repo>] [<WORKSPACE_ID>] [--branch <name>] [--base <ref>] [--no-apply] [--no-prompt]")
 	fmt.Fprintln(w, helpFlag(theme, useColor, "--preset <name>", "preset name"))
 	fmt.Fprintln(w, helpFlag(theme, useColor, "--review [<PR URL>]", "add review workspace from PR (GitHub only)"))
 	fmt.Fprintln(w, helpFlag(theme, useColor, "--issue <ISSUE_URL>", "add issue workspace from issue (GitHub only)"))
 	fmt.Fprintln(w, helpFlag(theme, useColor, "--repo <repo>", "add workspace from a repo"))
 	fmt.Fprintln(w, helpFlag(theme, useColor, "--branch <name>", "override branch name (repo/issue modes only)"))
 	fmt.Fprintln(w, helpFlag(theme, useColor, "--base <ref>", "override base ref (issue mode; applies to all repos in no-prompt)"))
-	fmt.Fprintln(w, helpFlag(theme, useColor, "--no-apply", "update gwst.yaml only (do not run gwst apply)"))
+	fmt.Fprintln(w, helpFlag(theme, useColor, "--no-apply", fmt.Sprintf("update %s only (do not run gwiac apply)", manifest.FileName)))
 	fmt.Fprintln(w, helpFlag(theme, useColor, "--no-prompt", "disable interactive prompt"))
 }
 
 func printManifestRmHelp(w io.Writer) {
 	theme, useColor := helpTheme(w)
-	fmt.Fprintln(w, "Usage: gwst manifest rm [<WORKSPACE_ID> ...] [--no-apply] [--no-prompt]")
-	fmt.Fprintln(w, helpFlag(theme, useColor, "--no-apply", "update gwst.yaml only (do not run gwst apply)"))
+	fmt.Fprintln(w, "Usage: gwiac manifest rm [<WORKSPACE_ID> ...] [--no-apply] [--no-prompt]")
+	fmt.Fprintln(w, helpFlag(theme, useColor, "--no-apply", fmt.Sprintf("update %s only (do not run gwiac apply)", manifest.FileName)))
 	fmt.Fprintln(w, helpFlag(theme, useColor, "--no-prompt", "disable interactive prompt"))
 }
 
 func printManifestGcHelp(w io.Writer) {
 	theme, useColor := helpTheme(w)
-	fmt.Fprintln(w, "Usage: gwst manifest gc [--no-apply] [--no-prompt]")
-	fmt.Fprintln(w, helpFlag(theme, useColor, "--no-apply", "update gwst.yaml only (do not run gwst apply)"))
+	fmt.Fprintln(w, "Usage: gwiac manifest gc [--no-apply] [--no-prompt]")
+	fmt.Fprintln(w, helpFlag(theme, useColor, "--no-apply", fmt.Sprintf("update %s only (do not run gwiac apply)", manifest.FileName)))
 	fmt.Fprintln(w, helpFlag(theme, useColor, "--no-prompt", "disable interactive prompt"))
 }
 
 func printManifestValidateHelp(w io.Writer) {
 	theme, useColor := helpTheme(w)
-	fmt.Fprintln(w, "Usage: gwst manifest validate [--no-prompt]")
+	fmt.Fprintln(w, "Usage: gwiac manifest validate [--no-prompt]")
 	fmt.Fprintln(w, helpFlag(theme, useColor, "--no-prompt", "accepted for compatibility (no effect)"))
 }
 
 func printManifestPresetHelp(w io.Writer) {
 	theme, useColor := helpTheme(w)
-	fmt.Fprintln(w, "Usage: gwst manifest preset <subcommand>")
+	fmt.Fprintln(w, "Usage: gwiac manifest preset <subcommand>")
 	fmt.Fprintln(w, "")
-	fmt.Fprintln(w, "Aliases: gwst manifest pre, gwst manifest p")
+	fmt.Fprintln(w, "Aliases: gwiac manifest pre, gwiac manifest p")
 	fmt.Fprintln(w, "")
 	fmt.Fprintln(w, helpSectionTitle(theme, useColor, "Subcommands:"))
 	fmt.Fprintln(w, helpCommand(theme, useColor, "ls", "list manifest presets"))
-	fmt.Fprintln(w, helpCommand(theme, useColor, "add [<name>]", "add a preset entry to gwst.yaml"))
-	fmt.Fprintln(w, helpCommand(theme, useColor, "rm [<name> ...]", "remove preset entries from gwst.yaml"))
-	fmt.Fprintln(w, helpCommand(theme, useColor, "validate", "validate presets in gwst.yaml"))
+	fmt.Fprintln(w, helpCommand(theme, useColor, "add [<name>]", fmt.Sprintf("add a preset entry to %s", manifest.FileName)))
+	fmt.Fprintln(w, helpCommand(theme, useColor, "rm [<name> ...]", fmt.Sprintf("remove preset entries from %s", manifest.FileName)))
+	fmt.Fprintln(w, helpCommand(theme, useColor, "validate", fmt.Sprintf("validate presets in %s", manifest.FileName)))
 }
 
 func printManifestPresetLsHelp(w io.Writer) {
 	theme, useColor := helpTheme(w)
-	fmt.Fprintln(w, "Usage: gwst manifest preset ls [--no-prompt]")
+	fmt.Fprintln(w, "Usage: gwiac manifest preset ls [--no-prompt]")
 	fmt.Fprintln(w, helpFlag(theme, useColor, "--no-prompt", "accepted for compatibility (no effect)"))
 }
 
 func printManifestPresetAddHelp(w io.Writer) {
 	theme, useColor := helpTheme(w)
-	fmt.Fprintln(w, "Usage: gwst manifest preset add [<name>] [--repo <repo> ...] [--no-prompt]")
+	fmt.Fprintln(w, "Usage: gwiac manifest preset add [<name>] [--repo <repo> ...] [--no-prompt]")
 	fmt.Fprintln(w, helpFlag(theme, useColor, "--repo <repo>", "repo spec (repeatable)"))
 	fmt.Fprintln(w, helpFlag(theme, useColor, "--no-prompt", "disable interactive prompt"))
 }
 
 func printManifestPresetRmHelp(w io.Writer) {
 	theme, useColor := helpTheme(w)
-	fmt.Fprintln(w, "Usage: gwst manifest preset rm [<name> ...] [--no-prompt]")
+	fmt.Fprintln(w, "Usage: gwiac manifest preset rm [<name> ...] [--no-prompt]")
 	fmt.Fprintln(w, helpFlag(theme, useColor, "--no-prompt", "disable interactive prompt"))
 }
 
 func printManifestPresetValidateHelp(w io.Writer) {
 	theme, useColor := helpTheme(w)
-	fmt.Fprintln(w, "Usage: gwst manifest preset validate [--no-prompt]")
+	fmt.Fprintln(w, "Usage: gwiac manifest preset validate [--no-prompt]")
 	fmt.Fprintln(w, helpFlag(theme, useColor, "--no-prompt", "accepted for compatibility (no effect)"))
 }
 
 func printDoctorHelp(w io.Writer) {
 	theme, useColor := helpTheme(w)
-	fmt.Fprintln(w, "Usage: gwst doctor [--fix | --self]")
+	fmt.Fprintln(w, "Usage: gwiac doctor [--fix | --self]")
 	fmt.Fprintln(w, helpFlag(theme, useColor, "--fix", "list issues and planned fixes (no changes yet)"))
-	fmt.Fprintln(w, helpFlag(theme, useColor, "--self", "run self-diagnostics for the gwst environment"))
+	fmt.Fprintln(w, helpFlag(theme, useColor, "--self", "run self-diagnostics for the gwiac environment"))
 }
 
 func printInitHelp(w io.Writer) {
-	fmt.Fprintln(w, "Usage: gwst init")
+	fmt.Fprintln(w, "Usage: gwiac init")
 }
 
 func printImportHelp(w io.Writer) {
-	fmt.Fprintln(w, "Usage: gwst import")
+	fmt.Fprintln(w, "Usage: gwiac import")
 }
 
 func printPlanHelp(w io.Writer) {
-	fmt.Fprintln(w, "Usage: gwst plan")
+	fmt.Fprintln(w, "Usage: gwiac plan")
 }
 
 func printApplyHelp(w io.Writer) {
-	fmt.Fprintln(w, "Usage: gwst apply")
+	fmt.Fprintln(w, "Usage: gwiac apply")
 }
 
 func helpTheme(w io.Writer) (ui.Theme, bool) {

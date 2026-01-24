@@ -36,7 +36,7 @@ func runManifestValidate(ctx context.Context, rootDir string, args []string) err
 		return nil
 	}
 	if validateFlags.NArg() != 0 {
-		return fmt.Errorf("usage: gwst manifest validate [--no-prompt]")
+		return fmt.Errorf("usage: gwiac manifest validate [--no-prompt]")
 	}
 
 	result, err := manifest.Validate(ctx, rootDir)
@@ -72,7 +72,7 @@ func formatManifestValidationIssue(issue manifest.ValidationIssue) string {
 	ref := strings.TrimSpace(issue.Ref)
 	msg := strings.TrimSpace(issue.Message)
 	if ref == "" {
-		ref = "gwst.yaml"
+		ref = manifest.FileName
 	}
 	if msg == "" {
 		return ref

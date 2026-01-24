@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	metadataDirName  = ".gwst"
+	MetadataDirName  = ".gwiac"
 	metadataFileName = "metadata.json"
 )
 
@@ -61,7 +61,7 @@ func SaveMetadata(wsDir string, meta Metadata) error {
 	if err := validateMetadata(meta); err != nil {
 		return err
 	}
-	dir := filepath.Join(wsDir, metadataDirName)
+	dir := filepath.Join(wsDir, MetadataDirName)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return fmt.Errorf("create metadata dir: %w", err)
 	}
@@ -84,7 +84,7 @@ func ReadDescription(wsDir string) (string, error) {
 }
 
 func metadataPath(wsDir string) string {
-	return filepath.Join(wsDir, metadataDirName, metadataFileName)
+	return filepath.Join(wsDir, MetadataDirName, metadataFileName)
 }
 
 func normalizeMetadata(meta Metadata) Metadata {

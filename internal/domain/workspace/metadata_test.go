@@ -33,7 +33,7 @@ func TestListIncludesDescription(t *testing.T) {
 	if err := os.MkdirAll(ws3, 0o755); err != nil {
 		t.Fatalf("create WS-3 dir: %v", err)
 	}
-	badDir := filepath.Join(ws3, metadataDirName)
+	badDir := filepath.Join(ws3, MetadataDirName)
 	if err := os.MkdirAll(badDir, 0o755); err != nil {
 		t.Fatalf("create metadata dir: %v", err)
 	}

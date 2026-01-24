@@ -24,7 +24,6 @@ type ValidationResult struct {
 }
 
 const (
-	IssueKindFile              = "gwst.yaml"
 	IssueKindInvalidYAML       = "invalid yaml"
 	IssueKindMissingRequired   = "missing required field"
 	IssueKindDuplicatePreset   = "duplicate preset name"
@@ -186,7 +185,7 @@ func joinFileIssue(err error) ValidationIssue {
 	if err != nil {
 		message = err.Error()
 	}
-	return joinIssue(IssueKindFile, "", "", message)
+	return joinIssue(manifest.FileName, "", "", message)
 }
 
 func joinIssue(kind, presetName, repoSpec, message string) ValidationIssue {
