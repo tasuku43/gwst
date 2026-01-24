@@ -49,6 +49,7 @@
 ## CLI output conventions (important)
 - Keep the section order from `docs/spec/ui/UI.md` and avoid emitting duplicate sections.
 - Follow the color semantics from `docs/spec/ui/UI.md` (success/warn/error/muted/accent) when adding colored output; do not introduce command-specific color rules without updating the spec.
+- Tree/list indentation must use shared tokens from `internal/infra/output` (e.g. `output.Indent`, `output.Indent2`, `output.TreeBranch*`, `output.TreeStem*`) to keep nesting consistent across commands.
 - For manifest mutation commands (`gwst manifest add/rm/gc/...`):
   - Do not print "partial" output (e.g. an `Info` section) before calling `applyManifestMutation`.
   - Instead, compute everything up front and render via `applyManifestMutation` hooks:

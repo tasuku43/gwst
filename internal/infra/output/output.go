@@ -12,8 +12,15 @@ import (
 
 const (
 	Indent       = "  "
+	Indent2      = Indent + Indent
+	Indent3      = Indent2 + Indent
 	StepPrefix   = "•"
 	LogConnector = "└─"
+
+	TreeBranchMid  = "├─ "
+	TreeBranchLast = "└─ "
+	TreeStemMid    = "│  "
+	TreeStemLast   = "   "
 )
 
 type StepLogger interface {
