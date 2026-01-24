@@ -88,3 +88,60 @@ func TestWorkspaceRepoSelectionsPaths(t *testing.T) {
 		t.Fatalf("expected repo path, got %s", model.selections[1].Path)
 	}
 }
+
+func TestWorkspaceRepoFilter_FuzzyMatch(t *testing.T) {
+	workspaces := []WorkspaceChoice{
+		{
+			ID:          "test",
+			Description: "hogehoge",
+			Repos: []PromptChoice{
+				{
+					Label:       "gion (branch: test)",
+					Value:       "/ws/test/gion",
+					Description: "github.com/tasuku43/gion",
+				},
+			},
+		},
+	}
+	model := newWorkspaceRepoSelectModel("giongo", workspaces, DefaultTheme(), false)
+	model.input.SetValue("testgion")
+	filtered := model.filterWorkspaces()
+
+	if len(filtered) != 1 {
+		t.Fatalf("expected 1 workspace, got %d", len(filtered))
+	}
+	if len(filtered[0].Repos) != 1 {
+		t.Fatalf("expected 1 repo, got %d", len(filtered[0].Repos))
+	}
+	if filtered[0].Repos[0].Label != "gion (branch: test)" {
+		t.Fatalf("unexpected repo label: %s", filtered[0].Repos[0].Label)
+	}
+}
+
+func TestWorkspaceRepoBestSelectionPrefersRepoMatch(t *testing.T) {
+	workspaces := []WorkspaceChoice{
+		{
+			ID:          "consistent-branch-selection",
+			Description: "desc",
+			Repos: []PromptChoice{
+				{
+					Label:       "gion (branch: consistent-branch-selection)",
+					Value:       "/ws/consistent-branch-selection/gion",
+					Description: "github.com/tasuku43/gion",
+				},
+			},
+		},
+	}
+	model := newWorkspaceRepoSelectModel("giongo", workspaces, DefaultTheme(), false)
+	model.input.SetValue("consissgion")
+	model.filtered = model.filterWorkspaces()
+	model.rebuildSelections()
+
+	best := model.bestSelectionIndex(model.input.Value())
+	if best < 0 || best >= len(model.selections) {
+		t.Fatalf("unexpected selection index: %d", best)
+	}
+	if model.selections[best].RepoIndex < 0 {
+		t.Fatalf("expected repo selection, got workspace selection")
+	}
+}

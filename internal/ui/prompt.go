@@ -2332,6 +2332,7 @@ type workspaceRepoSelectModel struct {
 
 	selectedPath string
 	height       int
+	lastQuery    string
 }
 
 func newWorkspaceRepoSelectModel(title string, workspaces []WorkspaceChoice, theme Theme, useColor bool) workspaceRepoSelectModel {
@@ -2351,6 +2352,10 @@ func newWorkspaceRepoSelectModel(title string, workspaces []WorkspaceChoice, the
 	}
 	m.filtered = m.filterWorkspaces()
 	m.rebuildSelections()
+	m.lastQuery = strings.TrimSpace(m.input.Value())
+	if m.lastQuery != "" && len(m.selections) > 0 {
+		m.cursor = m.bestSelectionIndex(m.lastQuery)
+	}
 	return m
 }
 
@@ -2391,6 +2396,13 @@ func (m workspaceRepoSelectModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.input, cmd = m.input.Update(msg)
 	m.filtered = m.filterWorkspaces()
 	m.rebuildSelections()
+	nextQuery := strings.TrimSpace(m.input.Value())
+	if nextQuery != m.lastQuery {
+		if nextQuery != "" && len(m.selections) > 0 {
+			m.cursor = m.bestSelectionIndex(nextQuery)
+		}
+		m.lastQuery = nextQuery
+	}
 	if m.cursor >= len(m.selections) {
 		m.cursor = max(0, len(m.selections)-1)
 	}
@@ -2468,6 +2480,65 @@ func (m workspaceRepoSelectModel) filterWorkspaces() []WorkspaceChoice {
 	return out
 }
 
+func (m workspaceRepoSelectModel) bestSelectionIndex(q string) int {
+	if len(m.selections) == 0 {
+		return 0
+	}
+	bestIndex := 0
+	bestScore := -1
+	query := strings.ToLower(strings.TrimSpace(q))
+	for i, sel := range m.selections {
+		text := m.selectionSearchText(sel)
+		score := fuzzyScore(strings.ToLower(text), query)
+		if score < 0 {
+			continue
+		}
+		if bestScore == -1 || score < bestScore || (score == bestScore && sel.RepoIndex >= 0 && m.selections[bestIndex].RepoIndex < 0) {
+			bestScore = score
+			bestIndex = i
+		}
+	}
+	if bestScore == -1 {
+		return 0
+	}
+	return bestIndex
+}
+
+func (m workspaceRepoSelectModel) selectionSearchText(sel workspaceRepoSelection) string {
+	if sel.WorkspaceIndex < 0 || sel.WorkspaceIndex >= len(m.filtered) {
+		return ""
+	}
+	ws := m.filtered[sel.WorkspaceIndex]
+	if sel.RepoIndex < 0 {
+		return workspaceSearchText(ws)
+	}
+	if sel.RepoIndex >= len(ws.Repos) {
+		return workspaceSearchText(ws)
+	}
+	repo := ws.Repos[sel.RepoIndex]
+	return repoSearchText(ws, repo)
+}
+
+func workspaceSearchText(ws WorkspaceChoice) string {
+	parts := []string{ws.ID, ws.Description}
+	return strings.TrimSpace(strings.Join(parts, " "))
+}
+
+func repoSearchText(ws WorkspaceChoice, repo PromptChoice) string {
+	parts := []string{
+		repo.Label,
+		repo.Description,
+	}
+	if len(repo.Details) > 0 {
+		parts = append(parts, repo.Details...)
+	}
+	if repo.Value != "" {
+		parts = append(parts, repo.Value)
+	}
+	parts = append(parts, ws.ID, ws.Description)
+	return strings.TrimSpace(strings.Join(parts, " "))
+}
+
 func cloneWorkspaceChoices(items []WorkspaceChoice) []WorkspaceChoice {
 	out := make([]WorkspaceChoice, 0, len(items))
 	for _, item := range items {
@@ -2481,31 +2552,92 @@ func cloneWorkspaceChoices(items []WorkspaceChoice) []WorkspaceChoice {
 }
 
 func workspaceChoiceMatches(item WorkspaceChoice, q string) bool {
-	if strings.Contains(strings.ToLower(item.ID), q) {
+	if fuzzyMatch(strings.ToLower(item.ID), q) {
 		return true
 	}
-	if strings.Contains(strings.ToLower(item.Description), q) {
+	if fuzzyMatch(strings.ToLower(item.Description), q) {
 		return true
 	}
 	return false
 }
 
 func repoChoiceMatches(repo PromptChoice, q string) bool {
-	if strings.Contains(strings.ToLower(repo.Label), q) {
+	if fuzzyMatch(strings.ToLower(repo.Label), q) {
 		return true
 	}
-	if strings.Contains(strings.ToLower(repo.Value), q) {
+	if fuzzyMatch(strings.ToLower(repo.Value), q) {
 		return true
 	}
-	if strings.Contains(strings.ToLower(repo.Description), q) {
+	if fuzzyMatch(strings.ToLower(repo.Description), q) {
 		return true
 	}
 	for _, detail := range repo.Details {
-		if strings.Contains(strings.ToLower(detail), q) {
+		if fuzzyMatch(strings.ToLower(detail), q) {
 			return true
 		}
 	}
 	return false
+}
+
+func fuzzyMatch(haystack, needle string) bool {
+	q := strings.ToLower(strings.TrimSpace(needle))
+	if q == "" {
+		return true
+	}
+	q = strings.Join(strings.Fields(q), "")
+	if q == "" {
+		return true
+	}
+	if haystack == "" {
+		return false
+	}
+	j := 0
+	for i := 0; i < len(haystack) && j < len(q); i++ {
+		if haystack[i] == q[j] {
+			j++
+		}
+	}
+	return j == len(q)
+}
+
+func fuzzyScore(haystack, needle string) int {
+	q := strings.ToLower(strings.TrimSpace(needle))
+	if q == "" {
+		return 0
+	}
+	q = strings.Join(strings.Fields(q), "")
+	if q == "" {
+		return 0
+	}
+	if haystack == "" {
+		return -1
+	}
+	j := 0
+	first := -1
+	last := -1
+	prev := -1
+	gaps := 0
+	for i := 0; i < len(haystack) && j < len(q); i++ {
+		if haystack[i] == q[j] {
+			if first == -1 {
+				first = i
+			}
+			if prev != -1 {
+				gaps += i - prev - 1
+			}
+			prev = i
+			last = i
+			j++
+		}
+	}
+	if j != len(q) {
+		return -1
+	}
+	span := 0
+	if first >= 0 && last >= 0 {
+		span = last - first
+	}
+	return gaps + span + first*2
 }
 
 type workspaceMultiSelectModel struct {
@@ -3016,19 +3148,17 @@ func renderWorkspaceRepoChoiceList(b *strings.Builder, items []WorkspaceChoice, 
 				repoConnector = "└─"
 			}
 			selectedRepo := selectIndex == cursor
+			stemToken := workspaceStem
 			connector := repoConnector
 			if useColor {
+				stemToken = theme.Muted.Render(workspaceStem)
 				connector = theme.Muted.Render(repoConnector)
 			}
 			repoLabel := repo.Label
-			if useColor {
-				if selectedRepo {
-					repoLabel = lipgloss.NewStyle().Bold(true).Render(repoLabel)
-				} else {
-					repoLabel = theme.Muted.Render(repoLabel)
-				}
+			if useColor && selectedRepo {
+				repoLabel = lipgloss.NewStyle().Bold(true).Render(repoLabel)
 			}
-			line := fmt.Sprintf("%s%s%s %s", output.Indent+output.Indent, workspaceStem, connector, repoLabel)
+			line := fmt.Sprintf("%s%s%s %s", output.Indent+output.Indent, stemToken, connector, repoLabel)
 			b.WriteString(line)
 			b.WriteString("\n")
 			selectIndex++
