@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	MetadataDirName  = ".gwiac"
+	MetadataDirName  = ".gion"
 	metadataFileName = "metadata.json"
 )
 

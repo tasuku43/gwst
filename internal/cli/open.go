@@ -40,11 +40,11 @@ func runWorkspaceOpen(ctx context.Context, rootDir string, args []string, noProm
 		return nil
 	}
 	if openFlags.NArg() > 1 {
-		return fmt.Errorf("usage: gwiac open [<WORKSPACE_ID>] [--shell]")
+		return fmt.Errorf("usage: gion open [<WORKSPACE_ID>] [--shell]")
 	}
 
 	if current := nestedOpenWorkspaceID(); current != "" {
-		return fmt.Errorf("already in gwiac open workspace: %s (exit the subshell to switch)", current)
+		return fmt.Errorf("already in gion open workspace: %s (exit the subshell to switch)", current)
 	}
 
 	workspaceID := ""
@@ -69,7 +69,7 @@ func runWorkspaceOpen(ctx context.Context, rootDir string, args []string, noProm
 		}
 		theme := ui.DefaultTheme()
 		useColor := isatty.IsTerminal(os.Stdout.Fd())
-		workspaceID, err = ui.PromptWorkspace("gwiac open", workspaceChoices, theme, useColor)
+		workspaceID, err = ui.PromptWorkspace("gion open", workspaceChoices, theme, useColor)
 		if err != nil {
 			return err
 		}
@@ -130,7 +130,7 @@ func runWorkspaceOpen(ctx context.Context, rootDir string, args []string, noProm
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	cmd.Env = append(os.Environ(), fmt.Sprintf("GWIAC_WORKSPACE=%s", workspaceID))
+	cmd.Env = append(os.Environ(), fmt.Sprintf("GION_WORKSPACE=%s", workspaceID))
 	cmd.Env = append(cmd.Env, extraEnv...)
 	trace := ""
 	if debuglog.Enabled() {
@@ -159,7 +159,7 @@ func shellCommandForOpen(shellPath string) (string, []string) {
 }
 
 func nestedOpenWorkspaceID() string {
-	return strings.TrimSpace(os.Getenv("GWIAC_WORKSPACE"))
+	return strings.TrimSpace(os.Getenv("GION_WORKSPACE"))
 }
 
 func isInteractiveShell(name string) bool {
@@ -192,7 +192,7 @@ func preparePromptOverride(shellPath string, workspaceID string) (*promptOverrid
 }
 
 func prepareBashPromptOverride(workspaceID string) (*promptOverride, error) {
-	dir, err := os.MkdirTemp("", "gwiac-open-bash-")
+	dir, err := os.MkdirTemp("", "gion-open-bash-")
 	if err != nil {
 		return nil, fmt.Errorf("open shell: create temp dir: %w", err)
 	}
@@ -200,10 +200,10 @@ func prepareBashPromptOverride(workspaceID string) (*promptOverride, error) {
 	home := os.Getenv("HOME")
 	fallback := workspaceID
 	content := strings.Join([]string{
-		"# gwiac open prompt wrapper",
+		"# gion open prompt wrapper",
 		fmt.Sprintf("if [ -r %s ]; then . %s; fi", strconv.Quote(filepath.Join(home, ".bashrc")), strconv.Quote(filepath.Join(home, ".bashrc"))),
-		fmt.Sprintf("ws=${GWIAC_WORKSPACE:-%s}", strconv.Quote(fallback)),
-		"prefix=\"\\[\\033[34m\\][gwiac:${ws}]\\[\\033[0m\\] \"",
+		fmt.Sprintf("ws=${GION_WORKSPACE:-%s}", strconv.Quote(fallback)),
+		"prefix=\"\\[\\033[34m\\][gion:${ws}]\\[\\033[0m\\] \"",
 		"if [ -n \"$PS1\" ]; then",
 		"  PS1=\"${prefix}${PS1}\"",
 		"else",
@@ -224,7 +224,7 @@ func prepareBashPromptOverride(workspaceID string) (*promptOverride, error) {
 }
 
 func prepareZshPromptOverride(workspaceID string) (*promptOverride, error) {
-	dir, err := os.MkdirTemp("", "gwiac-open-zsh-")
+	dir, err := os.MkdirTemp("", "gion-open-zsh-")
 	if err != nil {
 		return nil, fmt.Errorf("open shell: create temp dir: %w", err)
 	}
@@ -241,19 +241,19 @@ func prepareZshPromptOverride(workspaceID string) (*promptOverride, error) {
 	}
 	fallback := workspaceID
 	content := strings.Join([]string{
-		"# gwiac open prompt wrapper",
-		fmt.Sprintf("orig=${GWIAC_ZDOTDIR_ORIG:-%s}", strconv.Quote(origZdot)),
+		"# gion open prompt wrapper",
+		fmt.Sprintf("orig=${GION_ZDOTDIR_ORIG:-%s}", strconv.Quote(origZdot)),
 		"orig_hist=${HISTFILE:-$orig/.zsh_history}",
 		"if [ -r \"$orig_hist\" ]; then",
 		"  HISTFILE=\"$orig_hist\"",
 		"else",
-		"  HISTFILE=\"$GWIAC_HISTFILE_TMP\"",
+		"  HISTFILE=\"$GION_HISTFILE_TMP\"",
 		"fi",
 		"export HISTFILE",
 		"if [ -r \"$orig/.zshenv\" ]; then . \"$orig/.zshenv\"; fi",
 		"if [ -r \"$orig/.zshrc\" ]; then . \"$orig/.zshrc\"; fi",
-		fmt.Sprintf("ws=${GWIAC_WORKSPACE:-%s}", strconv.Quote(fallback)),
-		"prefix=\"%F{blue}[gwiac:${ws}]%f \"",
+		fmt.Sprintf("ws=${GION_WORKSPACE:-%s}", strconv.Quote(fallback)),
+		"prefix=\"%F{blue}[gion:${ws}]%f \"",
 		"if [ -n \"$PROMPT\" ]; then",
 		"  if [[ \"$PROMPT\" == $'\\n'* ]]; then",
 		"    PROMPT=$'\\n'\"${prefix}${PROMPT#$'\\n'}\"",
@@ -273,15 +273,15 @@ func prepareZshPromptOverride(workspaceID string) (*promptOverride, error) {
 		args: []string{"-i"},
 		env: []string{
 			fmt.Sprintf("ZDOTDIR=%s", dir),
-			fmt.Sprintf("GWIAC_ZDOTDIR_ORIG=%s", origZdot),
-			fmt.Sprintf("GWIAC_HISTFILE_TMP=%s", histfile),
+			fmt.Sprintf("GION_ZDOTDIR_ORIG=%s", origZdot),
+			fmt.Sprintf("GION_HISTFILE_TMP=%s", histfile),
 		},
 		cleanup: func() { _ = os.RemoveAll(dir) },
 	}, nil
 }
 
 func prepareShPromptOverride(workspaceID string) (*promptOverride, error) {
-	dir, err := os.MkdirTemp("", "gwiac-open-sh-")
+	dir, err := os.MkdirTemp("", "gion-open-sh-")
 	if err != nil {
 		return nil, fmt.Errorf("open shell: create temp dir: %w", err)
 	}
@@ -289,11 +289,11 @@ func prepareShPromptOverride(workspaceID string) (*promptOverride, error) {
 	origEnv := os.Getenv("ENV")
 	fallback := workspaceID
 	content := strings.Join([]string{
-		"# gwiac open prompt wrapper",
-		fmt.Sprintf("orig=${GWIAC_ENV_ORIG:-%s}", strconv.Quote(origEnv)),
+		"# gion open prompt wrapper",
+		fmt.Sprintf("orig=${GION_ENV_ORIG:-%s}", strconv.Quote(origEnv)),
 		"if [ -n \"$orig\" ] && [ -r \"$orig\" ]; then . \"$orig\"; fi",
-		fmt.Sprintf("ws=${GWIAC_WORKSPACE:-%s}", strconv.Quote(fallback)),
-		"prefix=\"\\033[34m[gwiac:${ws}]\\033[0m \"",
+		fmt.Sprintf("ws=${GION_WORKSPACE:-%s}", strconv.Quote(fallback)),
+		"prefix=\"\\033[34m[gion:${ws}]\\033[0m \"",
 		"if [ -n \"$PS1\" ]; then",
 		"  PS1=\"${prefix}${PS1}\"",
 		"else",
@@ -310,7 +310,7 @@ func prepareShPromptOverride(workspaceID string) (*promptOverride, error) {
 		args: []string{"-i"},
 		env: []string{
 			fmt.Sprintf("ENV=%s", rcfile),
-			fmt.Sprintf("GWIAC_ENV_ORIG=%s", origEnv),
+			fmt.Sprintf("GION_ENV_ORIG=%s", origEnv),
 		},
 		cleanup: func() { _ = os.RemoveAll(dir) },
 	}, nil

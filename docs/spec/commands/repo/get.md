@@ -1,11 +1,11 @@
 ---
-title: "gwiac repo get"
+title: "gion repo get"
 status: implemented
 migrated_from: "docs/spec/commands/repo-get.md"
 ---
 
 ## Synopsis
-`gwiac repo get <repo>`
+`gion repo get <repo>`
 
 ## Intent
 Create or normalize a bare repo store for a remote Git repository.

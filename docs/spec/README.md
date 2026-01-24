@@ -1,9 +1,9 @@
 ---
-title: "gwiac CLI specs"
+title: "gion CLI specs"
 status: implemented
 ---
 
-This directory holds gwiac specifications in English. Each file uses frontmatter metadata to track implementation status so we can evolve features intentionally.
+This directory holds gion specifications in English. Each file uses frontmatter metadata to track implementation status so we can evolve features intentionally.
 
 ## Metadata rules
 - Required: `title`, `status`.
@@ -16,15 +16,15 @@ This directory holds gwiac specifications in English. Each file uses frontmatter
 - `implemented`: implemented and considered current.
 
 ## Global CLI behavior
-- Command form: `gwiac <command> [flags] [args]`.
-- Root resolution precedence: `--root` flag > `GWIAC_ROOT` environment variable > default `~/gwiac`.
+- Command form: `gion <command> [flags] [args]`.
+- Root resolution precedence: `--root` flag > `GION_ROOT` environment variable > default `~/gion`.
 - Common flags: `--root <path>`, `--no-prompt`, `--debug`, `--help`/`-h`.
-- Version: `gwiac --version` (or `gwiac version`) prints a single-line version and exits 0.
+- Version: `gion --version` (or `gion version`) prints a single-line version and exits 0.
 - Output: human-readable text only in the current MVP; JSON output is future work.
 
 ## Debug logging
 - `--debug` enables debug logging to a file (no on-screen debug output).
-- Output directory: `<GWIAC_ROOT>/logs/`.
+- Output directory: `<GION_ROOT>/logs/`.
 - File naming: `debug-YYYYMMDD.log` using local date.
 - Append mode: always append to the day file (single file per day).
 - Format: one event per line, human-readable key/value pairs.

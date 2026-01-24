@@ -23,7 +23,7 @@ func versionLine() string {
 	if v == "" {
 		v = "dev"
 	}
-	parts := []string{fmt.Sprintf("gwiac %s", v)}
+	parts := []string{fmt.Sprintf("gion %s", v)}
 	if c := strings.TrimSpace(commit); c != "" {
 		parts = append(parts, c)
 	}

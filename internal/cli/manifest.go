@@ -60,7 +60,7 @@ func runManifestLs(ctx context.Context, rootDir string, args []string) error {
 		return nil
 	}
 	if lsFlags.NArg() != 0 {
-		return fmt.Errorf("usage: gwiac manifest ls [--no-prompt]")
+		return fmt.Errorf("usage: gion manifest ls [--no-prompt]")
 	}
 
 	theme := ui.DefaultTheme()

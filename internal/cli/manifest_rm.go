@@ -21,7 +21,7 @@ func runManifestRm(ctx context.Context, rootDir string, args []string, globalNoP
 	var noApply bool
 	var noPromptFlag bool
 	var helpFlag bool
-	rmFlags.BoolVar(&noApply, "no-apply", false, "do not run gwiac apply")
+	rmFlags.BoolVar(&noApply, "no-apply", false, "do not run gion apply")
 	rmFlags.BoolVar(&noPromptFlag, "no-prompt", false, "disable interactive prompt")
 	rmFlags.BoolVar(&helpFlag, "help", false, "show help")
 	rmFlags.BoolVar(&helpFlag, "h", false, "show help")
@@ -65,7 +65,7 @@ func runManifestRm(ctx context.Context, rootDir string, args []string, globalNoP
 		theme := ui.DefaultTheme()
 		useColor := isatty.IsTerminal(os.Stdout.Fd())
 		choices := buildManifestRmWorkspaceChoices(ctx, rootDir, desired)
-		selected, err := ui.PromptWorkspaceMultiSelectWithBlocked("gwiac manifest rm", choices, nil, theme, useColor)
+		selected, err := ui.PromptWorkspaceMultiSelectWithBlocked("gion manifest rm", choices, nil, theme, useColor)
 		if err != nil {
 			return err
 		}
@@ -131,7 +131,7 @@ func runManifestRm(ctx context.Context, rootDir string, args []string, globalNoP
 				r.Bullet(fmt.Sprintf("updated %s (removed %d workspace(s))", manifest.FileName, len(selectedIDs)))
 				r.Blank()
 				r.Section("Suggestion")
-				r.Bullet("gwiac apply")
+				r.Bullet("gion apply")
 			},
 			RenderNoChanges: func(r *ui.Renderer) {
 				r.Section("Result")

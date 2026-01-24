@@ -1,15 +1,15 @@
 version: 2
 
-project_name: gwiac
+project_name: gion
 
 before:
   hooks:
     - go test ./...
 
 builds:
-  - id: gwiac
-    main: ./cmd/gwiac
-    binary: gwiac
+  - id: gion
+    main: ./cmd/gion
+    binary: gion
     env:
       - CGO_ENABLED=0
     goos:
@@ -25,9 +25,9 @@ builds:
       - -X github.com/tasuku43/gwst/internal/cli.date={{ .Date }}
 
 archives:
-  - id: gwiac
+  - id: gion
     ids:
-      - gwiac
+      - gion
     formats:
       - tar.gz
     name_template: >-
@@ -43,7 +43,7 @@ release:
   prerelease: auto
   footer: |
     ## Install
-    - docs/guides/INSTALL.md: https://github.com/tasuku43/gwiac/blob/{{ .Tag }}/docs/guides/INSTALL.md
+    - docs/guides/INSTALL.md: https://github.com/tasuku43/gion/blob/{{ .Tag }}/docs/guides/INSTALL.md
 
     ## Compatibility policy
-    - docs/spec/core/COMPATIBILITY.md: https://github.com/tasuku43/gwiac/blob/{{ .Tag }}/docs/spec/core/COMPATIBILITY.md
+    - docs/spec/core/COMPATIBILITY.md: https://github.com/tasuku43/gion/blob/{{ .Tag }}/docs/spec/core/COMPATIBILITY.md

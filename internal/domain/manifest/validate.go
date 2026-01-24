@@ -17,7 +17,7 @@ import (
 
 type ValidationIssue struct {
 	// Ref is a logical reference path like:
-	// - gwiac.yaml
+	// - gion.yaml
 	// - workspaces
 	// - workspaces.PROJ-123.repos[0].branch
 	Ref     string

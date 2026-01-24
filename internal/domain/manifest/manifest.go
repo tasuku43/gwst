@@ -10,7 +10,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const FileName = "gwiac.yaml"
+const FileName = "gion.yaml"
 
 type File struct {
 	Version    int                  `yaml:"version"`

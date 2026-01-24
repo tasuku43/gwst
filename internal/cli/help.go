@@ -22,7 +22,7 @@ func isHelpArg(arg string) bool {
 
 func printGlobalHelp(w io.Writer) {
 	theme, useColor := helpTheme(w)
-	fmt.Fprintln(w, "Usage: gwiac <command> [flags] [args]")
+	fmt.Fprintln(w, "Usage: gion <command> [flags] [args]")
 	fmt.Fprintln(w, "")
 	fmt.Fprintln(w, helpSectionTitle(theme, useColor, "Commands:"))
 	fmt.Fprintln(w, helpCommand(theme, useColor, "init", "initialize root layout"))
@@ -71,13 +71,13 @@ func printCommandHelp(cmd string, w io.Writer) bool {
 }
 
 func printOpenHelp(w io.Writer) {
-	fmt.Fprintln(w, "Usage: gwiac open [<WORKSPACE_ID>] [--shell]")
+	fmt.Fprintln(w, "Usage: gion open [<WORKSPACE_ID>] [--shell]")
 	fmt.Fprintln(w, "  Open an interactive subshell at the workspace root")
 }
 
 func printRepoHelp(w io.Writer) {
 	theme, useColor := helpTheme(w)
-	fmt.Fprintln(w, "Usage: gwiac repo <subcommand>")
+	fmt.Fprintln(w, "Usage: gion repo <subcommand>")
 	fmt.Fprintln(w, "")
 	fmt.Fprintln(w, helpSectionTitle(theme, useColor, "Subcommands:"))
 	fmt.Fprintln(w, helpCommand(theme, useColor, "get <repo>", "fetch or update bare repo store"))
@@ -86,19 +86,19 @@ func printRepoHelp(w io.Writer) {
 
 func printRepoGetHelp(w io.Writer) {
 	theme, useColor := helpTheme(w)
-	fmt.Fprintln(w, "Usage: gwiac repo get <repo>")
+	fmt.Fprintln(w, "Usage: gion repo get <repo>")
 	fmt.Fprintln(w, helpFlag(theme, useColor, "repo", "git@github.com:owner/repo.git | https://github.com/owner/repo.git"))
 }
 
 func printRepoLsHelp(w io.Writer) {
-	fmt.Fprintln(w, "Usage: gwiac repo ls")
+	fmt.Fprintln(w, "Usage: gion repo ls")
 }
 
 func printManifestHelp(w io.Writer) {
 	theme, useColor := helpTheme(w)
-	fmt.Fprintln(w, "Usage: gwiac manifest <subcommand>")
+	fmt.Fprintln(w, "Usage: gion manifest <subcommand>")
 	fmt.Fprintln(w, "")
-	fmt.Fprintln(w, "Aliases: gwiac man, gwiac m")
+	fmt.Fprintln(w, "Aliases: gion man, gion m")
 	fmt.Fprintln(w, "")
 	fmt.Fprintln(w, helpSectionTitle(theme, useColor, "Subcommands:"))
 	fmt.Fprintln(w, helpCommand(theme, useColor, "ls", "list workspace inventory with drift tags"))
@@ -111,7 +111,7 @@ func printManifestHelp(w io.Writer) {
 
 func printManifestLsHelp(w io.Writer) {
 	theme, useColor := helpTheme(w)
-	fmt.Fprintln(w, "Usage: gwiac manifest ls [--no-prompt]")
+	fmt.Fprintln(w, "Usage: gion manifest ls [--no-prompt]")
 	fmt.Fprintln(w, helpFlag(theme, useColor, "--no-prompt", "accepted for compatibility (no effect)"))
 	fmt.Fprintln(w, "")
 	fmt.Fprintln(w, helpSectionTitle(theme, useColor, "Statuses:"))
@@ -121,47 +121,47 @@ func printManifestLsHelp(w io.Writer) {
 	fmt.Fprintln(w, helpFlag(theme, useColor, "extra", "on filesystem but missing in manifest (use import to capture)"))
 	fmt.Fprintln(w, "")
 	fmt.Fprintln(w, helpSectionTitle(theme, useColor, "Tips:"))
-	fmt.Fprintln(w, helpFlag(theme, useColor, "gwiac plan", "show the full diff details for drift/missing/extra"))
+	fmt.Fprintln(w, helpFlag(theme, useColor, "gion plan", "show the full diff details for drift/missing/extra"))
 }
 
 func printManifestAddHelp(w io.Writer) {
 	theme, useColor := helpTheme(w)
-	fmt.Fprintln(w, "Usage: gwiac manifest add [--preset <name> | --review [<PR URL>] | --issue <ISSUE_URL> | --repo <repo>] [<WORKSPACE_ID>] [--branch <name>] [--base <ref>] [--no-apply] [--no-prompt]")
+	fmt.Fprintln(w, "Usage: gion manifest add [--preset <name> | --review [<PR URL>] | --issue <ISSUE_URL> | --repo <repo>] [<WORKSPACE_ID>] [--branch <name>] [--base <ref>] [--no-apply] [--no-prompt]")
 	fmt.Fprintln(w, helpFlag(theme, useColor, "--preset <name>", "preset name"))
 	fmt.Fprintln(w, helpFlag(theme, useColor, "--review [<PR URL>]", "add review workspace from PR (GitHub only)"))
 	fmt.Fprintln(w, helpFlag(theme, useColor, "--issue <ISSUE_URL>", "add issue workspace from issue (GitHub only)"))
 	fmt.Fprintln(w, helpFlag(theme, useColor, "--repo <repo>", "add workspace from a repo"))
 	fmt.Fprintln(w, helpFlag(theme, useColor, "--branch <name>", "override branch name (repo/issue modes only)"))
 	fmt.Fprintln(w, helpFlag(theme, useColor, "--base <ref>", "override base ref (issue mode; applies to all repos in no-prompt)"))
-	fmt.Fprintln(w, helpFlag(theme, useColor, "--no-apply", fmt.Sprintf("update %s only (do not run gwiac apply)", manifest.FileName)))
+	fmt.Fprintln(w, helpFlag(theme, useColor, "--no-apply", fmt.Sprintf("update %s only (do not run gion apply)", manifest.FileName)))
 	fmt.Fprintln(w, helpFlag(theme, useColor, "--no-prompt", "disable interactive prompt"))
 }
 
 func printManifestRmHelp(w io.Writer) {
 	theme, useColor := helpTheme(w)
-	fmt.Fprintln(w, "Usage: gwiac manifest rm [<WORKSPACE_ID> ...] [--no-apply] [--no-prompt]")
-	fmt.Fprintln(w, helpFlag(theme, useColor, "--no-apply", fmt.Sprintf("update %s only (do not run gwiac apply)", manifest.FileName)))
+	fmt.Fprintln(w, "Usage: gion manifest rm [<WORKSPACE_ID> ...] [--no-apply] [--no-prompt]")
+	fmt.Fprintln(w, helpFlag(theme, useColor, "--no-apply", fmt.Sprintf("update %s only (do not run gion apply)", manifest.FileName)))
 	fmt.Fprintln(w, helpFlag(theme, useColor, "--no-prompt", "disable interactive prompt"))
 }
 
 func printManifestGcHelp(w io.Writer) {
 	theme, useColor := helpTheme(w)
-	fmt.Fprintln(w, "Usage: gwiac manifest gc [--no-apply] [--no-prompt]")
-	fmt.Fprintln(w, helpFlag(theme, useColor, "--no-apply", fmt.Sprintf("update %s only (do not run gwiac apply)", manifest.FileName)))
+	fmt.Fprintln(w, "Usage: gion manifest gc [--no-apply] [--no-prompt]")
+	fmt.Fprintln(w, helpFlag(theme, useColor, "--no-apply", fmt.Sprintf("update %s only (do not run gion apply)", manifest.FileName)))
 	fmt.Fprintln(w, helpFlag(theme, useColor, "--no-prompt", "disable interactive prompt"))
 }
 
 func printManifestValidateHelp(w io.Writer) {
 	theme, useColor := helpTheme(w)
-	fmt.Fprintln(w, "Usage: gwiac manifest validate [--no-prompt]")
+	fmt.Fprintln(w, "Usage: gion manifest validate [--no-prompt]")
 	fmt.Fprintln(w, helpFlag(theme, useColor, "--no-prompt", "accepted for compatibility (no effect)"))
 }
 
 func printManifestPresetHelp(w io.Writer) {
 	theme, useColor := helpTheme(w)
-	fmt.Fprintln(w, "Usage: gwiac manifest preset <subcommand>")
+	fmt.Fprintln(w, "Usage: gion manifest preset <subcommand>")
 	fmt.Fprintln(w, "")
-	fmt.Fprintln(w, "Aliases: gwiac manifest pre, gwiac manifest p")
+	fmt.Fprintln(w, "Aliases: gion manifest pre, gion manifest p")
 	fmt.Fprintln(w, "")
 	fmt.Fprintln(w, helpSectionTitle(theme, useColor, "Subcommands:"))
 	fmt.Fprintln(w, helpCommand(theme, useColor, "ls", "list manifest presets"))
@@ -172,50 +172,50 @@ func printManifestPresetHelp(w io.Writer) {
 
 func printManifestPresetLsHelp(w io.Writer) {
 	theme, useColor := helpTheme(w)
-	fmt.Fprintln(w, "Usage: gwiac manifest preset ls [--no-prompt]")
+	fmt.Fprintln(w, "Usage: gion manifest preset ls [--no-prompt]")
 	fmt.Fprintln(w, helpFlag(theme, useColor, "--no-prompt", "accepted for compatibility (no effect)"))
 }
 
 func printManifestPresetAddHelp(w io.Writer) {
 	theme, useColor := helpTheme(w)
-	fmt.Fprintln(w, "Usage: gwiac manifest preset add [<name>] [--repo <repo> ...] [--no-prompt]")
+	fmt.Fprintln(w, "Usage: gion manifest preset add [<name>] [--repo <repo> ...] [--no-prompt]")
 	fmt.Fprintln(w, helpFlag(theme, useColor, "--repo <repo>", "repo spec (repeatable)"))
 	fmt.Fprintln(w, helpFlag(theme, useColor, "--no-prompt", "disable interactive prompt"))
 }
 
 func printManifestPresetRmHelp(w io.Writer) {
 	theme, useColor := helpTheme(w)
-	fmt.Fprintln(w, "Usage: gwiac manifest preset rm [<name> ...] [--no-prompt]")
+	fmt.Fprintln(w, "Usage: gion manifest preset rm [<name> ...] [--no-prompt]")
 	fmt.Fprintln(w, helpFlag(theme, useColor, "--no-prompt", "disable interactive prompt"))
 }
 
 func printManifestPresetValidateHelp(w io.Writer) {
 	theme, useColor := helpTheme(w)
-	fmt.Fprintln(w, "Usage: gwiac manifest preset validate [--no-prompt]")
+	fmt.Fprintln(w, "Usage: gion manifest preset validate [--no-prompt]")
 	fmt.Fprintln(w, helpFlag(theme, useColor, "--no-prompt", "accepted for compatibility (no effect)"))
 }
 
 func printDoctorHelp(w io.Writer) {
 	theme, useColor := helpTheme(w)
-	fmt.Fprintln(w, "Usage: gwiac doctor [--fix | --self]")
+	fmt.Fprintln(w, "Usage: gion doctor [--fix | --self]")
 	fmt.Fprintln(w, helpFlag(theme, useColor, "--fix", "list issues and planned fixes (no changes yet)"))
-	fmt.Fprintln(w, helpFlag(theme, useColor, "--self", "run self-diagnostics for the gwiac environment"))
+	fmt.Fprintln(w, helpFlag(theme, useColor, "--self", "run self-diagnostics for the gion environment"))
 }
 
 func printInitHelp(w io.Writer) {
-	fmt.Fprintln(w, "Usage: gwiac init")
+	fmt.Fprintln(w, "Usage: gion init")
 }
 
 func printImportHelp(w io.Writer) {
-	fmt.Fprintln(w, "Usage: gwiac import")
+	fmt.Fprintln(w, "Usage: gion import")
 }
 
 func printPlanHelp(w io.Writer) {
-	fmt.Fprintln(w, "Usage: gwiac plan")
+	fmt.Fprintln(w, "Usage: gion plan")
 }
 
 func printApplyHelp(w io.Writer) {
-	fmt.Fprintln(w, "Usage: gwiac apply")
+	fmt.Fprintln(w, "Usage: gion apply")
 }
 
 func helpTheme(w io.Writer) (ui.Theme, bool) {

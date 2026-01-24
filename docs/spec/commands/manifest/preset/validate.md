@@ -1,28 +1,28 @@
 ---
-title: "gwiac manifest preset validate"
+title: "gion manifest preset validate"
 status: implemented
 aliases:
-  - "gwiac manifest pre validate"
-  - "gwiac manifest p validate"
+  - "gion manifest pre validate"
+  - "gion manifest p validate"
 ---
 
 ## Synopsis
-`gwiac manifest preset validate [--no-prompt]`
+`gion manifest preset validate [--no-prompt]`
 
 ## Intent
-Validate preset entries in `gwiac.yaml`.
+Validate preset entries in `gion.yaml`.
 
 ## Notes
-- This command is inventory-only and does not run `gwiac apply`.
+- This command is inventory-only and does not run `gion apply`.
 
 ## Behavior
-- Loads `<root>/gwiac.yaml`; missing or unreadable file is reported as an issue.
+- Loads `<root>/gion.yaml`; missing or unreadable file is reported as an issue.
 - Parses YAML and reports errors if invalid.
 - Checks for required fields:
   - top-level `presets` mapping exists.
   - each preset entry includes a non-empty `repos` list.
 - Detects duplicate preset names in the YAML source.
-- Validates preset names using the same rules as `gwiac manifest preset add`.
+- Validates preset names using the same rules as `gion manifest preset add`.
 - Validates each repo spec via the existing repo spec normalization rules.
 - Output uses the standard sectioned layout:
   - `Result` contains one bullet per issue; when no issues are found, prints `no issues found`.
@@ -40,9 +40,9 @@ Result
 ```
 
 ## Success Criteria
-- Returns success when `gwiac.yaml` presets are valid.
+- Returns success when `gion.yaml` presets are valid.
 
 ## Failure Modes
-- `gwiac.yaml` missing/unreadable.
+- `gion.yaml` missing/unreadable.
 - YAML parse error.
 - Missing required fields, duplicate preset names, invalid preset names, or invalid repo specs.

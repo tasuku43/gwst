@@ -15,7 +15,7 @@ func TestPrintCommandHelp_ManifestAliases(t *testing.T) {
 				t.Fatalf("expected ok=true")
 			}
 			out := buf.String()
-			if !strings.Contains(out, "Usage: gwiac manifest") {
+			if !strings.Contains(out, "Usage: gion manifest") {
 				t.Fatalf("expected manifest usage, got:\n%s", out)
 			}
 		})

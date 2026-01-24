@@ -697,8 +697,8 @@ func writeInitText(result initcmd.Result) {
 	renderer.Bullet(fmt.Sprintf("root: %s", result.RootDir))
 
 	renderSuggestions(renderer, useColor, []string{
-		"gwiac manifest preset ls",
-		"gwiac repo get <repo>",
+		"gion manifest preset ls",
+		"gion repo get <repo>",
 		fmt.Sprintf("Edit %s: %s", manifest.FileName, filepath.Join(result.RootDir, manifest.FileName)),
 	})
 }

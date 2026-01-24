@@ -1,16 +1,16 @@
 ---
-title: "gwiac plan"
+title: "gion plan"
 status: implemented
 ---
 
 ## Synopsis
-`gwiac plan [--root <path>] [--no-prompt]`
+`gion plan [--root <path>] [--no-prompt]`
 
 ## Intent
-Compute and display the diff between `gwiac.yaml` and the filesystem without applying changes, so users can review intended actions.
+Compute and display the diff between `gion.yaml` and the filesystem without applying changes, so users can review intended actions.
 
 ## Behavior
-- Loads `<root>/gwiac.yaml`; errors if missing or invalid.
+- Loads `<root>/gion.yaml`; errors if missing or invalid.
 - Scans `<root>/workspaces` to build the current state.
 - Computes a plan with `add`, `remove`, and `update` actions:
   - `add`: workspace or repo entry exists in manifest but not on filesystem.

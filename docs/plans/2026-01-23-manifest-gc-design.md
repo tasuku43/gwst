@@ -1,21 +1,21 @@
 ---
-title: "Design: gwiac manifest gc"
+title: "Design: gion manifest gc"
 status: draft
 date: 2026-01-23
 ---
 
-# gwiac manifest gc (Design Note)
+# gion manifest gc (Design Note)
 
 ## Background / Goal
 
-Workspaces can be in states that are either safe to delete automatically or should never be deleted automatically. `gwiac manifest gc` mechanically selects only those with extremely high confidence of being safe, removes them from `gwiac.yaml` (desired state), and relies on `gwiac apply` to reconcile (perform the actual deletion).
+Workspaces can be in states that are either safe to delete automatically or should never be deleted automatically. `gion manifest gc` mechanically selects only those with extremely high confidence of being safe, removes them from `gion.yaml` (desired state), and relies on `gion apply` to reconcile (perform the actual deletion).
 
-Manual removal (`gwiac manifest rm`) remains the explicit, human-judgment path.
+Manual removal (`gion manifest rm`) remains the explicit, human-judgment path.
 
 ## Responsibilities
 
-- `gwiac manifest gc` is a **manifest mutation** command (it shrinks the inventory).
-- Physical deletion (worktree remove / workspace dir remove) is performed by **`gwiac apply`**.
+- `gion manifest gc` is a **manifest mutation** command (it shrinks the inventory).
+- Physical deletion (worktree remove / workspace dir remove) is performed by **`gion apply`**.
 - Candidate selection is **conservative** (exclude when in doubt) to minimize accidental deletions.
 
 ## Assumptions / Data sources
@@ -23,7 +23,7 @@ Manual removal (`gwiac manifest rm`) remains the explicit, human-judgment path.
 - Decisions are based on local state only (**no implicit fetch/prune**).
 - Dirty/ahead/behind detection follows `git status --porcelain=v2 -b` (via existing workspace status/state logic).
 - Merge target selection is per-repo:
-  1) Use `gwiac.yaml repos[].base_ref` when set (e.g. `origin/release/1.2`)
+  1) Use `gion.yaml repos[].base_ref` when set (e.g. `origin/release/1.2`)
   2) Otherwise, use `origin/<default>` resolved from `refs/remotes/origin/HEAD`
 
 ## Rules (minimal set)
@@ -46,16 +46,16 @@ A workspace becomes a GC candidate only when **all repos** match strict merged.
 
 - `mode=review`:
   - The natural merge target is the PR base branch.
-  - Therefore `gwiac manifest add --review` should store `repos[].base_ref = origin/<pr_base_branch>`.
+  - Therefore `gion manifest add --review` should store `repos[].base_ref = origin/<pr_base_branch>`.
   - `manifest gc` itself does not need special casing by mode if target selection is consistent (base_ref first) and strict merged is used.
 - `mode=issue` assumes merging into the default branch (overrideable via `--base` / `base_ref` when needed).
 
 ## UX / Output
 
 - Always show candidate list and reasons (per-repo strict merged + target context) before mutating the manifest.
-- With `--no-apply`, only update `gwiac.yaml`.
-- Otherwise, run `gwiac apply` once for the entire root (same pattern as other manifest mutations).
-- If apply is declined/canceled (`n` / `Ctrl-C`), roll back `gwiac.yaml` (same as `manifest add`).
+- With `--no-apply`, only update `gion.yaml`.
+- Otherwise, run `gion apply` once for the entire root (same pattern as other manifest mutations).
+- If apply is declined/canceled (`n` / `Ctrl-C`), roll back `gion.yaml` (same as `manifest add`).
 
 ## Failure handling
 

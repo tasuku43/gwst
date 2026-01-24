@@ -1,9 +1,9 @@
 ---
-title: "gwiac manifest gc"
+title: "gion manifest gc"
 status: planned
 aliases:
-  - "gwiac man gc"
-  - "gwiac m gc"
+  - "gion man gc"
+  - "gion m gc"
 pending:
   - rules-implementation
   - reason-format
@@ -11,12 +11,12 @@ pending:
 ---
 
 ## Synopsis
-`gwiac manifest gc [--no-apply] [--no-prompt]`
+`gion manifest gc [--no-apply] [--no-prompt]`
 
 ## Intent
-Conservatively remove workspace entries from `gwiac.yaml` that are highly likely safe to delete, then (by default) run `gwiac apply` to reconcile the filesystem.
+Conservatively remove workspace entries from `gion.yaml` that are highly likely safe to delete, then (by default) run `gion apply` to reconcile the filesystem.
 
-This command is intentionally separated from manual removal flows (`gwiac manifest rm`), which remain the explicit/human-judgment path.
+This command is intentionally separated from manual removal flows (`gion manifest rm`), which remain the explicit/human-judgment path.
 
 ## Scope / Non-goals
 - **GC**: automatic, bulk, conservative. Exclude when in doubt.
@@ -30,7 +30,7 @@ This command is intentionally separated from manual removal flows (`gwiac manife
 
 ## Target branch selection (per repo)
 For each repo, determine a merge target:
-1) If `repos[].base_ref` is set in `gwiac.yaml`, use it (`origin/<branch>`).
+1) If `repos[].base_ref` is set in `gion.yaml`, use it (`origin/<branch>`).
 2) Otherwise, use `origin/<default>` resolved from `refs/remotes/origin/HEAD`.
 
 ## Base exclusions (per workspace)
@@ -53,25 +53,25 @@ A workspace is a candidate only if:
 - every repo matches at least one rule (initially: strict merged).
 
 ## Behavior
-- Scans workspaces present in `gwiac.yaml`.
+- Scans workspaces present in `gion.yaml`.
 - For each workspace:
   - Loads per-repo state (clean/unpushed/etc).
   - Computes per-repo rule results and reasons.
 - Prints candidates with reasons (always shown before manifest mutation).
-- Updates `gwiac.yaml` by removing all candidates.
-- By default, runs `gwiac apply` once for the entire root.
-- If apply is canceled/declined at confirmation, restores the previous `gwiac.yaml`.
+- Updates `gion.yaml` by removing all candidates.
+- By default, runs `gion apply` once for the entire root.
+- If apply is canceled/declined at confirmation, restores the previous `gion.yaml`.
 
 ## Flags
-- `--no-apply`: update `gwiac.yaml` and exit (do not run `gwiac apply`).
-- `--no-prompt`: forwarded to `gwiac apply` when apply is run (behavior follows `gwiac apply` spec).
+- `--no-apply`: update `gion.yaml` and exit (do not run `gion apply`).
+- `--no-prompt`: forwarded to `gion apply` when apply is run (behavior follows `gion apply` spec).
 
 ## Output
 - `Inputs`/`Info`: scanned / candidates / skipped counts.
 - Candidate list: workspace id + short reasons (e.g., `[merged]`) and target context.
-- `Plan`/`Apply`/`Result`: delegated to `gwiac apply` when apply is run.
+- `Plan`/`Apply`/`Result`: delegated to `gion apply` when apply is run.
 
 ## Failure Modes
 - Any git status or rule error => treat as unknown, skip, and report warning.
 - Manifest write failure.
-- Apply failure (manifest remains updated; users can re-run `gwiac apply`).
+- Apply failure (manifest remains updated; users can re-run `gion apply`).

@@ -6,9 +6,9 @@ tasks:
     cmds:
       - gofmt -w .
   build:dev:
-    desc: Build dev binary to ./gwiacdev
+    desc: Build dev binary to ./giondev
     cmds:
-      - go build -o ./gwiacdev ./cmd/gwiac
+      - go build -o ./giondev ./cmd/gion
   test:
     desc: Run tests
     cmds:

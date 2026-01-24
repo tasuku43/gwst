@@ -7,7 +7,7 @@ status: implemented
 
 ## Versioning
 
-gwiac uses SemVer-style versioning (`vX.Y.Z`).
+gion uses SemVer-style versioning (`vX.Y.Z`).
 
 During `v0.x`:
 - Breaking changes may happen, but will be documented clearly in release notes.

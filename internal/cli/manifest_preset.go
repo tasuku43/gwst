@@ -58,7 +58,7 @@ func runManifestPresetList(ctx context.Context, rootDir string, args []string) e
 		return nil
 	}
 	if lsFlags.NArg() != 0 {
-		return fmt.Errorf("usage: gwiac manifest preset ls [--no-prompt]")
+		return fmt.Errorf("usage: gion manifest preset ls [--no-prompt]")
 	}
 
 	file, err := preset.Load(rootDir)
@@ -121,7 +121,7 @@ func runManifestPresetAdd(ctx context.Context, rootDir string, args []string, no
 		return nil
 	}
 	if addFlags.NArg() > 1 {
-		return fmt.Errorf("usage: gwiac manifest preset add [<name>] [--repo <repo> ...] [--no-prompt]")
+		return fmt.Errorf("usage: gion manifest preset add [<name>] [--repo <repo> ...] [--no-prompt]")
 	}
 
 	name := ""
@@ -149,9 +149,9 @@ func runManifestPresetAdd(ctx context.Context, rootDir string, args []string, no
 			return err
 		}
 		if len(choices) == 0 {
-			return fmt.Errorf("no repos found; run gwiac repo get first")
+			return fmt.Errorf("no repos found; run gion repo get first")
 		}
-		name, repoSpecs, err = ui.PromptPresetRepos("gwiac manifest preset add", name, choices, theme, useColor)
+		name, repoSpecs, err = ui.PromptPresetRepos("gion manifest preset add", name, choices, theme, useColor)
 		if err != nil {
 			return err
 		}
@@ -162,7 +162,7 @@ func runManifestPresetAdd(ctx context.Context, rootDir string, args []string, no
 			if noPrompt {
 				return fmt.Errorf("preset name is required with --no-prompt")
 			}
-			name, err = ui.PromptPresetName("gwiac manifest preset add", "", theme, useColor)
+			name, err = ui.PromptPresetName("gion manifest preset add", "", theme, useColor)
 			if err != nil {
 				return err
 			}
@@ -177,10 +177,10 @@ func runManifestPresetAdd(ctx context.Context, rootDir string, args []string, no
 				return err
 			}
 			if len(choices) == 0 {
-				return fmt.Errorf("no repos found; run gwiac repo get first")
+				return fmt.Errorf("no repos found; run gion repo get first")
 			}
 			var selected []string
-			name, selected, err = ui.PromptPresetRepos("gwiac manifest preset add", name, choices, theme, useColor)
+			name, selected, err = ui.PromptPresetRepos("gion manifest preset add", name, choices, theme, useColor)
 			if err != nil {
 				return err
 			}
@@ -205,7 +205,7 @@ func runManifestPresetAdd(ctx context.Context, rootDir string, args []string, no
 		if _, exists, err := repo.Exists(rootDir, repoSpec); err != nil {
 			return err
 		} else if !exists {
-			return fmt.Errorf("repo store not found, run: gwiac repo get %s", repoSpec)
+			return fmt.Errorf("repo store not found, run: gion repo get %s", repoSpec)
 		}
 	}
 
@@ -284,7 +284,7 @@ func runManifestPresetRemove(ctx context.Context, rootDir string, args []string,
 		}
 		theme := ui.DefaultTheme()
 		useColor := isatty.IsTerminal(os.Stdout.Fd())
-		selected, err := ui.PromptMultiSelect("gwiac manifest preset rm", "preset", choices, theme, useColor)
+		selected, err := ui.PromptMultiSelect("gion manifest preset rm", "preset", choices, theme, useColor)
 		if err != nil {
 			return err
 		}
@@ -347,7 +347,7 @@ func runManifestPresetValidate(ctx context.Context, rootDir string, args []strin
 		return nil
 	}
 	if validateFlags.NArg() != 0 {
-		return fmt.Errorf("usage: gwiac manifest preset validate [--no-prompt]")
+		return fmt.Errorf("usage: gion manifest preset validate [--no-prompt]")
 	}
 
 	result, err := preset.Validate(rootDir)

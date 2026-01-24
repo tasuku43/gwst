@@ -36,7 +36,7 @@ func runManifestValidate(ctx context.Context, rootDir string, args []string) err
 		return nil
 	}
 	if validateFlags.NArg() != 0 {
-		return fmt.Errorf("usage: gwiac manifest validate [--no-prompt]")
+		return fmt.Errorf("usage: gion manifest validate [--no-prompt]")
 	}
 
 	result, err := manifest.Validate(ctx, rootDir)

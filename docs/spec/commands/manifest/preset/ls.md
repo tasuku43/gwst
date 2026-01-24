@@ -1,22 +1,22 @@
 ---
-title: "gwiac manifest preset ls"
+title: "gion manifest preset ls"
 status: implemented
 aliases:
-  - "gwiac manifest pre ls"
-  - "gwiac manifest p ls"
+  - "gion manifest pre ls"
+  - "gion manifest p ls"
 ---
 
 ## Synopsis
-`gwiac manifest preset ls [--no-prompt]`
+`gion manifest preset ls [--no-prompt]`
 
 ## Intent
-List preset entries in `gwiac.yaml`.
+List preset entries in `gion.yaml`.
 
 ## Notes
-- This command is inventory-only and does not run `gwiac apply`.
+- This command is inventory-only and does not run `gion apply`.
 
 ## Behavior
-- Loads `<root>/gwiac.yaml`; fails if the file is missing, unreadable, or invalid YAML.
+- Loads `<root>/gion.yaml`; fails if the file is missing, unreadable, or invalid YAML.
 - Parses preset entries and prints them in sorted order by preset name.
 - For each preset, lists its repository specs in the stored order.
 - No changes are made (read-only).
@@ -46,4 +46,4 @@ Result
 
 ## Failure Modes
 - Root not resolved.
-- `gwiac.yaml` missing, unreadable, or invalid YAML.
+- `gion.yaml` missing, unreadable, or invalid YAML.

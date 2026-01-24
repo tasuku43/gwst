@@ -1,13 +1,13 @@
 ---
-title: "gwiac manifest preset"
+title: "gion manifest preset"
 status: implemented
 aliases:
-  - "gwiac manifest pre"
-  - "gwiac manifest p"
+  - "gion manifest pre"
+  - "gion manifest p"
 ---
 
 ## Intent
-Manage preset entries in `gwiac.yaml` without manual YAML editing.
+Manage preset entries in `gion.yaml` without manual YAML editing.
 
 ## Notes
-- Preset commands are inventory-only and do not run `gwiac apply`.
+- Preset commands are inventory-only and do not run `gion apply`.

@@ -29,7 +29,7 @@ func runManifestGc(ctx context.Context, rootDir string, args []string, globalNoP
 	var noApply bool
 	var noPromptFlag bool
 	var helpFlag bool
-	gcFlags.BoolVar(&noApply, "no-apply", false, "do not run gwiac apply")
+	gcFlags.BoolVar(&noApply, "no-apply", false, "do not run gion apply")
 	gcFlags.BoolVar(&noPromptFlag, "no-prompt", false, "disable interactive prompt")
 	gcFlags.BoolVar(&helpFlag, "help", false, "show help")
 	gcFlags.BoolVar(&helpFlag, "h", false, "show help")
@@ -48,7 +48,7 @@ func runManifestGc(ctx context.Context, rootDir string, args []string, globalNoP
 		return nil
 	}
 	if gcFlags.NArg() != 0 {
-		return fmt.Errorf("usage: gwiac manifest gc [--no-apply] [--no-prompt]")
+		return fmt.Errorf("usage: gion manifest gc [--no-apply] [--no-prompt]")
 	}
 
 	noPrompt := globalNoPrompt || noPromptFlag
@@ -174,7 +174,7 @@ func runManifestGc(ctx context.Context, rootDir string, args []string, globalNoP
 				r.Bullet(fmt.Sprintf("updated %s (removed %d workspace(s))", manifest.FileName, len(candidateIDs)))
 				r.Blank()
 				r.Section("Suggestion")
-				r.Bullet("gwiac apply")
+				r.Bullet("gion apply")
 			},
 			RenderNoChanges: func(r *ui.Renderer) {
 				r.Section("Result")
@@ -280,7 +280,7 @@ func strictMergedIntoTarget(ctx context.Context, rootDir string, entry manifest.
 		return false, err
 	}
 	if !exists {
-		return false, fmt.Errorf("repo store not found (run: gwiac repo get %s)", repo.SpecFromKey(entry.RepoKey))
+		return false, fmt.Errorf("repo store not found (run: gion repo get %s)", repo.SpecFromKey(entry.RepoKey))
 	}
 
 	headRef := fmt.Sprintf("refs/heads/%s", branch)

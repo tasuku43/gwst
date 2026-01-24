@@ -1,32 +1,32 @@
 ---
-title: "gwiac.yaml"
+title: "gion.yaml"
 status: planned
 ---
 
-# gwiac.yaml
+# gion.yaml
 
-`gwiac.yaml` is the centralized inventory of workspaces used for tracking creation mode and enabling future IaC-style reconciliation.
+`gion.yaml` is the centralized inventory of workspaces used for tracking creation mode and enabling future IaC-style reconciliation.
 
 ## Location
 
-`<GWIAC_ROOT>/gwiac.yaml`
+`<GION_ROOT>/gion.yaml`
 
 Created by:
 
 ```
-gwiac init
+gion init
 ```
 
 ## Source of truth
 
-- **Non-IaC commands**: filesystem operations are the truth. After a successful change, `gwiac` rewrites `gwiac.yaml` as a whole to reflect the new state.
-- **`gwiac apply`**: `gwiac.yaml` is the truth. `gwiac` computes a diff, shows the plan, and applies the changes to the filesystem after confirmation.
-- **`gwiac import`**: filesystem and `.gwiac/metadata.json` are the truth. `gwiac` rebuilds `gwiac.yaml` from the current state.
+- **Non-IaC commands**: filesystem operations are the truth. After a successful change, `gion` rewrites `gion.yaml` as a whole to reflect the new state.
+- **`gion apply`**: `gion.yaml` is the truth. `gion` computes a diff, shows the plan, and applies the changes to the filesystem after confirmation.
+- **`gion import`**: filesystem and `.gion/metadata.json` are the truth. `gion` rebuilds `gion.yaml` from the current state.
 
 Notes:
-- `gwiac.yaml` is a gwiac-managed file. Commands rewrite the full file; comments and ordering may not be preserved.
-- When rewriting, gwiac preserves existing metadata for untouched workspaces where possible, and may read `.gwiac/metadata.json` to refill fields like `mode`, `description`, `preset_name`, and `source_url` during imports.
-- When importing, gwiac may also read `.gwiac/metadata.json` `base_branch` and store it as `base_ref` in `gwiac.yaml` (per repo entry) to preserve how branches were originally cut.
+- `gion.yaml` is a gion-managed file. Commands rewrite the full file; comments and ordering may not be preserved.
+- When rewriting, gion preserves existing metadata for untouched workspaces where possible, and may read `.gion/metadata.json` to refill fields like `mode`, `description`, `preset_name`, and `source_url` during imports.
+- When importing, gion may also read `.gion/metadata.json` `base_branch` and store it as `base_ref` in `gion.yaml` (per repo entry) to preserve how branches were originally cut.
 - Repo branch names are derived from each worktree's Git state when importing from the filesystem.
 
 ## Format
@@ -49,7 +49,7 @@ Repo entry fields:
 - `branch` (required): branch checked out in the worktree.
 - `base_ref` (optional): base ref used when creating the branch for the first time (only relevant if the branch does not already exist in the store).
   - When present, it must be in the form `origin/<branch>`.
-  - If omitted, gwiac uses the repo's detected default branch (prefers `refs/remotes/origin/HEAD`).
+  - If omitted, gion uses the repo's detected default branch (prefers `refs/remotes/origin/HEAD`).
 
 ```yaml
 version: 1
@@ -83,9 +83,9 @@ workspaces:
 
 ## Diff semantics (for apply)
 
-When reconciling, gwiac computes a plan with three categories:
-- **add**: present in gwiac.yaml, missing on filesystem.
-- **remove**: present on filesystem, missing in gwiac.yaml.
+When reconciling, gion computes a plan with three categories:
+- **add**: present in gion.yaml, missing on filesystem.
+- **remove**: present on filesystem, missing in gion.yaml.
 - **update**: present in both but differing repo/branch/alias definitions.
 
 Removals are treated as destructive and require explicit confirmation.

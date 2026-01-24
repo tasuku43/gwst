@@ -1,27 +1,27 @@
 ---
-title: "Directory layout under GWIAC_ROOT"
+title: "Directory layout under GION_ROOT"
 status: implemented
 ---
 
-# Directory layout under GWIAC_ROOT
+# Directory layout under GION_ROOT
 
-`gwiac` manages a single root directory (`GWIAC_ROOT`) that contains the bare repo store and workspaces.
+`gion` manages a single root directory (`GION_ROOT`) that contains the bare repo store and workspaces.
 
 ## Root resolution
 
-`GWIAC_ROOT` is resolved in this order:
+`GION_ROOT` is resolved in this order:
 
 1. `--root <path>`
-2. `GWIAC_ROOT` environment variable
-3. default `~/gwiac`
+2. `GION_ROOT` environment variable
+3. default `~/gion`
 
 ## Layout
 
 ```
-GWIAC_ROOT/
+GION_ROOT/
   bare/         # bare repo store (shared Git objects)
   workspaces/   # workspaces (task-scoped worktrees)
-  gwiac.yaml
+  gion.yaml
   logs/         # created when --debug is used
 ```
 
@@ -30,10 +30,10 @@ GWIAC_ROOT/
 Each workspace is a directory under `workspaces/` and contains one or more repo worktrees:
 
 ```
-GWIAC_ROOT/workspaces/<WORKSPACE_ID>/
+GION_ROOT/workspaces/<WORKSPACE_ID>/
   <alias1>/
   <alias2>/
-  .gwiac/metadata.json   # workspace metadata (optional: mode, description, source_url, preset_name, base_branch)
+  .gion/metadata.json   # workspace metadata (optional: mode, description, source_url, preset_name, base_branch)
 ```
 
-`gwiac open` runs a subshell with `GWIAC_WORKSPACE=<WORKSPACE_ID>` set for the child process.
+`gion open` runs a subshell with `GION_WORKSPACE=<WORKSPACE_ID>` set for the child process.

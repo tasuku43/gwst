@@ -18,7 +18,7 @@ func runPlan(ctx context.Context, rootDir string, args []string) error {
 		return nil
 	}
 	if len(args) != 0 {
-		return fmt.Errorf("usage: gwiac plan")
+		return fmt.Errorf("usage: gion plan")
 	}
 
 	theme := ui.DefaultTheme()

@@ -1,23 +1,23 @@
 ---
-title: "gwiac manifest preset rm"
+title: "gion manifest preset rm"
 status: implemented
 aliases:
-  - "gwiac manifest pre rm"
-  - "gwiac manifest p rm"
+  - "gion manifest pre rm"
+  - "gion manifest p rm"
 ---
 
 ## Synopsis
-`gwiac manifest preset rm [<name> ...] [--no-prompt]`
+`gion manifest preset rm [<name> ...] [--no-prompt]`
 
 ## Intent
-Remove preset entries from `gwiac.yaml`.
+Remove preset entries from `gion.yaml`.
 
 ## Notes
-- This command is inventory-only and does not run `gwiac apply`.
+- This command is inventory-only and does not run `gion apply`.
 
 ## Behavior
 - Accepts zero or more preset names. When multiple names are provided, duplicates are removed while preserving first-seen order.
-- Requires `gwiac.yaml` to exist (`gwiac init` completed). Missing file => error.
+- Requires `gion.yaml` to exist (`gion init` completed). Missing file => error.
 - With names provided:
   - Errors if any requested name does not exist; no changes are written.
   - Otherwise removes the listed presets and writes the file back via atomic tmp+rename.
@@ -30,8 +30,8 @@ Remove preset entries from `gwiac.yaml`.
 - Output uses the common sectioned layout from `docs/spec/ui/UI.md`. No `Plan`/`Apply` sections are used.
 
 ## Interactive selection UX (no args)
-- Candidate list is the preset names in `gwiac.yaml`.
-- Prompt behavior mirrors existing gwiac selection UI:
+- Candidate list is the preset names in `gion.yaml`.
+- Prompt behavior mirrors existing gion selection UI:
   - Shows a filterable list. Typing narrows candidates by substring match (case-insensitive). Optionally a lightweight fuzzy match is acceptable.
   - The first visible item is highlighted. `<Enter>` adds the highlighted preset name, removes it from the candidate list.
   - The prompt loops, allowing repeated add operations.
@@ -48,7 +48,7 @@ Inputs
     └─ helpers
 
 Result
-  • updated gwiac.yaml (removed 2 presets)
+  • updated gion.yaml (removed 2 presets)
 ```
 
 ### Output: non-interactive (args)
@@ -57,13 +57,13 @@ Inputs
   • preset: helpdesk
 
 Result
-  • updated gwiac.yaml (removed 1 preset)
+  • updated gion.yaml (removed 1 preset)
 ```
 
 ## Success Criteria
-- `gwiac.yaml` no longer contains the removed preset entries.
+- `gion.yaml` no longer contains the removed preset entries.
 
 ## Failure Modes
-- `gwiac.yaml` missing or unreadable.
+- `gion.yaml` missing or unreadable.
 - Preset name not found (when explicitly provided).
 - Write/rename failure when persisting the updated file.

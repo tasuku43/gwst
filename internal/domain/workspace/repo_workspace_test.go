@@ -15,14 +15,14 @@ import (
 )
 
 func TestRepoGetWorkspaceAddRemove(t *testing.T) {
-	t.Setenv("GIT_AUTHOR_NAME", "gwiac")
-	t.Setenv("GIT_AUTHOR_EMAIL", "gwiac@example.com")
-	t.Setenv("GIT_COMMITTER_NAME", "gwiac")
-	t.Setenv("GIT_COMMITTER_EMAIL", "gwiac@example.com")
+	t.Setenv("GIT_AUTHOR_NAME", "gion")
+	t.Setenv("GIT_AUTHOR_EMAIL", "gion@example.com")
+	t.Setenv("GIT_COMMITTER_NAME", "gion")
+	t.Setenv("GIT_COMMITTER_EMAIL", "gion@example.com")
 
 	ctx := context.Background()
 	tmp := t.TempDir()
-	rootDir := filepath.Join(tmp, "gwiac")
+	rootDir := filepath.Join(tmp, "gion")
 
 	remoteBase := filepath.Join(tmp, "remotes")
 	remotePath := filepath.Join(remoteBase, "org", "repo.git")
@@ -82,14 +82,14 @@ func TestRepoGetWorkspaceAddRemove(t *testing.T) {
 }
 
 func TestWorkspaceAddSkipsFetchWhenUpToDate(t *testing.T) {
-	t.Setenv("GIT_AUTHOR_NAME", "gwiac")
-	t.Setenv("GIT_AUTHOR_EMAIL", "gwiac@example.com")
-	t.Setenv("GIT_COMMITTER_NAME", "gwiac")
-	t.Setenv("GIT_COMMITTER_EMAIL", "gwiac@example.com")
+	t.Setenv("GIT_AUTHOR_NAME", "gion")
+	t.Setenv("GIT_AUTHOR_EMAIL", "gion@example.com")
+	t.Setenv("GIT_COMMITTER_NAME", "gion")
+	t.Setenv("GIT_COMMITTER_EMAIL", "gion@example.com")
 
 	ctx := context.Background()
 	tmp := t.TempDir()
-	rootDir := filepath.Join(tmp, "gwiac")
+	rootDir := filepath.Join(tmp, "gion")
 
 	remoteBase := filepath.Join(tmp, "remotes")
 	remotePath := filepath.Join(remoteBase, "org", "repo.git")
@@ -143,15 +143,15 @@ func TestWorkspaceAddSkipsFetchWhenUpToDate(t *testing.T) {
 }
 
 func TestWorkspaceAddFetchesEvenWithinGraceWhenFetchTrue(t *testing.T) {
-	t.Setenv("GIT_AUTHOR_NAME", "gwiac")
-	t.Setenv("GIT_AUTHOR_EMAIL", "gwiac@example.com")
-	t.Setenv("GIT_COMMITTER_NAME", "gwiac")
-	t.Setenv("GIT_COMMITTER_EMAIL", "gwiac@example.com")
-	t.Setenv("GWIAC_FETCH_GRACE_SECONDS", "3600")
+	t.Setenv("GIT_AUTHOR_NAME", "gion")
+	t.Setenv("GIT_AUTHOR_EMAIL", "gion@example.com")
+	t.Setenv("GIT_COMMITTER_NAME", "gion")
+	t.Setenv("GIT_COMMITTER_EMAIL", "gion@example.com")
+	t.Setenv("GION_FETCH_GRACE_SECONDS", "3600")
 
 	ctx := context.Background()
 	tmp := t.TempDir()
-	rootDir := filepath.Join(tmp, "gwiac")
+	rootDir := filepath.Join(tmp, "gion")
 
 	remoteBase := filepath.Join(tmp, "remotes")
 	remotePath := filepath.Join(remoteBase, "org", "repo.git")
@@ -214,14 +214,14 @@ func TestWorkspaceAddFetchesEvenWithinGraceWhenFetchTrue(t *testing.T) {
 }
 
 func TestWorkspaceAddTracksRemoteBranchWhenPresent(t *testing.T) {
-	t.Setenv("GIT_AUTHOR_NAME", "gwiac")
-	t.Setenv("GIT_AUTHOR_EMAIL", "gwiac@example.com")
-	t.Setenv("GIT_COMMITTER_NAME", "gwiac")
-	t.Setenv("GIT_COMMITTER_EMAIL", "gwiac@example.com")
+	t.Setenv("GIT_AUTHOR_NAME", "gion")
+	t.Setenv("GIT_AUTHOR_EMAIL", "gion@example.com")
+	t.Setenv("GIT_COMMITTER_NAME", "gion")
+	t.Setenv("GIT_COMMITTER_EMAIL", "gion@example.com")
 
 	ctx := context.Background()
 	tmp := t.TempDir()
-	rootDir := filepath.Join(tmp, "gwiac")
+	rootDir := filepath.Join(tmp, "gion")
 
 	remoteBase := filepath.Join(tmp, "remotes")
 	remotePath := filepath.Join(remoteBase, "org", "repo.git")
@@ -287,14 +287,14 @@ func TestWorkspaceAddTracksRemoteBranchWhenPresent(t *testing.T) {
 }
 
 func TestResolveBaseRefFallsBackWhenRemoteHeadRefMissing(t *testing.T) {
-	t.Setenv("GIT_AUTHOR_NAME", "gwiac")
-	t.Setenv("GIT_AUTHOR_EMAIL", "gwiac@example.com")
-	t.Setenv("GIT_COMMITTER_NAME", "gwiac")
-	t.Setenv("GIT_COMMITTER_EMAIL", "gwiac@example.com")
+	t.Setenv("GIT_AUTHOR_NAME", "gion")
+	t.Setenv("GIT_AUTHOR_EMAIL", "gion@example.com")
+	t.Setenv("GIT_COMMITTER_NAME", "gion")
+	t.Setenv("GIT_COMMITTER_EMAIL", "gion@example.com")
 
 	ctx := context.Background()
 	tmp := t.TempDir()
-	rootDir := filepath.Join(tmp, "gwiac")
+	rootDir := filepath.Join(tmp, "gion")
 
 	remoteBase := filepath.Join(tmp, "remotes")
 	remotePath := filepath.Join(remoteBase, "org", "repo.git")

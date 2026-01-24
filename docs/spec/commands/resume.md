@@ -1,24 +1,24 @@
 ---
-title: "gwiac resume"
+title: "gion resume"
 status: planned
 ---
 
 ## Synopsis
-`gwiac resume <repo> <ref> [--workspace <id>] [--branch <name>] [--reuse] [--no-prompt]`
+`gion resume <repo> <ref> [--workspace <id>] [--branch <name>] [--reuse] [--no-prompt]`
 
 ## Intent
 Rehydrate work from a remote branch or tag by fetching the ref into the bare store and attaching it to a workspace as a worktree, without disturbing existing worktrees.
 
 ## Behavior
 - Inputs:
-  - `<repo>`: SSH/HTTPS repo URL (same format as `gwiac repo get`).
+  - `<repo>`: SSH/HTTPS repo URL (same format as `gion repo get`).
   - `<ref>`: remote branch or tag name. If it looks like a full ref (`refs/heads/...`, `refs/tags/...`, `origin/...`), it is used as-is; otherwise treated as a branch or tag on `origin`.
 - Workspace selection:
   - If `--workspace` is given, target that workspace (must exist).
   - Otherwise, prompt to select a workspace (filterable). If none exist, error.
 - Prompt supports filtering: type-to-filter, Enter to select, selection removes the item, Ctrl+D/done to finish.
 - Fetch:
-  - Run `git fetch origin <ref>` in the bare store (creating the store via `gwiac repo get` if missing; prompts unless `--no-prompt`, where it errors instead).
+  - Run `git fetch origin <ref>` in the bare store (creating the store via `gion repo get` if missing; prompts unless `--no-prompt`, where it errors instead).
   - If the remote ref is already up to date (same object id locally), skip fetch.
 - Worktree creation:
   - Branch name for the worktree defaults to `<ref>` when it is a branch on origin; if `<ref>` resolves to a tag, a branch name is required via `--branch <name>` (no detached checkout by default to avoid accidental edits on a tag).
@@ -28,8 +28,8 @@ Rehydrate work from a remote branch or tag by fetching the ref into the bare sto
     - With `--reuse`, do not create a new worktree; instead, print its path and suggest `cd` (no checkout/reset performed).
     - Without `--reuse`, error.
 - Base ref: when the branch doesn’t exist locally, create it from `origin/<ref>` (for branches) or from the fetched tag commit when `--branch` is specified for tags.
-  - If the remote branch/tag does not exist, error (advise to use `gwiac manifest add --preset` for new branches).
-- Output: standard gwiac style (no header line; steps, result, suggestion). Result lists workspace, alias, branch, and path.
+  - If the remote branch/tag does not exist, error (advise to use `gion manifest add --preset` for new branches).
+- Output: standard gion style (no header line; steps, result, suggestion). Result lists workspace, alias, branch, and path.
 
 ## Success Criteria
 - The bare store has fetched `<ref>`, and the target workspace has a worktree checked out to the chosen branch (newly created or reused with `--reuse`).

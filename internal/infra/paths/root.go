@@ -6,14 +6,14 @@ import (
 	"strings"
 )
 
-const defaultRootDir = "gwiac"
+const defaultRootDir = "gion"
 
 func ResolveRoot(flagRoot string) (string, error) {
 	if flagRoot != "" {
 		return normalizeRoot(flagRoot)
 	}
 
-	envRoot := os.Getenv("GWIAC_ROOT")
+	envRoot := os.Getenv("GION_ROOT")
 	if envRoot != "" {
 		return normalizeRoot(envRoot)
 	}

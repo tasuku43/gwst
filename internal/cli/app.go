@@ -13,7 +13,7 @@ import (
 
 // Run is a placeholder for the CLI entrypoint.
 func Run() error {
-	fs := flag.NewFlagSet("gwiac", flag.ContinueOnError)
+	fs := flag.NewFlagSet("gion", flag.ContinueOnError)
 	var rootFlag string
 	var noPrompt bool
 	var debugFlag bool
