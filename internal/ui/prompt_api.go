@@ -295,10 +295,10 @@ func PromptIssueSelectWithBranches(title, label string, choices []PromptChoice, 
 	return append([]IssueSelection(nil), final.selectedIssues...), nil
 }
 
-func PromptCreateFlow(title string, startMode string, defaultWorkspaceID string, presetName string, presets []string, presetErr error, repoChoices []PromptChoice, repoErr error, reviewRepos []PromptChoice, issueRepos []PromptChoice, loadReview func(string) ([]PromptChoice, error), loadIssue func(string) ([]PromptChoice, error), loadPresetRepos func(string) ([]string, error), onReposResolved func([]string), validateBranch func(string) error, theme Theme, useColor bool, selectedRepo string) (string, string, string, string, []string, string, []string, string, []IssueSelection, string, error) {
+func PromptCreateFlow(title string, startMode string, defaultWorkspaceID string, presetName string, presets []string, presetErr error, repoChoices []PromptChoice, repoErr error, reviewRepos []PromptChoice, issueRepos []PromptChoice, loadReview func(string) ([]PromptChoice, error), loadIssue func(string) ([]PromptChoice, error), loadPresetRepos func(string) ([]string, error), onReposResolved func([]string), validateBranch func(string) error, validateWorkspaceID func(string) error, theme Theme, useColor bool, selectedRepo string) (string, string, string, string, []string, string, []string, string, []IssueSelection, string, error) {
 	debuglog.SetPrompt("create-flow")
 	defer debuglog.ClearPrompt()
-	model := newCreateFlowModel(title, presets, presetErr, repoChoices, repoErr, defaultWorkspaceID, presetName, reviewRepos, issueRepos, loadReview, loadIssue, loadPresetRepos, onReposResolved, validateBranch, theme, useColor, startMode, selectedRepo)
+	model := newCreateFlowModel(title, presets, presetErr, repoChoices, repoErr, defaultWorkspaceID, presetName, reviewRepos, issueRepos, loadReview, loadIssue, loadPresetRepos, onReposResolved, validateBranch, validateWorkspaceID, theme, useColor, startMode, selectedRepo)
 	if model.err != nil {
 		return "", "", "", "", nil, "", nil, "", nil, "", model.err
 	}

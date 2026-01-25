@@ -73,7 +73,7 @@ workspaces:
 ```
 
 ## Validation rules
-- Workspace IDs must satisfy git branch ref format rules (`git check-ref-format --branch`).
+- Workspace IDs must satisfy git branch ref format rules (`git check-ref-format --branch`) and must not include path separators or path traversal (`/`, `\\`, `.`, `..`).
 - `mode` must be one of the supported values.
 - `repo_key` must match the bare store key format (`<host>/<owner>/<repo>.git`) or the normalized repo key form (`<host>/<owner>/<repo>`).
 - `alias` must be unique within a workspace.

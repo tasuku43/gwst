@@ -195,6 +195,9 @@ func runManifestAdd(ctx context.Context, rootDir string, args []string, globalNo
 		validateBranch := func(v string) error {
 			return workspace.ValidateBranchName(ctx, v)
 		}
+		validateWorkspaceID := func(v string) error {
+			return workspace.ValidateWorkspaceID(ctx, v)
+		}
 
 		mode, tmplName, tmplWorkspaceID, tmplDesc, tmplBranches, reviewRepo, reviewPRs, issueRepo, issueSelections, repoSelected, err := ui.PromptCreateFlow(
 			"gion manifest add",
@@ -212,6 +215,7 @@ func runManifestAdd(ctx context.Context, rootDir string, args []string, globalNo
 			loadPresetRepos,
 			nil,
 			validateBranch,
+			validateWorkspaceID,
 			theme,
 			useColor,
 			"",
@@ -248,6 +252,9 @@ func runManifestAdd(ctx context.Context, rootDir string, args []string, globalNo
 		}
 		if strings.TrimSpace(workspaceID) == "" {
 			return fmt.Errorf("workspace id is required")
+		}
+		if err := workspace.ValidateWorkspaceID(ctx, workspaceID); err != nil {
+			return err
 		}
 		file, err := preset.Load(rootDir)
 		if err != nil {
@@ -294,6 +301,9 @@ func runManifestAdd(ctx context.Context, rootDir string, args []string, globalNo
 		}
 		if strings.TrimSpace(repoSpec) == "" || strings.TrimSpace(workspaceID) == "" {
 			return fmt.Errorf("repo and workspace id are required")
+		}
+		if err := workspace.ValidateWorkspaceID(ctx, workspaceID); err != nil {
+			return err
 		}
 		repoSpecNorm, err := normalizeRepoSpec(repoSpec)
 		if err != nil {
@@ -380,6 +390,9 @@ func manifestAddPreset(ctx context.Context, rootDir, presetName, workspaceID, de
 }
 
 func manifestAddPresetWithFile(ctx context.Context, rootDir, presetName, workspaceID, description string, tmpl preset.Preset, branches []string, baseRef string, apply func(manifest.File, func(*ui.Renderer), []string) error, showInputs func(*ui.Renderer)) error {
+	if err := workspace.ValidateWorkspaceID(ctx, workspaceID); err != nil {
+		return err
+	}
 	desired, err := manifest.Load(rootDir)
 	if err != nil {
 		return err
@@ -441,6 +454,9 @@ func manifestAddRepo(ctx context.Context, rootDir, repoSpec, workspaceID, descri
 }
 
 func manifestAddRepoWithSpec(ctx context.Context, rootDir, repoSpec, workspaceID, description, branch, baseRef string, apply func(manifest.File, func(*ui.Renderer), []string) error, showInputs func(*ui.Renderer)) error {
+	if err := workspace.ValidateWorkspaceID(ctx, workspaceID); err != nil {
+		return err
+	}
 	desired, err := manifest.Load(rootDir)
 	if err != nil {
 		return err
@@ -501,6 +517,9 @@ func manifestAddReviewURL(ctx context.Context, rootDir, prURL string, apply func
 	}
 
 	workspaceID := formatReviewWorkspaceID(baseOwner, baseRepo, pr.Number)
+	if err := workspace.ValidateWorkspaceID(ctx, workspaceID); err != nil {
+		return err
+	}
 	description := pr.Title
 	renderInputs := func(r *ui.Renderer) {
 		r.Section("Inputs")
@@ -585,6 +604,10 @@ func manifestAddReviewSelected(ctx context.Context, rootDir string, repoSpec str
 		}
 
 		workspaceID := formatReviewWorkspaceID(baseOwner, baseRepo, pr.Number)
+		if err := workspace.ValidateWorkspaceID(ctx, workspaceID); err != nil {
+			warnings = append(warnings, fmt.Sprintf("skipped PR #%d: invalid workspace id: %s", pr.Number, err.Error()))
+			continue
+		}
 		if _, exists := updated.Workspaces[workspaceID]; exists {
 			warnings = append(warnings, fmt.Sprintf("skipped: workspace already exists in %s: %s", manifest.FileName, workspaceID))
 			continue
@@ -663,6 +686,9 @@ func manifestAddIssueURL(ctx context.Context, rootDir, issueURL, branch, baseRef
 	}
 
 	workspaceID := formatIssueWorkspaceID(req.Owner, req.Repo, req.Number)
+	if err := workspace.ValidateWorkspaceID(ctx, workspaceID); err != nil {
+		return err
+	}
 	branchValue := strings.TrimSpace(branch)
 	if branchValue == "" {
 		branchValue = fmt.Sprintf("issue/%d", req.Number)
@@ -750,6 +776,10 @@ func manifestAddIssueSelected(ctx context.Context, rootDir string, repoSpec stri
 			continue
 		}
 		workspaceID := formatIssueWorkspaceID(owner, repoName, num)
+		if err := workspace.ValidateWorkspaceID(ctx, workspaceID); err != nil {
+			warnings = append(warnings, fmt.Sprintf("skipped issue #%d: invalid workspace id: %s", num, err.Error()))
+			continue
+		}
 		if _, exists := updated.Workspaces[workspaceID]; exists {
 			warnings = append(warnings, fmt.Sprintf("skipped: workspace already exists in %s: %s", manifest.FileName, workspaceID))
 			continue

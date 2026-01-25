@@ -75,6 +75,7 @@ type inputsModel struct {
 	preset      string
 	workspaceID string
 	label       string
+	validateID  func(string) error
 
 	stage     inputsStage
 	theme     Theme
@@ -121,22 +122,23 @@ type createFlowModel struct {
 	issueIssues  []IssueSelection
 	repoSelected string
 
-	reviewRepoModel  choiceSelectModel
-	reviewPRModel    multiSelectModel
-	issueRepoModel   choiceSelectModel
-	issueIssueModel  issueBranchSelectModel
-	repoSelectModel  choiceSelectModel
-	loadReviewPRs    func(string) ([]PromptChoice, error)
-	loadIssueChoices func(string) ([]PromptChoice, error)
-	loadPresetRepos  func(string) ([]string, error)
-	onReposResolved  func([]string)
-	validateBranch   func(string) error
+	reviewRepoModel     choiceSelectModel
+	reviewPRModel       multiSelectModel
+	issueRepoModel      choiceSelectModel
+	issueIssueModel     issueBranchSelectModel
+	repoSelectModel     choiceSelectModel
+	loadReviewPRs       func(string) ([]PromptChoice, error)
+	loadIssueChoices    func(string) ([]PromptChoice, error)
+	loadPresetRepos     func(string) ([]string, error)
+	onReposResolved     func([]string)
+	validateBranch      func(string) error
+	validateWorkspaceID func(string) error
 
 	theme    Theme
 	useColor bool
 }
 
-func newCreateFlowModel(title string, presets []string, tmplErr error, repoChoices []PromptChoice, repoErr error, defaultWorkspaceID string, presetName string, reviewRepos []PromptChoice, issueRepos []PromptChoice, loadReview func(string) ([]PromptChoice, error), loadIssue func(string) ([]PromptChoice, error), loadPresetRepos func(string) ([]string, error), onReposResolved func([]string), validateBranch func(string) error, theme Theme, useColor bool, startMode string, selectedRepo string) createFlowModel {
+func newCreateFlowModel(title string, presets []string, tmplErr error, repoChoices []PromptChoice, repoErr error, defaultWorkspaceID string, presetName string, reviewRepos []PromptChoice, issueRepos []PromptChoice, loadReview func(string) ([]PromptChoice, error), loadIssue func(string) ([]PromptChoice, error), loadPresetRepos func(string) ([]string, error), onReposResolved func([]string), validateBranch func(string) error, validateWorkspaceID func(string) error, theme Theme, useColor bool, startMode string, selectedRepo string) createFlowModel {
 	input := textinput.New()
 	input.Prompt = ""
 	input.Placeholder = "search"
@@ -145,23 +147,24 @@ func newCreateFlowModel(title string, presets []string, tmplErr error, repoChoic
 		input.PlaceholderStyle = theme.Muted
 	}
 	m := createFlowModel{
-		stage:              createStageMode,
-		presets:            presets,
-		tmplErr:            tmplErr,
-		repoChoices:        repoChoices,
-		repoErr:            repoErr,
-		defaultWorkspaceID: defaultWorkspaceID,
-		title:              title,
-		modeInput:          input,
-		reviewRepos:        reviewRepos,
-		issueRepos:         issueRepos,
-		loadReviewPRs:      loadReview,
-		loadIssueChoices:   loadIssue,
-		loadPresetRepos:    loadPresetRepos,
-		onReposResolved:    onReposResolved,
-		validateBranch:     validateBranch,
-		theme:              theme,
-		useColor:           useColor,
+		stage:               createStageMode,
+		presets:             presets,
+		tmplErr:             tmplErr,
+		repoChoices:         repoChoices,
+		repoErr:             repoErr,
+		defaultWorkspaceID:  defaultWorkspaceID,
+		title:               title,
+		modeInput:           input,
+		reviewRepos:         reviewRepos,
+		issueRepos:          issueRepos,
+		loadReviewPRs:       loadReview,
+		loadIssueChoices:    loadIssue,
+		loadPresetRepos:     loadPresetRepos,
+		onReposResolved:     onReposResolved,
+		validateBranch:      validateBranch,
+		validateWorkspaceID: validateWorkspaceID,
+		theme:               theme,
+		useColor:            useColor,
 	}
 	m.repoSelected = strings.TrimSpace(selectedRepo)
 	presetName = strings.TrimSpace(presetName)
@@ -172,7 +175,7 @@ func newCreateFlowModel(title string, presets []string, tmplErr error, repoChoic
 			if m.onReposResolved != nil {
 				m.onReposResolved(m.presetRepos)
 			}
-			m.presetModel = newInputsModelWithLabel(m.title, nil, m.repoSelected, m.defaultWorkspaceID, "repo", m.theme, m.useColor)
+			m.presetModel = newInputsModelWithLabel(m.title, nil, m.repoSelected, m.defaultWorkspaceID, "repo", m.validateWorkspaceID, m.theme, m.useColor)
 			m.stage = createStageRepoWorkspace
 		} else {
 			m.startMode(startMode, presetName)
@@ -201,7 +204,7 @@ func (m *createFlowModel) startMode(mode, presetName string) {
 		}
 		m.mode = mode
 		m.stage = createStagePreset
-		m.presetModel = newInputsModel(m.title, m.presets, presetName, m.defaultWorkspaceID, m.theme, m.useColor)
+		m.presetModel = newInputsModelWithLabel(m.title, m.presets, presetName, m.defaultWorkspaceID, "preset", m.validateWorkspaceID, m.theme, m.useColor)
 	case "review":
 		if len(m.reviewRepos) == 0 {
 			m.err = fmt.Errorf("no GitHub repos found")
@@ -494,7 +497,7 @@ func (m createFlowModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.onReposResolved != nil {
 				m.onReposResolved(m.presetRepos)
 			}
-			m.presetModel = newInputsModelWithLabel(m.title, nil, m.repoSelected, m.defaultWorkspaceID, "repo", m.theme, m.useColor)
+			m.presetModel = newInputsModelWithLabel(m.title, nil, m.repoSelected, m.defaultWorkspaceID, "repo", m.validateWorkspaceID, m.theme, m.useColor)
 			m.stage = createStageRepoWorkspace
 		}
 		return m, nil
@@ -638,10 +641,10 @@ func (m createFlowModel) selectionValue() string {
 }
 
 func newInputsModel(title string, presets []string, presetName string, workspaceID string, theme Theme, useColor bool) inputsModel {
-	return newInputsModelWithLabel(title, presets, presetName, workspaceID, "preset", theme, useColor)
+	return newInputsModelWithLabel(title, presets, presetName, workspaceID, "preset", nil, theme, useColor)
 }
 
-func newInputsModelWithLabel(title string, presets []string, presetName string, workspaceID string, label string, theme Theme, useColor bool) inputsModel {
+func newInputsModelWithLabel(title string, presets []string, presetName string, workspaceID string, label string, validateID func(string) error, theme Theme, useColor bool) inputsModel {
 	search := textinput.New()
 	search.Prompt = ""
 	search.Placeholder = "search"
@@ -674,6 +677,7 @@ func newInputsModelWithLabel(title string, presets []string, presetName string, 
 		preset:      presetName,
 		workspaceID: workspaceID,
 		label:       label,
+		validateID:  validateID,
 		stage:       stage,
 		theme:       theme,
 		useColor:    useColor,
@@ -717,6 +721,12 @@ func (m inputsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if value == "" {
 					m.errorLine = "required"
 					return m, nil
+				}
+				if m.validateID != nil {
+					if err := m.validateID(value); err != nil {
+						m.errorLine = err.Error()
+						return m, nil
+					}
 				}
 				m.workspaceID = value
 				m.done = true

@@ -105,3 +105,4 @@ Only implement:
   EOF
   )"
   ```
+- PR titles and bodies should be written in English unless explicitly requested otherwise.

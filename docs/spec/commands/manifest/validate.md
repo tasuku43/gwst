@@ -21,7 +21,7 @@ This is a read-only command. It does not scan the filesystem and does not run `g
   - `version` is optional; when present must be `1`.
   - `workspaces` mapping must exist.
 - Validates each workspace entry under `workspaces`:
-  - Workspace IDs must satisfy git branch ref format rules (`git check-ref-format --branch`).
+  - Workspace IDs must satisfy git branch ref format rules (`git check-ref-format --branch`) and must not include path separators or path traversal (`/`, `\\`, `.`, `..`).
   - Workspace entries must be a mapping.
   - `mode` is optional; when present must be one of: `preset`, `repo`, `review`, `issue`, `resume`, `add`.
   - If `mode=preset`, `preset_name` must be non-empty.
