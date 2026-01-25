@@ -38,8 +38,23 @@ func Normalize(input string) (Spec, error) {
 		}
 		host = u.Hostname()
 		path = strings.TrimPrefix(u.Path, "/")
+	case strings.HasPrefix(trimmed, "file://"):
+		u, err := url.Parse(trimmed)
+		if err != nil {
+			return Spec{}, fmt.Errorf("invalid file repo spec: %q", input)
+		}
+		// For file remotes, infer <host>/<owner>/<repo> from the tail of the path.
+		// Expected: file:///.../<host>/<owner>/<repo>(.git)
+		parts := strings.Split(strings.Trim(u.Path, "/"), "/")
+		if len(parts) < 3 {
+			return Spec{}, fmt.Errorf("file repo spec must end with <host>/<owner>/<repo>: %q", input)
+		}
+		host = parts[len(parts)-3]
+		owner := parts[len(parts)-2]
+		repo := parts[len(parts)-1]
+		path = fmt.Sprintf("%s/%s", owner, repo)
 	default:
-		return Spec{}, fmt.Errorf("repo spec must be ssh or https: %q", input)
+		return Spec{}, fmt.Errorf("repo spec must be ssh, https, or file: %q", input)
 	}
 
 	owner, repo, err := splitOwnerRepo(path)

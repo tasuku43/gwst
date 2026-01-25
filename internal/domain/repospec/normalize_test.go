@@ -20,6 +20,11 @@ func TestNormalize(t *testing.T) {
 			wantKey: "github.com/org/repo",
 		},
 		{
+			name:    "file",
+			input:   "file:///tmp/mirrors/example.com/org/repo.git",
+			wantKey: "example.com/org/repo",
+		},
+		{
 			name:    "shorthand",
 			input:   "github.com/org/repo.git",
 			wantErr: true,
