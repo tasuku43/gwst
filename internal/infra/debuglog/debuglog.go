@@ -34,12 +34,12 @@ func Enable(rootDir string) error {
 		return fmt.Errorf("root directory is required")
 	}
 	logDir := filepath.Join(rootDir, "logs")
-	if err := os.MkdirAll(logDir, 0o755); err != nil {
+	if err := os.MkdirAll(logDir, 0o700); err != nil {
 		return fmt.Errorf("create debug log dir: %w", err)
 	}
 	name := fmt.Sprintf("debug-%s.log", time.Now().Format("20060102"))
 	path := filepath.Join(logDir, name)
-	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
 	if err != nil {
 		return fmt.Errorf("open debug log file: %w", err)
 	}
@@ -133,7 +133,7 @@ func ClearPrompt() {
 	ctxState.mu.Unlock()
 }
 
-func SetStep(index int, stepID string) {
+func SetStep(index uint64, stepID string) {
 	ctxState.mu.Lock()
 	ctxState.phase = "steps"
 	ctxState.prompt = ""

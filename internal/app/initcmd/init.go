@@ -35,7 +35,7 @@ func Run(rootDir string) (Result, error) {
 			result.SkippedDirs = append(result.SkippedDirs, dir)
 			continue
 		}
-		if err := os.MkdirAll(dir, 0o755); err != nil {
+		if err := os.MkdirAll(dir, 0o750); err != nil {
 			return Result{}, fmt.Errorf("create dir: %w", err)
 		}
 		result.CreatedDirs = append(result.CreatedDirs, dir)
@@ -73,7 +73,7 @@ func writeManifest(path string) error {
 	if err != nil {
 		return err
 	}
-	if err := os.WriteFile(path, data, 0o644); err != nil {
+	if err := os.WriteFile(path, data, 0o600); err != nil {
 		return fmt.Errorf("write %s: %w", manifest.FileName, err)
 	}
 	return nil

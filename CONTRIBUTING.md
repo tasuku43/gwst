@@ -36,12 +36,20 @@ go test ./...
 go build ./...
 ```
 
+Optional security checks:
+
+```bash
+go run golang.org/x/vuln/cmd/govulncheck@v1.1.4 ./...
+go run github.com/securego/gosec/v2/cmd/gosec@v2.22.11 -- ./...
+```
+
 Optional (Taskfile):
 
 ```bash
 task fmt
 task test
 task build:dev
+task ci:full
 ```
 
 ## Running locally

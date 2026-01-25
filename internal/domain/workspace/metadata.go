@@ -62,14 +62,14 @@ func SaveMetadata(wsDir string, meta Metadata) error {
 		return err
 	}
 	dir := filepath.Join(wsDir, MetadataDirName)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return fmt.Errorf("create metadata dir: %w", err)
 	}
 	data, err := json.MarshalIndent(meta, "", "  ")
 	if err != nil {
 		return fmt.Errorf("marshal metadata: %w", err)
 	}
-	if err := os.WriteFile(metadataPath(wsDir), data, 0o644); err != nil {
+	if err := os.WriteFile(metadataPath(wsDir), data, 0o600); err != nil {
 		return fmt.Errorf("write metadata: %w", err)
 	}
 	return nil

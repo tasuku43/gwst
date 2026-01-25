@@ -96,7 +96,7 @@ func Save(rootDir string, file File) error {
 	if err != nil {
 		return err
 	}
-	if err := os.WriteFile(Path(rootDir), data, 0o644); err != nil {
+	if err := os.WriteFile(Path(rootDir), data, 0o600); err != nil {
 		return fmt.Errorf("write %s: %w", FileName, err)
 	}
 	return nil

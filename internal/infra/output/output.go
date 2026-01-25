@@ -41,8 +41,8 @@ func HasStepLogger() bool {
 }
 
 func Step(text string) {
-	step := int(atomic.AddUint64(&stepIndex, 1))
-	debuglog.SetStep(step, stepID(text))
+	value := atomic.AddUint64(&stepIndex, 1)
+	debuglog.SetStep(value, stepID(text))
 	if stepLogger != nil {
 		stepLogger.Step(text)
 		return

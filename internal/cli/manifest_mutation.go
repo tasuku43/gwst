@@ -77,7 +77,7 @@ func applyManifestMutation(ctx context.Context, rootDir string, updated manifest
 		return err
 	}
 	if res.Canceled || (res.HadChanges && !res.Confirmed) {
-		if err := os.WriteFile(manifest.Path(rootDir), opts.OriginalBytes, 0o644); err != nil {
+		if err := os.WriteFile(manifest.Path(rootDir), opts.OriginalBytes, 0o600); err != nil {
 			return fmt.Errorf("restore %s: %w", manifest.FileName, err)
 		}
 		renderer.Blank()

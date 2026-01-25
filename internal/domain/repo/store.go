@@ -33,7 +33,7 @@ func Get(ctx context.Context, rootDir string, repo string) (Store, error) {
 	}
 
 	if !exists {
-		if err := os.MkdirAll(filepath.Dir(storePath), 0o755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(storePath), 0o750); err != nil {
 			return Store{}, fmt.Errorf("create repo store dir: %w", err)
 		}
 		gitcmd.Logf("git clone --bare %s %s", remoteURL, storePath)
@@ -308,7 +308,7 @@ func touchFetchHead(storePath string) error {
 		if !os.IsNotExist(err) {
 			return err
 		}
-		file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0o644)
+		file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0o600)
 		if err != nil {
 			return err
 		}

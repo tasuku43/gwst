@@ -24,7 +24,7 @@ func New(ctx context.Context, rootDir string, workspaceID string) (string, error
 		return "", fmt.Errorf("workspace already exists: %s", wsDir)
 	}
 
-	if err := os.MkdirAll(wsDir, 0o755); err != nil {
+	if err := os.MkdirAll(wsDir, 0o750); err != nil {
 		return "", fmt.Errorf("create workspace dir: %w", err)
 	}
 

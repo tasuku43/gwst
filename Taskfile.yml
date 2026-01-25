@@ -38,7 +38,11 @@ tasks:
   vuln:
     desc: Run govulncheck
     cmds:
-      - go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+      - go run golang.org/x/vuln/cmd/govulncheck@v1.1.4 ./...
+  gosec:
+    desc: Run gosec
+    cmds:
+      - go run github.com/securego/gosec/v2/cmd/gosec@v2.22.11 -exclude=G304 -- ./...
   ci:
     desc: CI (fast)
     cmds:
@@ -52,6 +56,7 @@ tasks:
       - task: ci
       - task: test:race
       - task: vuln
+      - task: gosec
   release:preflight:
     desc: Release preflight checks
     cmds:
