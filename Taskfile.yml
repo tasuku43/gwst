@@ -38,7 +38,7 @@ tasks:
   vuln:
     desc: Run govulncheck
     cmds:
-      - go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+      - go run golang.org/x/vuln/cmd/govulncheck@v1.1.4 ./...
   gosec:
     desc: Run gosec
     cmds:
