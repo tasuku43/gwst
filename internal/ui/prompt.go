@@ -395,6 +395,9 @@ func (m createFlowModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.theme,
 					m.useColor,
 				)
+				if m.mode == "repo" {
+					m.branchModel.separateInputLine = true
+				}
 				m.stage = createStagePresetBranch
 				return m, nil
 			}
