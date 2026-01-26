@@ -30,7 +30,7 @@ func printGlobalHelp(w io.Writer) {
 	fmt.Fprintln(w, helpCommand(theme, useColor, "plan", fmt.Sprintf("show %s diff (no changes)", manifest.FileName)))
 	fmt.Fprintln(w, helpCommand(theme, useColor, "import", fmt.Sprintf("rebuild %s from filesystem", manifest.FileName)))
 	fmt.Fprintln(w, helpCommand(theme, useColor, "apply", fmt.Sprintf("apply %s to filesystem", manifest.FileName)))
-	fmt.Fprintln(w, helpCommand(theme, useColor, "repo <subcommand>", "repo commands (get/ls)"))
+	fmt.Fprintln(w, helpCommand(theme, useColor, "repo <subcommand>", "repo commands (get/ls/rm)"))
 	fmt.Fprintln(w, helpCommand(theme, useColor, "doctor [--fix | --self]", "check workspace/repo health"))
 	fmt.Fprintln(w, helpCommand(theme, useColor, "version", "print version"))
 	fmt.Fprintln(w, helpCommand(theme, useColor, "help [command]", "show help for a command"))
@@ -74,6 +74,7 @@ func printRepoHelp(w io.Writer) {
 	fmt.Fprintln(w, helpSectionTitle(theme, useColor, "Subcommands:"))
 	fmt.Fprintln(w, helpCommand(theme, useColor, "get <repo>", "fetch or update bare repo store"))
 	fmt.Fprintln(w, helpCommand(theme, useColor, "ls", "list known bare repo stores"))
+	fmt.Fprintln(w, helpCommand(theme, useColor, "rm [<repo> ...]", "remove bare repo stores"))
 }
 
 func printRepoGetHelp(w io.Writer) {
@@ -84,6 +85,10 @@ func printRepoGetHelp(w io.Writer) {
 
 func printRepoLsHelp(w io.Writer) {
 	fmt.Fprintln(w, "Usage: gion repo ls")
+}
+
+func printRepoRmHelp(w io.Writer) {
+	fmt.Fprintln(w, "Usage: gion repo rm [<repo> ...]")
 }
 
 func printManifestHelp(w io.Writer) {
