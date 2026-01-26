@@ -1,16 +1,21 @@
 # gion — Git workspaces (built on Git worktrees) as code, with guardrails.
 
 Git workspaces as code, with guardrails.  
-Built on Git worktrees: define a YAML inventory, then plan/apply to reconcile safely.
+Define a YAML inventory, then plan/apply to reconcile safely.
 
-## Demo (45s)
+## Overview
 
-Coming soon (new demo video in progress).
+gion manages task-based Git workspaces on top of worktrees.  
+You declare desired workspaces in `gion.yaml`, preview drift with `gion plan`, and reconcile with `gion apply`.
 
-This demo shows:
-- Create many workspaces at once
-- Jump fast with `giongo`
-- Clean up in bulk with guardrails (plan warns before deletions)
+## Features
+
+- **Reproducible inventory:** `gion.yaml` is the source of truth
+- **Bulk create with safety:** まとめて作れて、安全に運用できる
+- **Bulk cleanup with guardrails:** マージ済みのワークツリーを安全に一括掃除できる
+- **Fast navigation:** `giongo` jumps to any workspace or repo
+- **Multi-repo tasks:** group repos under a single workspace via presets
+- **GitHub-aware entry points:** create from PRs or issues with `gh`
 
 ## Quickstart (5 minutes)
 
@@ -21,18 +26,13 @@ brew tap tasuku43/gion
 brew install gion
 ```
 
-Other options:
-- Version pinning with mise (optional): `mise use -g github:tasuku43/gion@<version>`
-- Manual install via GitHub Releases (download archive → put `gion` on your PATH)
-- Build from source requires Go 1.24+
-
 ### 2) Prepare a repo store
 
 ```bash
 gion repo get git@github.com:org/backend.git
 ```
 
-### 3) Create a workspace (includes Plan + Apply by default)
+### 3) Create a workspace (Plan + Apply by default)
 
 ```bash
 gion manifest add --repo git@github.com:org/backend.git PROJ-123
@@ -50,59 +50,44 @@ cd "$(giongo --print)"
 gion manifest rm PROJ-123
 ```
 
-## What gion solves
+## Demo (45s)
 
-- **Reproducibility:** workspace inventory is code (`gion.yaml`), synced safely via diffs
-- **Scale:** create/remove many worktrees without losing track
-- **Safety:** `plan` warns about risky deletions (dirty/unpushed/diverged/unknown)
-- **Bulk operations without fear:** visible guardrails for mass create/delete
-- **Multi-repo tasks:** group multiple repos under one workspace (see “From presets” below)
+Coming soon (new demo video in progress).
 
-## How it works (Declare → Diff → Reconcile)
+This demo shows:
+- Create many workspaces at once
+- Jump fast with `giongo`
+- Clean up in bulk with guardrails (plan warns before deletions)
+
+## Installation
+
+### Homebrew
+
+```bash
+brew tap tasuku43/gion
+brew install gion
+```
+
+### Other options
+
+- Version pinning with mise (optional): `mise use -g github:tasuku43/gion@<version>`
+- Manual install via GitHub Releases (download archive → put `gion` and `giongo` on your PATH)
+- Build from source requires Go 1.24+
+
+### Requirements
+
+- Git
+- `gh` CLI (optional; required for `gion manifest add --review` and `gion manifest add --issue` — GitHub only)
+
+## Usage
+
+### Core workflow (Declare → Diff → Reconcile)
 
 - **Declare** desired workspaces in `gion.yaml` (inventory / desired state)
 - **Diff** with `gion plan` (read-only)
 - **Reconcile** with `gion apply` (shows a plan; confirms destructive changes)
 
-## Create in bulk: entry points
-
-### From PRs / issues (GitHub only)
-
-Interactive bulk selection (multi-select in the picker):
-
-```bash
-gion manifest add
-```
-
-Notes:
-- Requires `gh` (authenticated) to fetch metadata.
-- The picker supports bulk selection of PRs/issues, then a single apply.
-
-Direct URL (single workspace):
-
-```bash
-gion manifest add --review https://github.com/owner/repo/pull/123
-gion manifest add --issue  https://github.com/owner/repo/issues/123
-```
-
-### From presets (multi-repo “task workspace”)
-
-```yaml
-presets:
-  app:
-    repos:
-      - git@github.com:org/backend.git
-      - git@github.com:org/frontend.git
-      - git@github.com:org/infra.git
-```
-
-```bash
-gion manifest add --preset app PROJ-123
-```
-
-## Details (create → move → delete)
-
-### Create
+### Create workspaces
 
 Interactive front-end to the inventory:
 
@@ -145,33 +130,6 @@ Notes:
 - `giongo init` outputs a bash/zsh function definition.
 - For a permanent setup, paste the output into `~/.zshrc` or `~/.bashrc`.
 
-### Edit the inventory directly (AI-friendly)
-
-`gion.yaml` is just YAML. You can edit it directly (humans or AI), then review/apply changes:
-
-```bash
-gion plan
-gion apply
-```
-
-Minimal example:
-
-```yaml
-version: 1
-workspaces:
-  PROJ-123:
-    description: "fix login flow"
-    mode: repo
-    repos:
-      - alias: backend
-        repo_key: github.com/org/backend.git
-        branch: PROJ-123
-```
-
-Notes:
-- `gion.yaml` is gion-managed: commands rewrite the whole file, so comments/ordering may not be preserved.
-- If your local manual changes are the source of truth, use `gion import` to follow them back into `gion.yaml`.
-
 ### Cleanup
 
 Manual removal (explicit human judgment):
@@ -196,21 +154,88 @@ If the filesystem is the source of truth, rebuild the inventory:
 gion import
 ```
 
-## Requirements
+## Configuration
 
-- Git
-- `gh` CLI (optional; required for `gion manifest add --review` and `gion manifest add --issue` — GitHub only)
+`gion.yaml` is plain YAML. You can edit it directly (humans or AI), then review/apply changes:
 
-## Help and docs
+```bash
+gion plan
+gion apply
+```
 
-- `docs/README.md` for documentation index
-- `docs/spec/README.md` for specs index and status
-- `docs/spec/commands/` for per-command specs
-- `docs/spec/core/INVENTORY.md` for `gion.yaml` format
-- `docs/spec/core/PRESETS.md` for preset format
-- `docs/spec/core/DIRECTORY_LAYOUT.md` for the file layout
-- `docs/spec/ui/UI.md` for output conventions
-- `docs/concepts/CONCEPT.md` for background and motivation
+Minimal example:
+
+```yaml
+version: 1
+workspaces:
+  PROJ-123:
+    description: "fix login flow"
+    mode: repo
+    repos:
+      - alias: backend
+        repo_key: github.com/org/backend.git
+        branch: PROJ-123
+```
+
+Notes:
+- `gion.yaml` is gion-managed: commands rewrite the whole file, so comments/ordering may not be preserved.
+- If your local manual changes are the source of truth, use `gion import` to follow them back into `gion.yaml`.
+
+## Examples
+
+### From PRs / issues (GitHub only)
+
+This path is optimized for bulk creation from PRs/issues with one apply.
+
+Interactive bulk selection (multi-select in the picker):
+
+```bash
+gion manifest add
+```
+
+Notes:
+- Requires `gh` (authenticated) to fetch metadata.
+- The picker supports bulk selection of PRs/issues, then a single apply.
+
+Direct URL (single workspace):
+
+```bash
+gion manifest add --review https://github.com/owner/repo/pull/123
+gion manifest add --issue  https://github.com/owner/repo/issues/123
+```
+
+### From presets (multi-repo “task workspace”)
+
+```yaml
+presets:
+  app:
+    repos:
+      - git@github.com:org/backend.git
+      - git@github.com:org/frontend.git
+      - git@github.com:org/infra.git
+```
+
+```bash
+gion manifest add --preset app PROJ-123
+```
+
+## Troubleshooting / FAQ
+
+- `gion manifest add --review/--issue` requires `gh` authentication.
+- `gion apply` prompts before destructive changes; use `gion plan` to preview.
+- `gion.yaml` is rewritten by gion; use `gion import` if the filesystem is your source of truth.
+
+## Contributing
+
+See `CONTRIBUTING.md`.
+
+## Security
+
+See `SECURITY.md`.
+
+## License
+
+See `LICENSE`.
 
 ## Maintainer
 
