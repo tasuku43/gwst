@@ -1,22 +1,20 @@
-# gion — Git workspaces (built on Git worktrees) as code, with guardrails.
+# gion — task workspaces (built on Git worktrees) as code, with guardrails.
 
 Git workspaces as code, with guardrails.  
 Define a YAML inventory, then plan/apply to reconcile safely.
 
-Don’t lose track of worktrees: declare task workspaces in YAML, review diffs (including deletion risk), then safely create and clean them up in bulk.  
+Worktree sprawl brings pain:
+- Risky cleanup: deleting dirty or unpushed work by mistake.
+- Cognitive load: when worktrees multiply, it’s hard to remember where you did what.
+- Bulk creation friction: worktrees are powerful but tedious to set up and place.
+
+gion makes it safe and repeatable: declare task workspaces in YAML, review diffs (including deletion risk), then create and clean them up in bulk.  
 You don’t have to edit YAML directly—`gion manifest ...` lets you add/remove workspaces interactively and updates the inventory behind the scenes.
 
 ## Overview
 
 gion manages task-based Git workspaces on top of worktrees.  
 You declare desired workspaces in `gion.yaml`, preview drift with `gion plan`, and reconcile with `gion apply`.
-
-## Terminology
-
-- **Workspace:** a task-scoped directory under `GION_ROOT/workspaces/<WORKSPACE_ID>/` that can contain multiple repos.
-- **Worktree:** a Git worktree checkout for a repo, placed under a workspace (e.g. `.../workspaces/<id>/<alias>/`).
-- **Repo store:** a shared bare clone cache under `GION_ROOT/bare/` (used to create and update worktrees efficiently).
-- **Manifest:** the inventory file `gion.yaml` and the `gion manifest ...` subcommands that update it.
 
 ## Who it’s for
 
@@ -27,8 +25,8 @@ You declare desired workspaces in `gion.yaml`, preview drift with `gion plan`, a
 ## Features
 
 - **Reproducible inventory:** `gion.yaml` is the source of truth
-- **Bulk create with safety:** まとめて作れて、安全に運用できる
-- **Bulk cleanup with guardrails:** マージ済みのワークツリーを安全に一括掃除できる
+- **Bulk create, safely:** spin up many worktrees at once with guardrails.
+- **Bulk cleanup, safely:** remove worktrees in bulk with guardrails (diff + confirmation, risk surfaced for dirty/unpushed/diverged/unknown).
 - **Fast navigation:** `giongo` jumps to any workspace or repo
 - **Multi-repo tasks:** group repos under a single workspace via presets
 - **GitHub-aware entry points:** create from PRs or issues with `gh`
@@ -37,6 +35,10 @@ You declare desired workspaces in `gion.yaml`, preview drift with `gion plan`, a
 
 - **Plan-first:** always shows a diff before applying changes.
 - **Deletion risk visibility:** removal plans include a risk summary (e.g., dirty / unpushed / diverged / unknown).
+  - **dirty:** working tree has changes.
+  - **unpushed:** local branch is ahead of upstream.
+  - **diverged:** local and upstream have both advanced.
+  - **unknown:** status cannot be determined (e.g., git error or missing upstream).
 - **Confirm destructive changes:** removals require an explicit confirmation; `--no-prompt` refuses destructive changes.
 - **Conservative bulk cleanup:** merged-worktree cleanup excludes anything uncertain and acts only when it is highly likely safe.
 - **Clear safety boundary:** gion reconciles only under `GION_ROOT/` (workspaces + repo stores).
@@ -124,6 +126,35 @@ gion manifest rm PROJ-123
 
 Tip: If you prefer the shortest path, omit `--no-apply` and `gion manifest add` will run `gion apply` by default.
 
+## Terminology
+
+```
+GION_ROOT/  (safety boundary: gion only touches under this directory)
+├─ gion.yaml                      # desired state (inventory)
+│
+├─ bare/                          # shared Git object store (bare clones)
+│  └─ github.com/org/
+│     ├─ backend.git              # bare repo store (shared)
+│     ├─ frontend.git
+│     └─ infra.git
+│
+└─ workspaces/                    # task-scoped directories (each contains worktrees)
+   ├─ PROJ-123/                   # workspace_id (task)
+   │  ├─ backend/                 # worktree checkout (repo: backend)
+   │  │  ├─ .git                  # gitdir file -> points into .../backend.git/worktrees/...
+   │  │  └─ ...                   # working directory (your changes live here)
+   │  ├─ frontend/
+   │  └─ infra/
+   │
+   └─ PROJ-456/
+      └─ backend/
+```
+
+- **Workspace:** a task-scoped directory under `GION_ROOT/workspaces/<WORKSPACE_ID>/` that can contain multiple repos.
+- **Worktree:** a Git worktree checkout for a repo, placed under a workspace (e.g. `.../workspaces/<id>/<alias>/`).
+- **Repo store:** a shared bare clone cache under `GION_ROOT/bare/` (used to create and update worktrees efficiently).
+- **Manifest:** the inventory file `gion.yaml` and the `gion manifest ...` subcommands that update it.
+
 ## Demo (45s)
 
 Coming soon (new demo video in progress).
@@ -162,6 +193,21 @@ For a command overview, see `docs/guides/COMMANDS.md` (or run `gion help`).
 - **Declare** desired workspaces in `gion.yaml` (inventory / desired state)
 - **Diff** with `gion plan` (read-only)
 - **Reconcile** with `gion apply` (shows a plan; confirms destructive changes)
+
+Example plan (add + remove, trimmed):
+
+```text
+Plan
+  • + add workspace PROJ-123
+    └─ backend  PROJ-123
+       repo: github.com/org/backend.git
+  • - remove workspace PROJ-099
+    └─ backend  PROJ-099
+       risk: dirty (unstaged=2)
+       sync: upstream=origin/main ahead=1 behind=0
+
+Apply destructive changes? (default: No)
+```
 
 ### Create workspaces
 
@@ -222,6 +268,11 @@ gion manifest gc
 
 `gion manifest gc` removes workspace entries from `gion.yaml` only when they are highly likely safe to delete, then (by default) runs `gion apply` to reconcile.
 
+GC safety rules (summary):
+- Excludes any workspace with dirty / unpushed / diverged / unknown state.
+- Considers a workspace safe only when all repos are strictly merged into their target base.
+- Uses Git data from the local repo store (no PR metadata).
+
 ### Import
 
 If the filesystem is the source of truth, rebuild the inventory:
@@ -245,6 +296,11 @@ gion import
 - Inventory file: `<GION_ROOT>/gion.yaml`
 - Bare repo stores (shared Git objects): `<GION_ROOT>/bare/`
 - Workspaces (task directories containing worktrees): `<GION_ROOT>/workspaces/`
+
+Invariants (short):
+- `version: 1` is the current inventory schema; future changes will be versioned.
+- gion only reads/writes under `GION_ROOT/` (safety boundary).
+- Workspace IDs must be valid Git branch names (used as worktree branches).
 
 `gion.yaml` is plain YAML. You can edit it directly (humans or AI), then review/apply changes:
 
@@ -273,6 +329,7 @@ Notes:
 - `gion.yaml` is gion-managed: commands rewrite the whole file, so comments/ordering may not be preserved.
 - Avoid relying on ordering/comments; keep human notes in `description` or a separate file.
 - If you hand-edit `gion.yaml`, run `gion plan` to review the diff before `gion apply`.
+- For day-to-day edits, prefer `gion manifest ...`; treat direct YAML edits as advanced or automation-only, and always review with `gion plan`.
 - If your local manual changes are the source of truth, use `gion import` to follow them back into `gion.yaml`.
 
 ## Examples
