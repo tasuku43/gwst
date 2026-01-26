@@ -81,6 +81,8 @@ brew install gion
 
 ## Usage
 
+For a command overview, see `docs/guides/COMMANDS.md` (or run `gion help`).
+
 ### Core workflow (Declare → Diff → Reconcile)
 
 - **Declare** desired workspaces in `gion.yaml` (inventory / desired state)
