@@ -50,6 +50,7 @@ Rules:
 - No success banner; success is implied in Result section
 - Long lines should wrap to the terminal width; continuation lines keep the same text indent (prefix width).
   - Exception: interactive picker lists should truncate long lines with `...` to keep a stable cursor→row mapping.
+  - When truncation would hide the user-entered value at the end of a long label (e.g. per-repo branch inputs), prefer a 2-line layout: label on its own line, then an indented `branch: <value>` line.
 
 Notes:
 - IaC-style commands use `Plan`/`Apply`:
