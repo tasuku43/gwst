@@ -8,13 +8,13 @@ import (
 	"strings"
 
 	"github.com/mattn/go-isatty"
-	"github.com/tasuku43/gwst/internal/app/apply"
-	"github.com/tasuku43/gwst/internal/app/manifestplan"
-	"github.com/tasuku43/gwst/internal/domain/manifest"
-	"github.com/tasuku43/gwst/internal/domain/repo"
-	"github.com/tasuku43/gwst/internal/infra/output"
-	"github.com/tasuku43/gwst/internal/infra/prefetcher"
-	"github.com/tasuku43/gwst/internal/ui"
+	"github.com/tasuku43/gion/internal/app/apply"
+	"github.com/tasuku43/gion/internal/app/manifestplan"
+	"github.com/tasuku43/gion/internal/domain/manifest"
+	"github.com/tasuku43/gion/internal/domain/repo"
+	"github.com/tasuku43/gion/internal/infra/output"
+	"github.com/tasuku43/gion/internal/infra/prefetcher"
+	"github.com/tasuku43/gion/internal/ui"
 )
 
 func runApply(ctx context.Context, rootDir string, args []string, noPrompt bool) error {

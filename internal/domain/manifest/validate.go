@@ -10,8 +10,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/tasuku43/gwst/internal/domain/repo"
-	"github.com/tasuku43/gwst/internal/domain/workspace"
+	"github.com/tasuku43/gion/internal/domain/repo"
+	"github.com/tasuku43/gion/internal/domain/workspace"
 	"gopkg.in/yaml.v3"
 )
 

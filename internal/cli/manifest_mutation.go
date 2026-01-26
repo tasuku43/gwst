@@ -7,9 +7,9 @@ import (
 	"strings"
 
 	"github.com/mattn/go-isatty"
-	"github.com/tasuku43/gwst/internal/app/manifestplan"
-	"github.com/tasuku43/gwst/internal/domain/manifest"
-	"github.com/tasuku43/gwst/internal/ui"
+	"github.com/tasuku43/gion/internal/app/manifestplan"
+	"github.com/tasuku43/gion/internal/domain/manifest"
+	"github.com/tasuku43/gion/internal/ui"
 )
 
 type manifestMutationHooks struct {

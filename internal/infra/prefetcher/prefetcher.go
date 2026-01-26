@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/tasuku43/gwst/internal/domain/repo"
+	"github.com/tasuku43/gion/internal/domain/repo"
 )
 
 type Task struct {

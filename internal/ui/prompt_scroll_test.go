@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/charmbracelet/x/ansi"
-	"github.com/tasuku43/gwst/internal/infra/output"
+	"github.com/tasuku43/gion/internal/infra/output"
 )
 
 func countTerminalLines(text string) int {

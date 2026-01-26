@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/tasuku43/gwst/internal/domain/preset"
-	"github.com/tasuku43/gwst/internal/domain/workspace"
+	"github.com/tasuku43/gion/internal/domain/preset"
+	"github.com/tasuku43/gion/internal/domain/workspace"
 )
 
 type PresetStepFunc func(repoSpec string, index, total int)

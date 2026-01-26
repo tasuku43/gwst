@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/tasuku43/gwst/internal/app/manifestplan"
-	"github.com/tasuku43/gwst/internal/domain/workspace"
-	"github.com/tasuku43/gwst/internal/infra/output"
-	"github.com/tasuku43/gwst/internal/ui"
+	"github.com/tasuku43/gion/internal/app/manifestplan"
+	"github.com/tasuku43/gion/internal/domain/workspace"
+	"github.com/tasuku43/gion/internal/infra/output"
+	"github.com/tasuku43/gion/internal/ui"
 )
 
 func TestRenderWorkspaceRiskDetails_IndentsUnderBullet(t *testing.T) {

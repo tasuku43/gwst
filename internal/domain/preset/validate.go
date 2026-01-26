@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/tasuku43/gwst/internal/domain/manifest"
-	"github.com/tasuku43/gwst/internal/domain/repo"
+	"github.com/tasuku43/gion/internal/domain/manifest"
+	"github.com/tasuku43/gion/internal/domain/repo"
 	"gopkg.in/yaml.v3"
 )
 

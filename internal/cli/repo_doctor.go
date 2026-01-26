@@ -10,10 +10,10 @@ import (
 	"time"
 
 	"github.com/mattn/go-isatty"
-	"github.com/tasuku43/gwst/internal/app/doctor"
-	"github.com/tasuku43/gwst/internal/domain/repo"
-	"github.com/tasuku43/gwst/internal/infra/output"
-	"github.com/tasuku43/gwst/internal/ui"
+	"github.com/tasuku43/gion/internal/app/doctor"
+	"github.com/tasuku43/gion/internal/domain/repo"
+	"github.com/tasuku43/gion/internal/infra/output"
+	"github.com/tasuku43/gion/internal/ui"
 )
 
 func runDoctor(ctx context.Context, rootDir string, args []string) error {

@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/tasuku43/gwst/internal/domain/manifest"
+	"github.com/tasuku43/gion/internal/domain/manifest"
 )
 
 func TestList_ClassifiesAppliedMissingDriftExtra(t *testing.T) {

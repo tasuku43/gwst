@@ -6,8 +6,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/tasuku43/gwst/internal/app/manifestplan"
-	"github.com/tasuku43/gwst/internal/domain/workspace"
+	"github.com/tasuku43/gion/internal/app/manifestplan"
+	"github.com/tasuku43/gion/internal/domain/workspace"
 )
 
 type DriftStatus string

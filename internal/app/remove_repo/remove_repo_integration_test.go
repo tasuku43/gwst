@@ -10,10 +10,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tasuku43/gwst/internal/app/create"
-	"github.com/tasuku43/gwst/internal/app/remove_repo"
-	"github.com/tasuku43/gwst/internal/domain/repo"
-	"github.com/tasuku43/gwst/internal/domain/workspace"
+	"github.com/tasuku43/gion/internal/app/create"
+	"github.com/tasuku43/gion/internal/app/remove_repo"
+	"github.com/tasuku43/gion/internal/domain/repo"
+	"github.com/tasuku43/gion/internal/domain/workspace"
 )
 
 func TestRemoveRepo_RejectsDirtyWhenNotAllowed(t *testing.T) {

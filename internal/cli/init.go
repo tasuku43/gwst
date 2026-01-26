@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/tasuku43/gwst/internal/app/initcmd"
+	"github.com/tasuku43/gion/internal/app/initcmd"
 )
 
 func runInit(rootDir string, args []string) error {

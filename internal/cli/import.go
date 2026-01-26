@@ -7,10 +7,10 @@ import (
 	"os"
 
 	"github.com/mattn/go-isatty"
-	"github.com/tasuku43/gwst/internal/app/manifestimport"
-	"github.com/tasuku43/gwst/internal/domain/manifest"
-	"github.com/tasuku43/gwst/internal/infra/paths"
-	"github.com/tasuku43/gwst/internal/ui"
+	"github.com/tasuku43/gion/internal/app/manifestimport"
+	"github.com/tasuku43/gion/internal/domain/manifest"
+	"github.com/tasuku43/gion/internal/infra/paths"
+	"github.com/tasuku43/gion/internal/ui"
 )
 
 func runImport(ctx context.Context, rootDir string, args []string, noPrompt bool) error {

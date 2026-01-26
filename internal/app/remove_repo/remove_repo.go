@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/tasuku43/gwst/internal/domain/workspace"
-	"github.com/tasuku43/gwst/internal/infra/gitcmd"
+	"github.com/tasuku43/gion/internal/domain/workspace"
+	"github.com/tasuku43/gion/internal/infra/gitcmd"
 )
 
 type Options struct {

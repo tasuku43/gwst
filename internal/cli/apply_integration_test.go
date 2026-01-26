@@ -7,13 +7,13 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/tasuku43/gwst/internal/app/create"
-	"github.com/tasuku43/gwst/internal/app/manifestplan"
-	"github.com/tasuku43/gwst/internal/domain/manifest"
-	"github.com/tasuku43/gwst/internal/domain/repo"
-	"github.com/tasuku43/gwst/internal/domain/workspace"
-	"github.com/tasuku43/gwst/internal/infra/gitcmd"
-	"github.com/tasuku43/gwst/internal/ui"
+	"github.com/tasuku43/gion/internal/app/create"
+	"github.com/tasuku43/gion/internal/app/manifestplan"
+	"github.com/tasuku43/gion/internal/domain/manifest"
+	"github.com/tasuku43/gion/internal/domain/repo"
+	"github.com/tasuku43/gion/internal/domain/workspace"
+	"github.com/tasuku43/gion/internal/infra/gitcmd"
+	"github.com/tasuku43/gion/internal/ui"
 )
 
 func TestApply_BranchRenameInPlace_SucceedsWithDirtyWorktree(t *testing.T) {

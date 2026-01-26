@@ -3,7 +3,7 @@ package cli
 import (
 	"context"
 
-	"github.com/tasuku43/gwst/internal/app/manifestimport"
+	"github.com/tasuku43/gion/internal/app/manifestimport"
 )
 
 func rebuildManifest(ctx context.Context, rootDir string) error {

@@ -1,4 +1,4 @@
-module github.com/tasuku43/gwst
+module github.com/tasuku43/gion
 
 go 1.24.0
 

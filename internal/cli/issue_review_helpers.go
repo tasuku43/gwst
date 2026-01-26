@@ -10,9 +10,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/tasuku43/gwst/internal/domain/repo"
-	"github.com/tasuku43/gwst/internal/infra/debuglog"
-	"github.com/tasuku43/gwst/internal/ui"
+	"github.com/tasuku43/gion/internal/domain/repo"
+	"github.com/tasuku43/gion/internal/infra/debuglog"
+	"github.com/tasuku43/gion/internal/ui"
 )
 
 type issueRepoChoice struct {

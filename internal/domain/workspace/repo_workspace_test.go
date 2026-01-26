@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tasuku43/gwst/internal/domain/repo"
-	"github.com/tasuku43/gwst/internal/domain/workspace"
+	"github.com/tasuku43/gion/internal/domain/repo"
+	"github.com/tasuku43/gion/internal/domain/workspace"
 )
 
 func TestRepoGetWorkspaceAddRemove(t *testing.T) {

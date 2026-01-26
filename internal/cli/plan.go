@@ -7,9 +7,9 @@ import (
 	"os"
 
 	"github.com/mattn/go-isatty"
-	"github.com/tasuku43/gwst/internal/app/manifestplan"
-	"github.com/tasuku43/gwst/internal/domain/manifest"
-	"github.com/tasuku43/gwst/internal/ui"
+	"github.com/tasuku43/gion/internal/app/manifestplan"
+	"github.com/tasuku43/gion/internal/domain/manifest"
+	"github.com/tasuku43/gion/internal/ui"
 )
 
 func runPlan(ctx context.Context, rootDir string, args []string) error {

@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/tasuku43/gwst/internal/infra/gitcmd"
-	"github.com/tasuku43/gwst/internal/infra/paths"
+	"github.com/tasuku43/gion/internal/infra/gitcmd"
+	"github.com/tasuku43/gion/internal/infra/paths"
 )
 
 func New(ctx context.Context, rootDir string, workspaceID string) (string, error) {

@@ -8,8 +8,8 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
-	"github.com/tasuku43/gwst/internal/infra/debuglog"
-	"github.com/tasuku43/gwst/internal/infra/output"
+	"github.com/tasuku43/gion/internal/infra/debuglog"
+	"github.com/tasuku43/gion/internal/infra/output"
 )
 
 type Renderer struct {

@@ -13,9 +13,9 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mattn/go-isatty"
 	"github.com/muesli/termenv"
-	"github.com/tasuku43/gwst/internal/domain/workspace"
-	"github.com/tasuku43/gwst/internal/infra/paths"
-	"github.com/tasuku43/gwst/internal/ui"
+	"github.com/tasuku43/gion/internal/domain/workspace"
+	"github.com/tasuku43/gion/internal/infra/paths"
+	"github.com/tasuku43/gion/internal/ui"
 )
 
 var isTerminal = isatty.IsTerminal

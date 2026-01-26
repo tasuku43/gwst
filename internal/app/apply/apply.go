@@ -6,15 +6,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/tasuku43/gwst/internal/app/add"
-	"github.com/tasuku43/gwst/internal/app/create"
-	"github.com/tasuku43/gwst/internal/app/manifestplan"
-	"github.com/tasuku43/gwst/internal/app/remove_repo"
-	"github.com/tasuku43/gwst/internal/app/rm"
-	"github.com/tasuku43/gwst/internal/domain/manifest"
-	"github.com/tasuku43/gwst/internal/domain/repo"
-	"github.com/tasuku43/gwst/internal/domain/workspace"
-	"github.com/tasuku43/gwst/internal/infra/gitcmd"
+	"github.com/tasuku43/gion/internal/app/add"
+	"github.com/tasuku43/gion/internal/app/create"
+	"github.com/tasuku43/gion/internal/app/manifestplan"
+	"github.com/tasuku43/gion/internal/app/remove_repo"
+	"github.com/tasuku43/gion/internal/app/rm"
+	"github.com/tasuku43/gion/internal/domain/manifest"
+	"github.com/tasuku43/gion/internal/domain/repo"
+	"github.com/tasuku43/gion/internal/domain/workspace"
+	"github.com/tasuku43/gion/internal/infra/gitcmd"
 )
 
 type Options struct {

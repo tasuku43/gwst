@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/tasuku43/gwst/internal/domain/manifest"
+	"github.com/tasuku43/gion/internal/domain/manifest"
 )
 
 type File = manifest.File

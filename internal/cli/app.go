@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/tasuku43/gwst/internal/infra/debuglog"
-	"github.com/tasuku43/gwst/internal/infra/paths"
+	"github.com/tasuku43/gion/internal/infra/debuglog"
+	"github.com/tasuku43/gion/internal/infra/paths"
 )
 
 // Run is a placeholder for the CLI entrypoint.

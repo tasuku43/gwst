@@ -10,7 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
-	"github.com/tasuku43/gwst/internal/infra/output"
+	"github.com/tasuku43/gion/internal/infra/output"
 )
 
 var ErrPromptCanceled = errors.New("prompt canceled")

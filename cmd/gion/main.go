@@ -5,8 +5,8 @@ import (
 	"os"
 
 	"github.com/mattn/go-isatty"
-	"github.com/tasuku43/gwst/internal/cli"
-	"github.com/tasuku43/gwst/internal/ui"
+	"github.com/tasuku43/gion/internal/cli"
+	"github.com/tasuku43/gion/internal/ui"
 )
 
 func main() {

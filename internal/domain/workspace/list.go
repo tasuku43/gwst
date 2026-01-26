@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/tasuku43/gwst/internal/infra/paths"
+	"github.com/tasuku43/gion/internal/infra/paths"
 )
 
 type Entry struct {

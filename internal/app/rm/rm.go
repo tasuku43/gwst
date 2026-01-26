@@ -3,7 +3,7 @@ package rm
 import (
 	"context"
 
-	"github.com/tasuku43/gwst/internal/domain/workspace"
+	"github.com/tasuku43/gion/internal/domain/workspace"
 )
 
 func Remove(ctx context.Context, rootDir, workspaceID string, allowDirty bool) error {
