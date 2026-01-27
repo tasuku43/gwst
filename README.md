@@ -24,6 +24,8 @@ You don’t have to edit YAML directly—`gion manifest ...` lets you add/remove
 - **Multi-repo tasks:** group repos under a single workspace via presets
 - **GitHub-aware entry points:** create from PRs or issues with `gh`
 
+Tip: `gion manifest` can be shortened to `gion m` or `gion man`.
+
 ## Guardrails (safety by default)
 
 - **Plan-first:** always shows a diff before applying changes.
@@ -184,6 +186,48 @@ Run with flags to skip prompts:
 gion manifest add --repo git@github.com:org/backend.git PROJ-123
 ```
 
+#### From PRs / issues (GitHub only)
+
+This path is optimized for bulk creation from PRs/issues with one apply.
+
+Interactive bulk selection (multi-select in the picker):
+
+```bash
+gion manifest add
+```
+
+Notes:
+- Requires `gh` (authenticated) to fetch metadata.
+- The picker supports bulk selection of PRs/issues, then a single apply.
+
+Direct URL (single workspace):
+
+```bash
+gion manifest add --review https://github.com/owner/repo/pull/123
+gion manifest add --issue  https://github.com/owner/repo/issues/123
+```
+
+#### From presets (multi-repo “task workspace”)
+
+Create a preset:
+
+```bash
+gion manifest preset add app --repo git@github.com:org/backend.git --repo git@github.com:org/frontend.git
+```
+
+```yaml
+presets:
+  app:
+    repos:
+      - git@github.com:org/backend.git
+      - git@github.com:org/frontend.git
+      - git@github.com:org/infra.git
+```
+
+```bash
+gion manifest add --preset app PROJ-123
+```
+
 ### Move fast with giongo
 
 `giongo` is a small companion binary that jumps into a workspace or repo using a picker.  
@@ -319,44 +363,6 @@ Notes:
 - `gion.yaml` is gion-managed and rewritten; don’t rely on ordering or comments.
 - You can edit `gion.yaml` directly (humans or AI). For interactive changes, `gion manifest ...` is convenient.
 - If you hand-edit, run `gion plan` before `gion apply`. If the filesystem is the source of truth, use `gion import`.
-
-## Examples
-
-### From PRs / issues (GitHub only)
-
-This path is optimized for bulk creation from PRs/issues with one apply.
-
-Interactive bulk selection (multi-select in the picker):
-
-```bash
-gion manifest add
-```
-
-Notes:
-- Requires `gh` (authenticated) to fetch metadata.
-- The picker supports bulk selection of PRs/issues, then a single apply.
-
-Direct URL (single workspace):
-
-```bash
-gion manifest add --review https://github.com/owner/repo/pull/123
-gion manifest add --issue  https://github.com/owner/repo/issues/123
-```
-
-### From presets (multi-repo “task workspace”)
-
-```yaml
-presets:
-  app:
-    repos:
-      - git@github.com:org/backend.git
-      - git@github.com:org/frontend.git
-      - git@github.com:org/infra.git
-```
-
-```bash
-gion manifest add --preset app PROJ-123
-```
 
 ## Contributing
 
