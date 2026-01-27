@@ -87,32 +87,41 @@ Bare repo store location:
 
 ### 3) Create a workspace (review first)
 
-Add a workspace to the inventory without applying yet:
+Add a workspace interactively (example output, trimmed):
 
 ```bash
-gion manifest add --no-apply --repo git@github.com:org/backend.git PROJ-123
+gion manifest add
 ```
-
-Review the plan (example output, trimmed):
-
 ```bash
-gion plan
-```
+Inputs
+  • repo: git@github.com:org/backend.git
+  • workspace id: PROJ-123
+  • repo #1 (git@github.com:org/backend.git)
+    └─ branch: PROJ-123-sample
 
-```text
+Info
+  • manifest: updated gion.yaml
+
 Plan
   • + add workspace PROJ-123
-    └─ backend  PROJ-123
-       repo: github.com/org/backend.git
+    └─ backend (branch: PROJ-123-sample)
+       repo: github.com/org/backend
+
+  • Apply changes? (default: No) (y/n)
+    └─ y
+
+Apply
+  • create workspace PROJ-123
+  • worktree add backend
+  └─ $ git worktree add -b PROJ-123-sample …/workspaces/PROJ-123/backend origin/main
+     (git output trimmed)
+
+Result
+  • applied: add=1 update=0 remove=0
+  • gion.yaml rewritten
 ```
 
-Apply the changes (this will prompt if anything is destructive):
-
-```bash
-gion apply
-```
-
-This creates a workspace worktree at:
+Resulting worktree:
 
 ```text
 ~/gion/workspaces/PROJ-123/backend
@@ -121,14 +130,18 @@ This creates a workspace worktree at:
 ### 4) Jump into a workspace (interactive)
 
 ```bash
-cd "$(giongo --print)"
+# Setup (once):
+eval "$(giongo init)"
+giongo
 ```
 
 ### 5) Remove safely (guardrails on by default)
 
 ```bash
-gion manifest rm PROJ-123
+gion manifest rm
 ```
+
+Select a workspace, review the plan, then confirm to apply.
 
 ## Demo (45s)
 
@@ -205,7 +218,7 @@ Notes:
 Manual removal (explicit human judgment):
 
 ```bash
-gion manifest rm PROJ-123
+gion manifest rm
 ```
 
 Automatic cleanup (conservative):
