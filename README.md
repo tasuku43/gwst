@@ -147,10 +147,6 @@ gion manifest rm
 
 Select a workspace, review the plan, then confirm to apply.
 
-## Demo (45s)
-
-Demo video: <URL>
-
 ## Usage
 
 For a command overview, see `docs/guides/COMMANDS.md` (or run `gion help`).
